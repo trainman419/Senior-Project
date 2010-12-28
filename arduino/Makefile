@@ -15,6 +15,8 @@ TRG=main
 
 all: $(TRG).hex
 
+main.elf: main.o pwm.o
+
 download: $(TRG).hex
 	avrdude -pm2560 -P/dev/tty.usbmodem411 -cstk500 -u -U flash:w:$(TRG).hex
 # I'm a little worried that I don't need to specify a baud rate, but it works

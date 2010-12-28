@@ -1,6 +1,6 @@
 
 %.elf: %.o
-	$(LD) $(LDFLAGS) $< $(LOADLIBES) $(LDLIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
 %.hex: %.elf
 	avr-objcopy -O ihex $< $@
