@@ -1,1 +1,4 @@
 main.hex
+main.elf
+main.o
+pwm.o
