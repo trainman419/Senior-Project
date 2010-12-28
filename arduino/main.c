@@ -7,12 +7,15 @@
  */
 
 #include <avr/io.h>
+#include "pwm.h"
 
 #define CLK 16000
 
 int main() {
    int i;
    int j;
+
+   pwm_init(5);
 
    DDRB |= 1 << 7;
 
