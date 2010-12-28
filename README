@@ -1,0 +1,1 @@
+This is the code for my senior project; a robot implementing localization, mapping, navigation and path-planning on relatively cheap hardware. I'm using two processors; an Arduino for I/O and an AMD Geode for the main processing. More hardware description to come.
