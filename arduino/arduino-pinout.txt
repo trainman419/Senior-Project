@@ -1,0 +1,84 @@
+Notes on the areduino pinouts; taken from the schematics
+Best viewed with a fixed-width font
+
+UART 0:
+RX: PE0
+TX: PE1
+
+UART 1:
+RX: PD2
+TX: PD3
+
+UART 2:
+RX: PH0
+TX: PH1
+
+UART 3:
+RX: PJ0
+TX: PJ1
+
+Analog In:
+A0:  PF0
+A1:  PF1
+A2:  PF2
+A3:  PF3
+A4:  PF4
+A5:  PF5
+A6:  PF6
+A7:  PF7
+A8:  PK0
+A9:  PK1
+A10: PK2
+A11: PK3
+A12: PK4
+A13: PK5
+A14: PK6
+A15: PK7
+
+PWM Out:
+2:  PE4
+3:  PE5
+4:  PG5
+5:  PE3
+6:  PH3
+7:  PH4
+8:  PH5
+9:  PH6
+10: PB4
+11: PB5
+12: PB6
+13: PB7
+
+Digital I/O:
+22: PA0 (AD0) [external memory address/data 0]
+23: PA1 (AD1) [ ... 1]
+24: PA2 (AD2) [ ... 2]
+25: PA3 (AD3) [ ... 3]
+26: PA4 (AD4) [ ... 4]
+27: PA5 (AD5) [ ... 5]
+28: PA6 (AD6) [ ... 6]
+29: PA7 (AD7) [ ... 7]
+30: PC7 (A15) [external memory address 15]
+31: PC6 (A14) [ ... 14]
+32: PC5 (A13) [ ... 13]
+33: PC4 (A12) [ ... 12]
+34: PC3 (A11) [ ... 11]
+35: PC2 (A10) [ ... 10]
+36: PC1 (A9)  [ ... 9]
+37: PC0 (A8)  [ ... 8]
+38: PD7 (T0)  [timer/counter0 clock input]
+39: PG2 (ALE) [external memory address latch]
+40: PG1 (RD)  [external memory read strobe]
+41: PG0 (WR)  [external memory write strobe]
+42: PL7  -
+43: PL6  -
+44: PL5 (OC5C) [output compare C; timer 5]
+45: PL4 (OC5B) [output compare B; timer 5]
+46: PL3 (OC5A) [output compare A; timer 5]
+47: PL2 (T5)   [timer/counter5 clock input]
+48: PL1 (ICP5) [timer/counter5 input capture trigger]
+49: PL0 (ICP4) [timer/counter4 input capture trigger]
+50: PB3 (MISO/PCINT3)
+51: PB2 (MOSI/PCINT2)
+52: PB1 (SCK/PCINT1)
+53: PB0 (SS/PCINT0)
