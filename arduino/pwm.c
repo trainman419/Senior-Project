@@ -5,6 +5,30 @@
 
    These functions are for PWM generation from the 16-bit timers, 1, 3, 4 and 5
 
+   These set up the phase-correct, non-inverted PWM mode.
+   Using the ICRn registers for TOP
+
+WGMn3: 1 (TCCRnB bit 4)
+WGMn2: 0 (TCCRnB bit 3)
+WGMn1: 1 (TCCRnA bit 1)
+WGMn0: 0 (TCCRnA bit 0)
+
+write TCCRnB bits 6 and 7 to 0
+TCCRnB bits 2 to 0 set prescaler (datasheet page 161)
+
+To enable output, set
+COMnx1 = 1 (TCCRnA bit 2x + 3)
+COMnx0 = 0 (TCCRnA bit 2x + 2)
+
+Also set direction bit for output pin
+DDRx = ???
+
+Set TIMSKn to 0 (disable all interrupts)
+
+frequency equation:
+f = clk / (2 * N * TOP)
+N = prescaler
+TOP = top value, ICRn
    
    */
 
@@ -67,16 +91,43 @@ uint8_t pwm_init(uint8_t pin) {
    cli(); // disable interrupts
 
    // TODO: set up phase-correct PWM
+   uint8_t * tccr = tccr_base[timer];
+
+   // set WGMn1 and COMnx1 
+   tccr[A] |= (2 | (1 << (oc*2 + 3)));
+   // clear WGMn0 and COMnx0
+   tccr[A] &= ~(1 | (1 << (oc*2 + 2)));
+
+   // set WGMn3
+   tccr[B] |= 1;
+   // clear WGMn2 and bits 6 and 7
+   tccr[B] &= ~( (1 << 3) | (1 << 6) | (1 << 7));
+
+   // leave prescaler bits alone
 
    SREG = sreg;
    return 0;
 }
 
-/* disable pwm for ... ? */
+/* disable pwm output for a particular pin
+ *
+ * same input as for pwm_init()
+ */
 void pwm_off(uint8_t timer) {
 }
 
-/* set the duty cycle for pwm */
+/* set the duty cycle for pwm 
+ * 
+ * timer: same format as for pwm_init
+ * duty: % duty cycle or absolute OCRn value?
+ *   % duty cycle means consumers don't have to think
+ *   OCR values give the most control
+ */
+/*
+ * percentage as float?
+ * store precentage so that we can maintain duty cycle when changing
+ *   frequency?
+ */
 void pwm_set_duty(uint8_t timer, uint16_t duty) {
 }
 
