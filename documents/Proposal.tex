@@ -1,14 +1,21 @@
-\documentclass[a4paper,12pt]{report}
+\documentclass[a4paper,12pt]{article}
 
 \usepackage[pdftex]{graphicx}
 
 \begin{document}
 
-\title{Senior Project Proposal}
+\title{Senior Project Proposal: Localization, Mapping and Path-Planning for Inexpensive Robots}
 \author{Austin Hendrix}
 \date{December 2010}
 \maketitle
 
-Some text here.
+
+For my senior project, I propose to build and program a relatively inexpensive robot to perform localization, mapping and path-planning. The purpose of this project would be to explore the capabilities of a relatively low-cost, semi-autonomous robot, to explore the capabilities of open-source robotics software, and potentially contribute back to the open-source community.
+
+The hardware platform will consist of an off-the-shelf remote control car, with the radio removed, and replaced with a control electronics, including a compass, GPS, sonar, laser scanner, wheel encoders, a microcontroller and an x86-based computer. The primary sensor will be a Hokuyo URG-04LX-UG01 scanning laser range finder.
+
+The software will consist of custom firmware for the microcontroller and Linux on the main computer, with software based on one of the open-source robotics packages. The microcontroller will manage comunication with the sensors, and consolidate and transmit that data to the main computer, and monitor and maintain speed and direction. The main computer will interpret the sensor data, perform localization and map-making, plan a path to its destination, and send the appropriate motor commands to the microcontroller to travel to that destination. The robot should be mostly autonomous, aside from high-level motion commands in the form of target destinations, in absolute or relative coordinates, for the robot to navigate to. Commands with either be pre-programmed, or transmitted to the robot over a wireless link.
+
+Potential avenues of investigation once navigation and planning have been achieved to a reasonable degree include mounting a Kinect to the robot to explore its capabilities, or mounting a USB nerf turret with a webcam to the robot, allowing it to find, track, follow and shoot targets of the operator's choosing.
 
 \end{document}
