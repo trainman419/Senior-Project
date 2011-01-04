@@ -91,7 +91,7 @@ uint8_t pwm_init(uint8_t pin) {
    cli(); // disable interrupts
 
    // TODO: set up phase-correct PWM
-   uint8_t * tccr = tccr_base[timer];
+   volatile uint8_t * tccr = tccr_base[timer];
 
    // set WGMn1 and COMnx1 
    tccr[A] |= (2 | (1 << (oc*2 + 3)));
