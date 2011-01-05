@@ -2,3 +2,4 @@ main.hex
 main.elf
 main.o
 pwm.o
+Makefile.device
