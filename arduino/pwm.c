@@ -35,6 +35,8 @@ TOP = top value, ICRn
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#include "pwm.h"
+
 #define F_CPU 16000000
 
 volatile uint16_t * timer_base[] = { 

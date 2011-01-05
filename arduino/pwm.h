@@ -3,10 +3,10 @@
    Author: Austin Hendrix
 */
 
-void pwm_init(unsigned char timer);
-void pwm_off(unsigned char timer);
-void pwm_set_duty(unsigned char timer, unsigned char duty);
-void pwm_set_freq(unsigned char timer, unsigned int freq);
+uint8_t pwm_init(uint8_t pin);
+void pwm_off(uint8_t timer);
+uint8_t pwm_set_duty(uint8_t pin, float duty);
+uint8_t pwm_set_freq(uint8_t timer, uint16_t freq);
 
 #define PWM2  0x3B
 #define PWM3  0x3C
