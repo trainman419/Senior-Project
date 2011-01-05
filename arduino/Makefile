@@ -1,5 +1,6 @@
 DEVICE=atmega2560
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O3
+LDFLAGS=-mmcu=$(DEVICE)
 
 CC=avr-gcc 
 CPP=avr-gcc -E
