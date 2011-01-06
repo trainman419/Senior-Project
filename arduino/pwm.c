@@ -105,13 +105,17 @@ uint8_t pwm_init(uint8_t pin) {
    // set up phase-correct PWM
    volatile uint8_t * tccr = tccr_base[timer];
 
-   // set WGMn1 and COMnx1 
-   tccr[A] |= (2 | (1 << (oc*2 + 3)));
-   // clear WGMn0 and COMnx0
-   tccr[A] &= ~(1 | (1 << (oc*2 + 2)));
+   // set WGMn1
+   tccr[A] |= 2;
+   // set  COMnx1 
+   tccr[A] |= (1 << (oc*2 + 3));
+   // clear WGMn0 
+   tccr[A] &= ~1; 
+   // clear COMnx0
+   tccr[A] &= ~(1 << (oc*2 + 2));
 
    // set WGMn3
-   tccr[B] |= 1;
+   tccr[B] |= (1 << 4);
    // clear WGMn2 and bits 6 and 7
    tccr[B] &= ~( (1 << 3) | (1 << 6) | (1 << 7));
 
@@ -162,6 +166,8 @@ uint8_t pwm_set_duty(uint8_t pin, float duty) {
    uint16_t ocr = 0;
    ocr = icr * duty; // this is EXPENSIVE!
    if( ocr > icr ) ocr = icr;
+
+   //ocr = 1000;
 
    base[OC_OFF + oc] = ocr;
    pwm_duty[timer*3 + oc] = duty;
@@ -221,12 +227,16 @@ uint8_t pwm_set_freq(uint8_t timer, uint16_t freq) {
 
    // set up our compare register
    *icr = base - 1;
+   //*icr = 2000;
 
    // set our prescaler
    volatile uint8_t * tccr = tccr_base[timer];
 
-   tccr[C] &= ~(0x7);
-   tccr[C] |= 0x7 & prescale;
+   // unset prescaler
+   tccr[B] &= ~(0x7);
+   // set new prescaler
+   //tccr[B] |= 1; // FIXME: no prescaler
+   tccr[B] |= 0x7 & prescale;
 
    return 0;
 }

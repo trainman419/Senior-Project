@@ -19,7 +19,7 @@ uint8_t pwm_set_freq(uint8_t timer, uint16_t freq);
 #define PWM10 0x2A
 #define PWM11 0x1A
 #define PWM12 0x1B
-#define PWM13 0x0A
+#define PWM13 0x1C
 
 #define PWM14 0x5C
 #define PWM15 0x5B
