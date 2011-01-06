@@ -227,7 +227,6 @@ uint8_t pwm_set_freq(uint8_t timer, uint16_t freq) {
 
    // set up our compare register
    *icr = base - 1;
-   //*icr = 2000;
 
    // set our prescaler
    volatile uint8_t * tccr = tccr_base[timer];
@@ -235,8 +234,13 @@ uint8_t pwm_set_freq(uint8_t timer, uint16_t freq) {
    // unset prescaler
    tccr[B] &= ~(0x7);
    // set new prescaler
-   //tccr[B] |= 1; // FIXME: no prescaler
    tccr[B] |= 0x7 & prescale;
+
+
+   // TODO: figure out which outputs are enabled, read their duty cycle settings
+   // and update the appropriate OCRnx registers
+   //
+   // for now, we avoid this by writing the main software to compensate
 
    return 0;
 }

@@ -47,7 +47,7 @@ PWM Out:
 10: PB4 (OC2A/PCINT4)
 11: PB5 (OC1A/PCINT5)
 12: PB6 (OC1B/PCINT6)
-13: PB7 (OC0A/OC1C/PCINT7) (LED)
+13: PB7 (OC0A/OC1C/PCINT7) (LED) (Use OC1C)
 
 Digital I/O:
 22: PA0 (AD0) [external memory address/data 0]

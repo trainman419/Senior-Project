@@ -15,7 +15,7 @@ int main() {
    int i;
    int j;
 
-   int duty = 0;
+   int duty = 50;
 
    DDRB |= 1 << 7;
    DDRB |= 1 << 6;
@@ -45,11 +45,11 @@ int main() {
    }
 
    while(1) {
-      for(j=0;j<10; j++)
+      for(j=0;j<80; j++)
          for(i=0;i<CLK; i++);
 
-      duty++;
-      if( duty >= 100 ) duty = 0;
+      duty += 10;
+      if( duty > 100 ) duty = 0;
 
       pwm_set_duty(PWM12, ((float)duty) / 100.0);
    }
