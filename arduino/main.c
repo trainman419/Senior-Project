@@ -20,29 +20,9 @@ int main() {
    DDRB |= 1 << 7;
    DDRB |= 1 << 6;
 
-   uint8_t init = pwm_init(PWM12); // LED pwm
-   uint8_t freq = pwm_set_freq(1, 200);
-   uint8_t d = pwm_set_duty(PWM12, 0.5);
-
-   // check for errors and flash the LED
-   if( init || freq || d ) {
-      uint8_t f = 8;
-      if( d ) f = 4;
-      if( freq ) f = 2;
-      if( init ) f = 1;
-
-      while(1) {
-         for(j=0;j<f; j++)
-            for(i=0;i<1600; i++);
-
-         PORTB &= ~(1 << 7);
-
-         for(j=0;j<f; j++)
-            for(i=0;i<1600; i++);
-
-         PORTB |= 1 << 7;
-      }
-   }
+   pwm_init(PWM12); // LED pwm
+   pwm_set_freq(1, 200);
+   pwm_set_duty(PWM12, 0.5);
 
    while(1) {
       for(j=0;j<80; j++)
