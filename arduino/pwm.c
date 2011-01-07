@@ -144,8 +144,9 @@ void pwm_off(uint8_t timer) {
  * store precentage so that we can maintain duty cycle when changing
  *   frequency?
  */
-float pwm_duty[15] = {
+float pwm_duty[18] = {
    0.0, 0.0, 0.0, 
+   0.0, 0.0, 0.0,
    0.0, 0.0, 0.0,
    0.0, 0.0, 0.0,
    0.0, 0.0, 0.0,

@@ -13,14 +13,19 @@
 // maybe increase size since the atmega2560 has more memory?
 
 /* recieve circular fifo (10 bytes total 20% overhead) */
-uint8_t rx_head[] = {0, 0, 0, 0}; /* points to next writeable byte */
-volatile uint8_t rx_size[] = {0, 0, 0, 0}; /* number of byts in buffer */
+uint8_t rx_head[4]; /* points to next writeable byte */
+volatile uint8_t rx_size[4]; /* number of byts in buffer */
 uint8_t rx_buf[4][8];
 
 /* send circular fifo (10 bytes total, 20% overhead) */
-uint8_t tx_head[] = {0, 0, 0, 0}; /* next writeable byte */
-volatile uint8_t tx_size[] = {0, 0, 0, 0}; /* number of bytes in buffer */
+uint8_t tx_head[4]; /* next writeable byte */
+volatile uint8_t tx_size[4]; /* number of bytes in buffer */
 uint8_t tx_buf[4][8];
+
+volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
+#define A 0
+#define B 1
+#define C 2
 
 /* recieve interrupt 0 */
 ISR(USART0_RX_vect) /* receive complete */
@@ -52,10 +57,13 @@ ISR(USART2_RX_vect) /* receive complete */
 /* recieve interrupt 3 */
 ISR(USART3_RX_vect) /* receive complete */
 {
+   //cli();
    /* read into fifo, allow overruns for now. */
-   rx_buf[3][rx_head[3]++] = UDR3;
+   rx_buf[3][rx_head[3]] = UDR3;
+   rx_head[3]++;
    rx_head[3] &= 7;
    rx_size[3]++;
+   //sei();
 }
 
 /* determine if there is data in the rx buffer */
@@ -65,8 +73,15 @@ uint8_t rx_ready(uint8_t port) {
 
 /* get a byte from recieve buffer. block until data recieved */
 uint8_t rx_byte(uint8_t port) {
-   while (!rx_size[port]);
-   return rx_buf[port][(rx_head[port] - rx_size[port]--) & 7];
+   while(!rx_size[port]);
+
+   ucsr[port][B] &= ~(1 << 7); /* disable receive interrupt */
+
+   uint8_t res = rx_buf[port][(rx_head[port] - rx_size[port]) & 7];
+   rx_size[port]--;
+
+   ucsr[port][B] |= (1 << 7); /* enable receive interrupt */
+   return res;
 }
 
 /* transmit interrupt 0 */
@@ -114,11 +129,6 @@ uint8_t tx_ready(uint8_t port) {
    return tx_size[port] < 8;
 }
 
-volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
-#define A 0
-#define B 1
-#define C 2
-
 /* put a byte in the transmit buffer. block until space available */
 void tx_byte(uint8_t port, uint8_t b) {
    while (tx_size[port] > 7);
@@ -149,9 +159,6 @@ void serial_init(uint8_t port)
       /* enable input pin pull-up */
    rxtx[port][1] &= ~(1 << rxbit[port]);
 
-   /* tx pin setup: set pin as output */
-   rxtx[port][0] |= (1 << (rxbit[port]+1));
-
 	/* USART init code */
    ucsr[port][B] = 0x18; /* RX and TX enable, interrupts */
 	ucsr[port][C] = 0x8E; /* no parity, 1 stop, 8bit */
@@ -173,9 +180,18 @@ void serial_init(uint8_t port)
    ucsr[port][B] |= (1 << 7);
 }
 
-void serial_baud(uint8_t port, uint16_t baud) {
-   uint32_t ubr = 1000000;
-   ubr /= baud;
+void serial_baud(uint8_t port, uint32_t baud) {
+   uint32_t ubr = 10000000; // ubr is 10x input clock
+   ubr /= baud; // divide by baud rate
+   // ubr is now 10x target value
+
+   // add 5 (0.5) and divide by 10 to round properly
+   ubr += 5; 
+   ubr /= 10;
+
+   // final subtraction
+   ubr--;
+   //ubr--;
    // FIXME: deal with baud rates that are too high here
    *ubrr[port] = ubr;
 }

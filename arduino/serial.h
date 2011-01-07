@@ -13,6 +13,9 @@
 /* setup and enable serial interrupts */
 void serial_init(uint8_t port);
 
+/* set serial baud rate */
+void serial_baud(uint8_t port, uint32_t baud);
+
 /* stops the serial interrupts */
 void serial_stop(uint8_t port);
 

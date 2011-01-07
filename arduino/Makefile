@@ -16,7 +16,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o
+main.elf: main.o pwm.o motor.o serial.o power.o
 
 download: $(TRG).hex
 	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
