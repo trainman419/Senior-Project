@@ -27,6 +27,11 @@ int main() {
    pwm_init(PWM13);
    pwm_set_freq(1, 200);
    pwm_set_duty(PWM13, 0.5);
+
+   // serial port 1: bluetooth
+   serial_init(1);
+   // set baud rate: 57.6k baud
+   serial_baud(1,57600);
    
    while(1) {
       for(j=0;j<80; j++)
@@ -39,9 +44,10 @@ int main() {
 
       if( dir ) speed += 10;
       else speed -= 10;
-      if( speed == 100 ) dir = 0;
-      if( speed == -100 ) dir = 1;
+      if( speed == 50 ) dir = 0;
+      if( speed == -50 ) dir = 1;
       motor_speed(speed);
+
    }
 
    // loop forever instead of exiting

@@ -46,7 +46,14 @@ void motor_speed(int8_t speed) {
       // clear dir
       PORTL &= ~(1 << 4);
    }
+
+   PORTL |= (1 << 5);
    pwm_set_duty(PWM16, duty);
+}
+
+/* coast the motor */
+void motor_coast() {
+   PORTL &= ~(1 << 5);
 }
 
 /* get the status flags from the motor driver */

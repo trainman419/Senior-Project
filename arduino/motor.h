@@ -15,6 +15,9 @@ void motor_init();
 /* set the motor speed */
 void motor_speed(int8_t speed);
 
+/* coast the motor */
+void motor_coast();
+
 /* get the status flags from the motor driver */
 uint8_t motor_flags();
 

@@ -3,6 +3,9 @@
    Author: Austin Hendrix
 */
 
+#ifndef PWM_H
+#define PWM_H
+
 uint8_t pwm_init(uint8_t pin);
 void pwm_off(uint8_t timer);
 uint8_t pwm_set_duty(uint8_t pin, float duty);
@@ -24,3 +27,5 @@ uint8_t pwm_set_freq(uint8_t timer, uint16_t freq);
 #define PWM14 0x50
 #define PWM15 0x51
 #define PWM16 0x52
+
+#endif
