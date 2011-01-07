@@ -1,5 +1,4 @@
 main.hex
 main.elf
-main.o
-pwm.o
+*.o
 Makefile.device

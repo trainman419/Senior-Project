@@ -67,7 +67,7 @@ volatile uint8_t * tccr_base[] = {
 
 inline uint8_t check_pin(uint8_t pin) {
    uint8_t timer = (pin & 0xF0) >> 4;
-   uint8_t oc = (pin & 0x0F) - 0x0A; // TODO: eliminate this subtration by re-writing the table
+   uint8_t oc = (pin & 0x0F);
 
    if( timer >= sizeof(timer_base) ) {
       return 1;
@@ -94,7 +94,7 @@ uint8_t pwm_init(uint8_t pin) {
    uint8_t sreg;
 
    uint8_t timer = (pin & 0xF0) >> 4;
-   uint8_t oc = (pin & 0x0F) - 0x0A; // TODO: eliminate this subtration by re-writing the table
+   uint8_t oc = (pin & 0x0F);
 
    uint8_t ck = check_pin(pin);
    if( ck ) return ck;
@@ -154,7 +154,7 @@ float pwm_duty[15] = {
 
 uint8_t pwm_set_duty(uint8_t pin, float duty) {
    uint8_t timer = (pin & 0xF0) >> 4;
-   uint8_t oc = (pin & 0x0F) - 0x0A; // TODO: remove subtraction
+   uint8_t oc = 2 - (pin & 0x0F);
 
    uint8_t ck = check_pin(pin);
    if( ck ) return ck;

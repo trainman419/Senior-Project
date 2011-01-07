@@ -1,6 +1,6 @@
 DEVICE=atmega2560
 CFLAGS=-mmcu=$(DEVICE) -Wall -Werror
-LDFLAGS=-mmcu=$(DEVICE)
+LDFLAGS=-mmcu=$(DEVICE) -lm
 
 CC=avr-gcc 
 CPP=avr-gcc -E
@@ -16,7 +16,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o
+main.elf: main.o pwm.o motor.o
 
 download: $(TRG).hex
 	avrdude -pm2560 -P${COM} -cstk500 -u -U flash:w:$(TRG).hex
