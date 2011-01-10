@@ -1,4 +1,4 @@
-/* power.h
+/* power.c
  *
  * Robot power management functions, including:
  *  5V main regulator enable/disable
@@ -10,6 +10,7 @@
 
 #include <avr/io.h>
 #include "power.h"
+#include "adc.h"
 
 /* enable 5V regulator */
 void pwr_on() {
@@ -32,8 +33,34 @@ void pwr_off() {
    PORTL |= (1 << 1);
 }
 
+/* initialize ADCs for reading battries */
+void battery_init() {
+   adc_init();
+}
+
 /* read charge of electronics battery. roughly 0-100 */
-uint8_t main_battery(); // TODO: implement this
+/*
+ * Measurement notes:
+ *    9.2V: 134
+ *    9.15V: 133
+ *    9.1V: 132
+ */
+uint8_t main_battery() {
+   // TODO: implement this properly
+   uint16_t adc = adc_read(7);
+   return adc >> 2;
+}
 
 /* read charge of motor battery. roughly 0-100 */
-uint8_t motor_battery(); // TODO: implement this
+/*
+ * Measurement notes:
+ *    9.4V: 149
+ *    0.5V: 025
+ */
+uint8_t motor_battery(){
+   // TODO: implement this properly
+   // this is likely to share A LOT of code with main_battery()
+   uint16_t adc = adc_read(15);
+
+   return adc >> 2;
+}

@@ -20,6 +20,9 @@ void pwr_sleep();
 /* full system shutdown. there is no going back! */
 void pwr_off();
 
+/* initialize ADCs for reading battries */
+void battery_init();
+
 /* read charge of electronics battery. roughly 0-100 */
 uint8_t main_battery();
 

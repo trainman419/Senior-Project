@@ -12,6 +12,7 @@
 #include "motor.h"
 #include "serial.h"
 #include "power.h"
+#include "servo.h"
 
 #define CLK 16000
 
@@ -28,6 +29,34 @@ void tx_string(uint8_t port, char * s) {
    }
 }
 
+void tx_batteries() {
+   uint8_t mainb, motor;
+   mainb = main_battery();
+   motor = motor_battery();
+   // output format:
+   // Main  XXX
+   // Motor XXX
+   // 11 characters per line
+   //
+   // I'm kinda assuming that format[] will be an immutable buffer in flash
+   char format[] = "Main  XXX\r\nMotor XXX\r\n";
+   char output[24]; // a few spares, just in case
+   uint8_t i;
+   for( i=0; format[i]; i++ )
+      output[i] = format[i];
+   output[i] = 0;
+
+   output[6] = (mainb/100) + '0';
+   output[7] = ((mainb/10) % 10) + '0';
+   output[8] = (mainb % 10) + '0';
+
+   output[17] = (motor/100) + '0';
+   output[18] = ((motor/10) % 10) + '0';
+   output[19] = (motor % 10) + '0';
+
+   tx_string(BT, output);
+}
+
 /* read serial port, parse data, send results */
 uint8_t handle_bluetooth() {
    uint8_t res = 0;
@@ -35,13 +64,11 @@ uint8_t handle_bluetooth() {
       uint8_t bt = rx_byte(BT);
       switch(bt) {
          case 'a':
-         case 'A':
             res = 1;
             steer -= 10;
             tx_string(BT, "left\r\n");
             break;
          case 'd':
-         case 'D':
             res = 1;
             steer += 10;
             tx_string(BT, "right\r\n");
@@ -59,6 +86,7 @@ uint8_t handle_bluetooth() {
          case ' ':
             res = 1;
             speed = 0;
+            steer = 0;
             tx_string(BT, "stop\r\n");
             break;
       }
@@ -77,6 +105,8 @@ uint8_t handle_bluetooth() {
       tx_byte(BT, '0' + (tmp%10));
       tx_byte(BT, '\r');
       tx_byte(BT, '\n');
+
+      tx_batteries();
    }
    return res;
 }
@@ -85,6 +115,14 @@ int main() {
 
    DDRB |= 1 << 7;
    motor_init();
+
+   servo_init();
+   DDRC |= (1 << 1);
+   servo_map(0, &PORTC, 1);
+
+   servo_set(0, 127);
+
+   battery_init();
 
    // LED pwm setup
    /*pwm_init(PWM13);
@@ -105,6 +143,7 @@ int main() {
          PORTB |= (1 << 7);
          motor_speed(speed); // this take 30-400 uS
          PORTB &= ~(1 << 7);
+         servo_set(0, 127 + steer);
       }
    }
 
