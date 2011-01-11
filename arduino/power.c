@@ -44,6 +44,15 @@ void battery_init() {
  *    9.2V: 134
  *    9.15V: 133
  *    9.1V: 132
+ *    8.95V: 130
+ *    8.90V: 129
+ *    8.85V: 128
+ *    8.77V: 127
+ *    8.70V: 126
+ *    8.60V: 124
+ *    7.05V: 099 (still stable; not heavily tested)
+ *
+ * Run-time test: 2.5 hours!
  */
 uint8_t main_battery() {
    // TODO: implement this properly

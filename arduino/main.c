@@ -16,6 +16,7 @@
 
 #define CLK 16000
 
+#define BRAIN 0
 #define BT 3
 
 int8_t speed;
@@ -29,7 +30,7 @@ void tx_string(uint8_t port, char * s) {
    }
 }
 
-void tx_batteries() {
+void tx_batteries(uint8_t port) {
    uint8_t mainb, motor;
    mainb = main_battery();
    motor = motor_battery();
@@ -54,40 +55,40 @@ void tx_batteries() {
    output[18] = ((motor/10) % 10) + '0';
    output[19] = (motor % 10) + '0';
 
-   tx_string(BT, output);
+   tx_string(port, output);
 }
 
 /* read serial port, parse data, send results */
-uint8_t handle_bluetooth() {
+uint8_t handle_bluetooth(uint8_t port) {
    uint8_t res = 0;
-   if( rx_ready(BT) ) {
-      uint8_t bt = rx_byte(BT);
+   if( rx_ready(port) ) {
+      uint8_t bt = rx_byte(port);
       switch(bt) {
          case 'a':
             res = 1;
             steer -= 10;
-            tx_string(BT, "left\r\n");
+            tx_string(port, "left\r\n");
             break;
          case 'd':
             res = 1;
             steer += 10;
-            tx_string(BT, "right\r\n");
+            tx_string(port, "right\r\n");
             break;
          case 'w':
             res = 1;
             speed += 5;
-            tx_string(BT, "faster\r\n");
+            tx_string(port, "faster\r\n");
             break;
          case 's':
             res = 1;
             speed -= 5;
-            tx_string(BT, "slower\r\n");
+            tx_string(port, "slower\r\n");
             break;
          case ' ':
             res = 1;
             speed = 0;
             steer = 0;
-            tx_string(BT, "stop\r\n");
+            tx_string(port, "stop\r\n");
             break;
       }
       if( speed > 50 ) speed = 50;
@@ -97,16 +98,16 @@ uint8_t handle_bluetooth() {
 
       int8_t tmp = speed;
       if(speed < 0) {
-         tx_byte(BT, '-');
+         tx_byte(port, '-');
          tmp = -speed;
       }
-      tx_byte(BT, '0' + (tmp/100));
-      tx_byte(BT, '0' + ((tmp/10)%10));
-      tx_byte(BT, '0' + (tmp%10));
-      tx_byte(BT, '\r');
-      tx_byte(BT, '\n');
+      tx_byte(port, '0' + (tmp/100));
+      tx_byte(port, '0' + ((tmp/10)%10));
+      tx_byte(port, '0' + (tmp%10));
+      tx_byte(port, '\r');
+      tx_byte(port, '\n');
 
-      tx_batteries();
+      tx_batteries(port);
    }
    return res;
 }
@@ -130,16 +131,29 @@ int main() {
    pwm_set_duty(PWM13, 0.5);*/
 
    // serial port 3: bluetooth
-   serial_init(3);
+   serial_init(BT);
    // set baud rate: 115.2k baud
-   serial_baud(3,115200);
+   serial_baud(BT,115200);
+
+   // serial port 0: brain
+   serial_init(BRAIN);
+   serial_baud(BRAIN, 115200);
+
+
    sei(); // enable interrupts
+
 
    // power up!
    pwr_on();
    
    while(1) {
-      if( handle_bluetooth() ) {
+      if( handle_bluetooth(BRAIN) ) {
+         PORTB |= (1 << 7);
+         motor_speed(speed); // this take 30-400 uS
+         PORTB &= ~(1 << 7);
+         servo_set(0, 127 + steer);
+      }
+      if( handle_bluetooth(BT) ) {
          PORTB |= (1 << 7);
          motor_speed(speed); // this take 30-400 uS
          PORTB &= ~(1 << 7);
