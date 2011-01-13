@@ -50,6 +50,7 @@ void battery_init() {
  *    8.77V: 127
  *    8.70V: 126
  *    8.60V: 124
+ *    7.68V: 110
  *    7.05V: 099 (still stable; not heavily tested)
  *
  * Run-time test: 2.5 hours!
