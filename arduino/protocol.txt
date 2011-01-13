@@ -1,0 +1,43 @@
+This document describes the serial protocols that the robot uses to communicate, both over bluetooth and over the serial link from the arduino to the main board.
+Ideally, most packets will be enterable by hand. At the very least, the shell
+should be reachable with hand-typed packets.
+
+General formats:
+<ID> <EOT>
+<ID> <len> <data ... > <EOT>
+
+Message types:
+
+Data from Robot:
+Sonar data
+GPS data (not sure if this is raw NMEA or parsed...)
+Bump sensor data
+Odometry count readings
+Speed readings
+Wheel slip notification?
+Battery level readings
+Reflex Settings
+Hardware sleep/wake status
+
+Data to Robot:
+Motor Command
+Steering Command
+Reflex enable/disable/query
+Power down (timed)
+Hardware sleep/wake
+
+Data through:
+Laser Scanner data through.
+Commands through
+Direct shell access mode: bluetooth -> shell
+
+Arduino shell mode; over bluetooth and serial.
+
+
+A few thoughts on reflexes:
+Reflexes are generally designed to save the robot from damage or prevent it
+from damaging something else. They should be very simple, reactive
+percept-to-action mappings that are implemented in firmware, quickly and
+without processor intervention. Since sensors can fail, get stuck, or if the
+robot is simply in a situation where it expects that reading, it should be
+able to disable certain reflexes if necessary.
