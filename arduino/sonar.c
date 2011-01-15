@@ -7,9 +7,9 @@
 #include <avr/io.h>
 #include "serial.h"
 
-#define NUMSONARS 5;
+#define NUM_SONARS 5
 uint8_t sonar_port;
-uint8_t sonar_value[NUMSONARS];
+uint8_t sonar_value[NUM_SONARS];
 
 /* initalize sonar driver */
 void sonar_init(uint8_t port) {
@@ -25,7 +25,7 @@ void sonar_init(uint8_t port) {
 
 /* get the value of a sonar. return zero for non-existent sonars */
 uint8_t get_sonar(uint8_t sonar) {
-   if( sonar < NUMSONARS ) {
+   if( sonar < NUM_SONARS ) {
       return sonar_value[sonar];
    }
    return 0;
