@@ -3,6 +3,8 @@
  * Serial routines for ATmega32
  * Modified to support the multiple UARTS of the Atmega2560
  *
+ * TODO: modify to add separate TX and RX init functions
+ *
  * Author: Austin Hendrix
 */
 
