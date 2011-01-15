@@ -2,9 +2,13 @@ This document describes the serial protocols that the robot uses to communicate,
 Ideally, most packets will be enterable by hand. At the very least, the shell
 should be reachable with hand-typed packets.
 
+Escape sequence: since packets are terminated by a specific character, should there be an escape sequence if we want to include that character in messages? We will need to escape it if shows up as the packet length (or maybe the packet type defines that?)
+
+Acknowledgements? Serial links should be pretty reliable; do we really need acknoledgements?
+
 General formats:
-<ID> <EOT>
-<ID> <len> <data ... > <EOT>
+<ID> <\n>
+<ID> <len> <data ... > <\n>
 
 Message types:
 
