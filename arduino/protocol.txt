@@ -6,6 +6,12 @@ Escape sequence: since packets are terminated by a specific character, should th
 
 Acknowledgements? Serial links should be pretty reliable; do we really need acknoledgements?
 
+Laser scan bandwidth notes:
+the scanner outputs 512-float scans at a rate of 10Hz. A float is 4 bytes.
+Total bandwidth: 20480 bytes/sec = 163840 bits/sec
+This is more bandwidth than is available on the bluetooth link, but not by a
+lot. If we cut it down a little, we should be able to deal with it.
+
 General formats:
 <ID> <\n>
 <ID> <len> <data ... > <\n>
