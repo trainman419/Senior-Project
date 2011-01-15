@@ -1,0 +1,19 @@
+<package>
+  <description brief="laser_view">
+
+     laser_view
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/laser_view</url>
+
+  <depend package="std_msgs"/>
+  <depend package="rospy"/>
+  <depend package="sensor_msgs"/>
+  <rosdep name="pygame"/>
+
+</package>
+
+
