@@ -11,6 +11,11 @@ the scanner outputs 512-float scans at a rate of 10Hz. A float is 4 bytes.
 Total bandwidth: 20480 bytes/sec = 163840 bits/sec
 This is more bandwidth than is available on the bluetooth link, but not by a
 lot. If we cut it down a little, we should be able to deal with it.
+Possible values for laser data are realistically in the range from 0-5 meters, 
+with an accuracy of about 1cm. If we're willing to lose half of our accuracy, it's easy to represent this in a byte b = d * 50; each increment of b will be 2cm
+We will probably need to break laser messages into parts to get proper response times from the system; ie give other processes a chance to communicate more frequently than 10x/sec
+
+GPS data rate: about 480 bytes/second = 3840 bits/sec
 
 General formats:
 <ID> <\n>
@@ -19,15 +24,16 @@ General formats:
 Message types:
 
 Data from Robot:
-Sonar data
-GPS data (not sure if this is raw NMEA or parsed...)
-Bump sensor data
-Odometry count readings
-Speed readings
+ID:   Description
+S     Sonar data
+G     GPS data (not sure if this is raw NMEA or parsed...)
+B     Bump sensor data
+O     Odometry count readings
+s     Speed readings
 Wheel slip notification?
-Battery level readings
-Reflex Settings
-Hardware sleep/wake status
+b     Battery level readings
+R     Reflex Settings
+H     Hardware sleep/wake status
 
 Data to Robot:
 Motor Command
