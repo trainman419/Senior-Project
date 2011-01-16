@@ -150,36 +150,50 @@ uint8_t rxbit[] = {0, 2, 0, 0};
 
 volatile uint16_t * ubrr[] = {&UBRR0, &UBRR1, &UBRR2, &UBRR3};
 
+/* initialize serial tx */
+void serial_init_tx(uint8_t port) {
+	ucsr[port][C] = 0x8E; /* no parity, 1 stop, 8bit */
+
+   *ubrr[port] = 0x67; /* serial divisor 9600 baud */
+
+	/* USART init code */
+   ucsr[port][B] |= 0x08; /* RX and TX enable, interrupts */
+
+   /* buffer init */
+   tx_head[port] = 0;
+   tx_size[port] = 0;
+}
+
+/* initialize serial rx */
+void serial_init_rx(uint8_t port) {
+   /* rx pin setup */
+   /* set pin input */
+   rxtx[port][0] &= ~(1 << rxbit[port]);
+   /* enable input pin pull-up */
+   rxtx[port][1] &= ~(1 << rxbit[port]);
+
+	ucsr[port][C] = 0x8E; /* no parity, 1 stop, 8bit */
+
+   *ubrr[port] = 0x67; /* serial divisor 9600 baud */
+
+	/* USART init code */
+   ucsr[port][B] |= 0x10; /* RX and TX enable, interrupts */
+
+   /* buffer init */
+   rx_head[port] = 0;
+   rx_size[port] = 0;
+
+	/* set the USART_RXC interrupt enable bit */
+   ucsr[port][B] |= (1 << 7);
+}
+
 /* setup and enable serial interrupts */
 void serial_init(uint8_t port)
 {
    serial_stop(port);
 
-   /* rx pin setup */
-      /* set pin input */
-   rxtx[port][0] &= ~(1 << rxbit[port]);
-      /* enable input pin pull-up */
-   rxtx[port][1] &= ~(1 << rxbit[port]);
-
-	/* USART init code */
-   ucsr[port][B] = 0x18; /* RX and TX enable, interrupts */
-	ucsr[port][C] = 0x8E; /* no parity, 1 stop, 8bit */
-
-   // TODO: abstract this out
-	//UBRRH = 0x00; /* high byte, serial divisor */
-   //UBRRL = 0x67; /* low byte, serial divisor. 9600 baud */
-   //UBRRL = 0x63; /* low byte, serial divisor. 10000 baud */
-   *ubrr[port] = 0x67; /* serial divisor 9600 baud */
-
-   /* buffer init */
-   tx_head[port] = 0;
-   tx_size[port] = 0;
-   rx_head[port] = 0;
-   rx_size[port] = 0;
-   
-
-	/* set the USART_RXC interrupt enable bit */
-   ucsr[port][B] |= (1 << 7);
+   serial_init_rx(port);
+   serial_init_tx(port);
 }
 
 void serial_baud(uint8_t port, uint32_t baud) {
