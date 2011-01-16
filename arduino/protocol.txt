@@ -4,7 +4,7 @@ should be reachable with hand-typed packets.
 
 Escape sequence: since packets are terminated by a specific character, should there be an escape sequence if we want to include that character in messages? We will need to escape it if shows up as the packet length (or maybe the packet type defines that?)
 
-Acknowledgements? Serial links should be pretty reliable; do we really need acknoledgements?
+Acknowledgements? Serial links should be pretty reliable; do we really need acknoledgements? NO: just resend data/updates frequently enough; a fast update rate will be just as good and faster than retransmits, and won't waste bandwidth.
 
 Laser scan bandwidth notes:
 the scanner outputs 512-float scans at a rate of 10Hz. A float is 4 bytes.
@@ -19,7 +19,10 @@ GPS data rate: about 480 bytes/second = 3840 bits/sec
 
 General formats:
 <ID> <\n>
-<ID> <len> <data ... > <\n>
+<ID> <data ... > <checksum> <\n>
+
+checksum: xor of ID and every data byte
+packet types are fixed-length for most types; no need to encode packet length
 
 Message types:
 
@@ -29,26 +32,28 @@ S     Sonar data
 G     GPS data (not sure if this is raw NMEA or parsed...)
 B     Bump sensor data
 O     Odometry count readings
-s     Speed readings
-Wheel slip notification?
+O     Speed readings
+W     Wheel slip notification?
 b     Battery level readings
 R     Reflex Settings
 H     Hardware sleep/wake status
 
 Data to Robot:
-Motor Command
-Steering Command
-Reflex enable/disable/query
-Power down (timed)
-Hardware sleep/wake
+M     Motor Command
+S     Steering Command
+R     Reflex enable/disable/query
+P     Power down (timed)
+P     Hardware sleep/wake
 
 Data through:
-Laser Scanner data through.
-Commands through
-Direct shell access mode: bluetooth -> shell
+L     Laser Scanner data through.
+C     Commands through
 
+Shell access modes:
+Direct shell access mode: bluetooth -> shell
 Arduino shell mode; over bluetooth and serial.
 
+shell modes supress all normal protocol parsing and I/O
 
 A few thoughts on reflexes:
 Reflexes are generally designed to save the robot from damage or prevent it
