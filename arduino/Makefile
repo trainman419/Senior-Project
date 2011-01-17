@@ -11,6 +11,8 @@ LD=avr-gcc
 
 # include implicit rules for arduino
 include Makefile.implicit
+
+# include computer-specific file defining programmer port
 include Makefile.device
 
 TRG=main
@@ -21,4 +23,4 @@ main.elf: main.o pwm.o motor.o serial.o power.o adc.o system.o servo.o gps.o son
 
 download: $(TRG).hex
 	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
-# I'm a little worried that I don't need to specify a baud rate, but it works
+#  no need to specify baud rate with new Arduio UNO/Mega 2560 programmer
