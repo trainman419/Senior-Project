@@ -13,6 +13,7 @@
 #include "serial.h"
 #include "power.h"
 #include "servo.h"
+#include "system.h"
 
 #define CLK 16000
 
@@ -32,7 +33,7 @@ void tx_string(uint8_t port, char * s) {
    }
 }
 
-void tx_batteries(uint8_t port) {
+/*void tx_batteries(uint8_t port) {
    uint8_t mainb, motor;
    mainb = main_battery();
    motor = motor_battery();
@@ -58,7 +59,7 @@ void tx_batteries(uint8_t port) {
    output[19] = (motor % 10) + '0';
 
    tx_string(port, output);
-}
+}*/
 
 /* read serial port, parse data, send results */
 uint8_t handle_bluetooth(uint8_t port) {
@@ -109,24 +110,27 @@ uint8_t handle_bluetooth(uint8_t port) {
       tx_byte(port, '\r');
       tx_byte(port, '\n');
 
-      tx_batteries(port);
+      //tx_batteries(port);
    }
    return res;
 }
 
 int main() {
 
+
    DDRB |= 1 << 7;
    motor_init();
 
    servo_init();
    DDRC |= (1 << 1);
-   servo_map(0, &PORTC, 1);
+   //servo_map(0, &PORTC, 1);
 
    servo_set(0, 127);
-
    battery_init();
 
+   system_init();
+
+   sei(); // enable interrupts
    // LED pwm setup
    /*pwm_init(PWM13);
    pwm_set_freq(1, 200);
@@ -146,17 +150,14 @@ int main() {
    DDRH |= (1 << 1);
    PORTH &= ~(1 << 1);
 
-   sei(); // enable interrupts
-
-
    // power up!
    pwr_on();
    
    while(1) {
       if( handle_bluetooth(BRAIN) ) {
-         PORTB |= (1 << 7);
+         //PORTB |= (1 << 7);
          motor_speed(speed); // this take 30-400 uS
-         PORTB &= ~(1 << 7);
+         //PORTB &= ~(1 << 7);
          servo_set(0, 127 + steer);
       }
       /*if( handle_bluetooth(BT) ) {

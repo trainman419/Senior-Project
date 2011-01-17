@@ -20,10 +20,12 @@ void pwr_on() {
 }
 
 /* disable 5V regulator */
+/* for now, don't call this. the regulator sinks current rather than turning off*/
 void pwr_sleep() {
    // arduino mega pin 37: PC0
-   DDRC |= 1;
-   PORTC &= ~1;
+   // FIXME: enable this when we figure out what's going on with the regulator
+   /*DDRC |= 1;
+   PORTC &= ~1;*/
 }
 
 /* full system shutdown. there is no going back! */
@@ -55,11 +57,11 @@ void battery_init() {
  *
  * Run-time test: 2.5 hours!
  */
-uint8_t main_battery() {
+/*uint8_t main_battery() {
    // TODO: implement this properly
    uint16_t adc = adc_read(7);
    return adc >> 2;
-}
+}*/
 
 /* read charge of motor battery. roughly 0-100 */
 /*
@@ -67,10 +69,10 @@ uint8_t main_battery() {
  *    9.4V: 149
  *    0.5V: 025
  */
-uint8_t motor_battery(){
+/*uint8_t motor_battery(){
    // TODO: implement this properly
    // this is likely to share A LOT of code with main_battery()
    uint16_t adc = adc_read(15);
 
    return adc >> 2;
-}
+}*/

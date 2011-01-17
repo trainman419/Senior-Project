@@ -59,13 +59,11 @@ ISR(USART2_RX_vect) /* receive complete */
 /* recieve interrupt 3 */
 ISR(USART3_RX_vect) /* receive complete */
 {
-   //cli();
    /* read into fifo, allow overruns for now. */
    rx_buf[3][rx_head[3]] = UDR3;
    rx_head[3]++;
    rx_head[3] &= 7;
    rx_size[3]++;
-   //sei();
 }
 
 /* determine if there is data in the rx buffer */
