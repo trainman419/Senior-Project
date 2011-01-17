@@ -39,8 +39,8 @@ R     Reflex Settings
 H     Hardware sleep/wake status
 
 Data to Robot:
-M     Motor Command
-S     Steering Command
+M <s> Motor Command
+S <s> Steering Command
 R     Reflex enable/disable/query
 P     Power down (timed)
 P     Hardware sleep/wake
@@ -62,3 +62,21 @@ percept-to-action mappings that are implemented in firmware, quickly and
 without processor intervention. Since sensors can fail, get stuck, or if the
 robot is simply in a situation where it expects that reading, it should be
 able to disable certain reflexes if necessary.
+
+
+Reflex byte format:
+
+bits:    description
+7:6      0: query
+         1: enable
+         2: disable
+
+5:0      reflex number
+
+
+Power control codes:
+
+0:       query system state
+1:       power enable
+2:       power disable
+3:       timed power down. 

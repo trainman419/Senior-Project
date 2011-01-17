@@ -18,6 +18,8 @@
 
 #define BRAIN 0
 #define BT 3
+#define GPS 2
+#define SONAR 1
 
 int8_t speed;
 int8_t steer;
@@ -139,6 +141,10 @@ int main() {
    serial_init(BRAIN);
    serial_baud(BRAIN, 115200);
 
+   serial_init_rx(GPS);
+   serial_baud(GPS, 4800);
+   DDRH |= (1 << 1);
+   PORTH &= ~(1 << 1);
 
    sei(); // enable interrupts
 
@@ -153,11 +159,14 @@ int main() {
          PORTB &= ~(1 << 7);
          servo_set(0, 127 + steer);
       }
-      if( handle_bluetooth(BT) ) {
+      /*if( handle_bluetooth(BT) ) {
          PORTB |= (1 << 7);
          motor_speed(speed); // this take 30-400 uS
          PORTB &= ~(1 << 7);
          servo_set(0, 127 + steer);
+      }*/
+      if( rx_ready(GPS) ) {
+         tx_byte(BT, rx_byte(GPS));
       }
    }
 
