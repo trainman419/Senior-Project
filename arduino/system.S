@@ -116,7 +116,8 @@ __vector_23:
    pop r31
 
 yeild:
-   sei  ; enable interrupts
+   ;sei  ; enable nested interrupts
+   sbi 0x05, 7 ; PORTB7; turn LED on
    ; push all of the process registers onto the stack
    push r0
    push r1
@@ -153,6 +154,7 @@ yeild:
 
    ; grab SREG and push it onto the stack too
    in r29, 0x3f ; SREG
+   push r29
 
    ; grab stack pointer at this point and store
    lds r31, current_pid
@@ -247,10 +249,11 @@ L4:
    ; restore stack pointer.
    ld r28, Z+  ; SPL from SRAM
    ld r29, Z+  ; SPH from SRAM
+
    cli ; disable interrupts before writing stack pointer
    out 0x3d, r28 ; SPL
    out 0x3e, r29 ; SPH
-   sei ; enable interrupts now that we're done writing the stack pointer
+   ;sei ; enable interrupts now that we're done writing the stack pointer
 
    pop r28 ; get SREG off stack
    out 0x3f, r28 ; set SREG
@@ -288,9 +291,10 @@ L4:
    pop r1
    pop r0
 
+   cbi 0x05, 7 ; PORTB7; turn LED off
+
    reti ; return and enable interrupts
-   ; TODO: update measured run-time
-   ; measured run-time of 
+   ; measured run-time of <15 uS (about 13.5uS)
 
 .global system_init
 system_init:
@@ -312,7 +316,7 @@ system_init:
    ;  scale by: 250 * 64 ( prescaler 011, page 133 )
    ; Final timer frequency of 1000 Hz
    ;   1.000mS per interrupt
-   ;    overhead of TODO: recalculate/measure overhead
+   ;    overhead of < 1.5% (interrupt time of 15uS/1000uS)
    ;
    cli ; disable interrupts for a little bit
 
@@ -324,7 +328,6 @@ system_init:
    ldi r30, 0b00001011
    out 0x25, r30
 
-
    ; TIMSK0 (TOIE0 = 1)
    ldi r30, 0b00000001
    sts 0x6E, r30 ; use STS instruction; see page 21
@@ -333,7 +336,6 @@ system_init:
    ldi r30, 249 ; (250 steps total)
    out 0x27, r30
 
-   sei ; don't forget to enable interrupts!
    ret
 
 .global system ; u08 system( void (*task)(void), u08 sched, u08 pri );
