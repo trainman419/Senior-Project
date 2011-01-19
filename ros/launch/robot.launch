@@ -1,0 +1,6 @@
+<launch>
+
+   <node pkg="hokuyo_node" name="hokuyo" type="hokuyo_node"/>
+   <node pkg="hardware_interface" name="hardware" type="hardware_interface"/>
+
+</launch>
