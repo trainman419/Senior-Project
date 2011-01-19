@@ -13,11 +13,14 @@
 #include "serial.h"
 #include "power.h"
 #include "servo.h"
+#include "system.h"
 
 #define CLK 16000
 
 #define BRAIN 0
 #define BT 3
+#define GPS 2
+#define SONAR 1
 
 int8_t speed;
 int8_t steer;
@@ -30,7 +33,7 @@ void tx_string(uint8_t port, char * s) {
    }
 }
 
-void tx_batteries(uint8_t port) {
+/*void tx_batteries(uint8_t port) {
    uint8_t mainb, motor;
    mainb = main_battery();
    motor = motor_battery();
@@ -56,7 +59,7 @@ void tx_batteries(uint8_t port) {
    output[19] = (motor % 10) + '0';
 
    tx_string(port, output);
-}
+}*/
 
 /* read serial port, parse data, send results */
 uint8_t handle_bluetooth(uint8_t port) {
@@ -107,24 +110,27 @@ uint8_t handle_bluetooth(uint8_t port) {
       tx_byte(port, '\r');
       tx_byte(port, '\n');
 
-      tx_batteries(port);
+      //tx_batteries(port);
    }
    return res;
 }
 
 int main() {
 
+
    DDRB |= 1 << 7;
    motor_init();
 
    servo_init();
    DDRC |= (1 << 1);
-   servo_map(0, &PORTC, 1);
+   //servo_map(0, &PORTC, 1);
 
    servo_set(0, 127);
-
    battery_init();
 
+   system_init();
+
+   sei(); // enable interrupts
    // LED pwm setup
    /*pwm_init(PWM13);
    pwm_set_freq(1, 200);
@@ -139,25 +145,29 @@ int main() {
    serial_init(BRAIN);
    serial_baud(BRAIN, 115200);
 
-
-   sei(); // enable interrupts
-
+   serial_init_rx(GPS);
+   serial_baud(GPS, 4800);
+   DDRH |= (1 << 1);
+   PORTH &= ~(1 << 1);
 
    // power up!
    pwr_on();
    
    while(1) {
       if( handle_bluetooth(BRAIN) ) {
-         PORTB |= (1 << 7);
+         //PORTB |= (1 << 7);
          motor_speed(speed); // this take 30-400 uS
-         PORTB &= ~(1 << 7);
+         //PORTB &= ~(1 << 7);
          servo_set(0, 127 + steer);
       }
-      if( handle_bluetooth(BT) ) {
+      /*if( handle_bluetooth(BT) ) {
          PORTB |= (1 << 7);
          motor_speed(speed); // this take 30-400 uS
          PORTB &= ~(1 << 7);
          servo_set(0, 127 + steer);
+      }*/
+      if( rx_ready(GPS) ) {
+         tx_byte(BT, rx_byte(GPS));
       }
    }
 

@@ -33,7 +33,7 @@ void adc_init() {
 uint8_t adc_lock = 0;
 
 /* read from the specified ADC channel */
-uint16_t adc_read(uint8_t channel) {
+/*uint16_t adc_read(uint8_t channel) {
    // with the given prescaler rate, a conversion will take 1664 clocks, or
    // about 0.1mS. SLOW!
    uint16_t res = 0;
@@ -76,4 +76,4 @@ uint16_t adc_read(uint8_t channel) {
    adc_lock = 0;
 
    return res;
-}
+}*/

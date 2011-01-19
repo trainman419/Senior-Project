@@ -14,13 +14,11 @@ extern char current_pid;
 extern char num_pids;
 
 struct pid_entry {
-   unsigned char r[32];
-   unsigned char sreg;
    unsigned char spl;
    unsigned char sph;
    unsigned char schedule;
-   unsigned char priority;
    unsigned char last;
+   unsigned char priority;
 };
 
 void schedule(unsigned char sched);

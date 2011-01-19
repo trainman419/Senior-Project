@@ -32,13 +32,15 @@ void servo_init() {
 volatile uint8_t * servo_port[8];
 uint8_t servo_pin[8];
 
+// a note: both of these interrupts should take about a dozen instructions 
+//  to execute, with all of the output hardcoding I've done
+
 // compare match interrupt
 ISR(TIMER1_COMPA_vect) {
    /*if( servo_port[0] )
       *servo_port[0] &= ~(1 << servo_pin[0]);
       */
    PORTC &= ~(1 << 1);
-   //PORTC ^= (1 << 1);
 }
 
 // overflow interrupt
