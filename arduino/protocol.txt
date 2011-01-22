@@ -17,9 +17,9 @@ We will probably need to break laser messages into parts to get proper response 
 
 GPS data rate: about 480 bytes/second = 3840 bits/sec
 
-General formats:
-<ID> <\n>
-<ID> <data ... > <checksum> <\n>
+General formats: (minicom sends \r on 'enter' or 'return')
+<ID> <\r>
+<ID> <data ... > <checksum> <\r>
 
 checksum: xor of ID and every data byte
 packet types are fixed-length for most types; no need to encode packet length
@@ -48,6 +48,7 @@ P     Hardware sleep/wake
 Data through:
 L     Laser Scanner data through.
 C     Commands through
+Z     Initiate shutdown
 
 Shell access modes:
 Direct shell access mode: bluetooth -> shell
