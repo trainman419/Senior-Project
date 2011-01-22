@@ -115,8 +115,23 @@ uint8_t handle_bluetooth(uint8_t port) {
    return res;
 }
 
-int main() {
+// too big to stick on the stack
+uint8_t laser_buffer[256];
 
+#define MODE_IDLE 0
+#define MODE_LASER 1
+#define MODE_POWER 2
+#define MODE_WAIT 255
+
+int main() {
+   uint16_t laser_index;
+   uint16_t laser_count;
+   
+   uint8_t brain_rx_mode;
+   uint8_t brain_tx_mode;
+
+   uint8_t bt_rx_mode;
+   uint8_t bt_tx_mode;
 
    DDRB |= 1 << 7;
    motor_init();
@@ -145,30 +160,105 @@ int main() {
    serial_init(BRAIN);
    serial_baud(BRAIN, 115200);
 
-   serial_init_rx(GPS);
+   // GPS initialization
+   /*serial_init_rx(GPS);
    serial_baud(GPS, 4800);
    DDRH |= (1 << 1);
-   PORTH &= ~(1 << 1);
+   PORTH &= ~(1 << 1);*/
 
    // power up!
    pwr_on();
+
+   laser_index = 0;
+   laser_count = 0;
+   brain_rx_mode = MODE_IDLE;
+   brain_tx_mode = MODE_IDLE;
+   bt_rx_mode = MODE_IDLE;
+   bt_tx_mode = MODE_IDLE;
+   //uint8_t input;
    
+   // main loop. Manage data flow between bluetooth and computer
    while(1) {
-      if( handle_bluetooth(BRAIN) ) {
-         //PORTB |= (1 << 7);
-         motor_speed(speed); // this take 30-400 uS
-         //PORTB &= ~(1 << 7);
-         servo_set(0, 127 + steer);
+
+      /*input = rx_byte(BRAIN);
+      tx_byte(BT,input);*/
+
+      // we're losing data no matter how we transfer it because the serial
+      //  driver is too slow; it can't handle 115200 in and out for 
+      //  extended periods
+
+      tx_byte(BT, 'L');
+      for( laser_index=0; laser_index < 256; laser_index++) {
+         tx_byte(BT, 64);
       }
-      /*if( handle_bluetooth(BT) ) {
-         PORTB |= (1 << 7);
-         motor_speed(speed); // this take 30-400 uS
-         PORTB &= ~(1 << 7);
-         servo_set(0, 127 + steer);
+      tx_byte(BT, '\r');
+
+      // receive data from the brain and process it
+      /*if( rx_ready(BRAIN) ) {
+         input = rx_byte(BRAIN);
+         // at this point, we expect two types of messages: laser and shutdown
+         switch(brain_rx_mode) {
+            case MODE_IDLE:
+               switch(input) {
+                  case 'L':
+                     brain_rx_mode = MODE_LASER;
+                     laser_index = 0;
+                     laser_count = 0;
+                     break;
+                  case 'P':
+                     brain_rx_mode = MODE_POWER;
+                     tx_string(BRAIN, "power\n\r");
+                     break;
+               }
+               break;
+            case MODE_LASER:
+               laser_buffer[laser_index++] = input;
+               laser_count++;
+               if( bt_tx_mode == MODE_IDLE ) {
+                  bt_tx_mode = MODE_LASER;
+                  tx_byte(BT, 'L');
+               }
+               if( bt_tx_mode == MODE_LASER ) {
+                  // FIXME: this will transmit buffered data out of order
+                  while( laser_index > 0 && tx_ready(BT) ) {
+                     laser_index--;
+                     tx_byte(BT, laser_buffer[laser_index]);
+                  }
+               }
+               if( laser_count == 256 && bt_tx_mode == MODE_LASER ) {
+                  tx_byte(BT, '\r');
+                  bt_tx_mode = MODE_IDLE;
+                  brain_rx_mode = MODE_WAIT;
+               }
+               break;
+            case MODE_POWER:
+               switch(input) {
+                  case '0':
+                     break;
+                  case '1':
+                     pwr_on();
+                     tx_string(BRAIN, "power on\n\r");
+                     break;
+                  case '2':
+                     pwr_sleep();
+                     tx_string(BRAIN, "power sleep\n\r");
+                     break;
+                  case '3':
+                     // TODO: work out shutdown timer and set it here
+                     break;
+               }
+               brain_rx_mode = MODE_WAIT;
+               break;
+            case MODE_WAIT:
+               if( input == '\n' || input == '\r' ) {
+                  brain_rx_mode = MODE_IDLE;
+                  tx_string(BRAIN, "ready\n\r");
+               }
+               break;
+         }
       }*/
-      if( rx_ready(GPS) ) {
-         tx_byte(BT, rx_byte(GPS));
-      }
+
+      // TODO: receive data from BT and process/pass it
    }
 
    // if we're here, we're done. power down.

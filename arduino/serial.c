@@ -14,15 +14,18 @@
 
 // maybe increase size since the atmega2560 has more memory?
 
+
 /* recieve circular fifo (10 bytes total 20% overhead) */
 uint8_t rx_head[4]; /* points to next writeable byte */
 volatile uint8_t rx_size[4]; /* number of byts in buffer */
-uint8_t rx_buf[4][8];
+uint8_t rx_buf[4][8] __attribute((aligned(8)));
+uint8_t * rx_ptr[4];
 
 /* send circular fifo (10 bytes total, 20% overhead) */
 uint8_t tx_head[4]; /* next writeable byte */
 volatile uint8_t tx_size[4]; /* number of bytes in buffer */
-uint8_t tx_buf[4][8];
+uint8_t tx_buf[4][8] __attribute__((aligned(8)));
+uint8_t * tx_ptr;
 
 volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
 #define A 0
@@ -33,9 +36,11 @@ volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
 ISR(USART0_RX_vect) /* receive complete */
 {
    /* read into fifo, allow overruns for now. */
-   rx_buf[0][rx_head[0]++] = UDR0;
-   rx_head[0] &= 7;
-   rx_size[0]++;
+   /*rx_buf[0][rx_head[0]++] = UDR0;
+   rx_head[0] &= 127;
+   rx_size[0]++;*/
+   *rx_ptr[0] = UDR0;
+   rx_ptr[0] = (uint8_t*)((uint16_t)(rx_ptr[0]+1) & (uint16_t)0xFFF8);
 }
 
 /* recieve interrupt 1 */
@@ -43,7 +48,7 @@ ISR(USART1_RX_vect) /* receive complete */
 {
    /* read into fifo, allow overruns for now. */
    rx_buf[1][rx_head[1]++] = UDR1;
-   rx_head[1] &= 7;
+   rx_head[1] &= 127;
    rx_size[1]++;
 }
 
@@ -52,7 +57,7 @@ ISR(USART2_RX_vect) /* receive complete */
 {
    /* read into fifo, allow overruns for now. */
    rx_buf[2][rx_head[2]++] = UDR2;
-   rx_head[2] &= 7;
+   rx_head[2] &= 127;
    rx_size[2]++;
 }
 
@@ -62,7 +67,7 @@ ISR(USART3_RX_vect) /* receive complete */
    /* read into fifo, allow overruns for now. */
    rx_buf[3][rx_head[3]] = UDR3;
    rx_head[3]++;
-   rx_head[3] &= 7;
+   rx_head[3] &= 127;
    rx_size[3]++;
 }
 
@@ -77,7 +82,7 @@ uint8_t rx_byte(uint8_t port) {
 
    ucsr[port][B] &= ~(1 << 7); /* disable receive interrupt */
 
-   uint8_t res = rx_buf[port][(rx_head[port] - rx_size[port]) & 7];
+   uint8_t res = rx_buf[port][(rx_head[port] - rx_size[port]) & 127];
    rx_size[port]--;
 
    ucsr[port][B] |= (1 << 7); /* enable receive interrupt */
@@ -88,7 +93,7 @@ uint8_t rx_byte(uint8_t port) {
 ISR(USART0_UDRE_vect) /* ready for more data to transmit */
 {
    if (tx_size[0]) {
-      UDR0 = tx_buf[0][(tx_head[0] - tx_size[0]--) & 7];
+      UDR0 = tx_buf[0][(tx_head[0] - tx_size[0]--) & 127];
    } else {
 	   UCSR0B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -98,7 +103,7 @@ ISR(USART0_UDRE_vect) /* ready for more data to transmit */
 ISR(USART1_UDRE_vect) /* ready for more data to transmit */
 {
    if (tx_size[1]) {
-      UDR1 = tx_buf[1][(tx_head[1] - tx_size[1]--) & 7];
+      UDR1 = tx_buf[1][(tx_head[1] - tx_size[1]--) & 127];
    } else {
 	   UCSR1B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -108,7 +113,7 @@ ISR(USART1_UDRE_vect) /* ready for more data to transmit */
 ISR(USART2_UDRE_vect) /* ready for more data to transmit */
 {
    if (tx_size[2]) {
-      UDR2 = tx_buf[2][(tx_head[2] - tx_size[2]--) & 7];
+      UDR2 = tx_buf[2][(tx_head[2] - tx_size[2]--) & 127];
    } else {
 	   UCSR2B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -118,7 +123,7 @@ ISR(USART2_UDRE_vect) /* ready for more data to transmit */
 ISR(USART3_UDRE_vect) /* ready for more data to transmit */
 {
    if (tx_size[3]) {
-      UDR3 = tx_buf[3][(tx_head[3] - tx_size[3]--) & 7];
+      UDR3 = tx_buf[3][(tx_head[3] - tx_size[3]--) & 127];
    } else {
 	   UCSR3B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -131,12 +136,12 @@ uint8_t tx_ready(uint8_t port) {
 
 /* put a byte in the transmit buffer. block until space available */
 void tx_byte(uint8_t port, uint8_t b) {
-   while (tx_size[port] > 7);
+   while (tx_size[port] > 127);
 
    /* messing with buffer pointers is not atomic; need locking here */
    ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (just enough locking) */
    tx_buf[port][tx_head[port]++] = b;
-   tx_head[port] &= 7;
+   tx_head[port] &= 127;
    tx_size[port]++;
    /* done messing with buffer pointers */
 

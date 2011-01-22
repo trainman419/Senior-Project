@@ -6,6 +6,8 @@
 ; original serial RX interrupt takes 61 cycles (including reti)
 ; original serial TX interrupt takes 68 cycles (including reti)
 
+; pointer version of RX interrupt takes 64 cycles
+
 .text
 
 rx_interrupt:
@@ -21,10 +23,10 @@ rx_interrupt:
    lds r31, (rx_ptr_head+1)
    lds r29, UDR0 
    st Z+, r29
-   andi r30, 0x7
+   andi r30, 0xF8
    sts rx_ptr_head, r30
    sts (rx_ptr_head+1), r31
-   ; body: 15 cycles
+   ; body: 13 cycles
 
    ; footer
    pop r30
@@ -35,7 +37,7 @@ rx_interrupt:
    ; footer: 9 cycles
 
    reti ; 5 cycles
-   ; total 9 + 9 + 15 + 5 = 38 cycles
+   ; total 9 + 9 + 13 + 5 = 36 cycles
    ; 40% faster
    
 tx_interrupt:
@@ -79,12 +81,14 @@ TX_1:
 .global tx_buffer
    .type tx_buffer, @object
    .size tx_buffer, 4*8
+   .balign 32
 tx_buffer:
    .skip 4*8
 
 .global rx_buffer
    .type rx_buffer, @object
    .size rx_buffer, 4*8
+   .align 8
 rx_buffer:
    .skip 4*8
 
