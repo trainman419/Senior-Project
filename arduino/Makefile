@@ -1,5 +1,5 @@
 DEVICE=atmega2560
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O3 -save-temps
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O3
 LDFLAGS=-mmcu=$(DEVICE) -lm
 ASFLAGS=-mmcu=$(DEVICE)
 
@@ -19,7 +19,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o new_serial.o power.o adc.o system.o servo.o gps.o sonar.o
+main.elf: main.o pwm.o motor.o serial.o power.o adc.o system.o servo.o gps.o sonar.o
 
 download: $(TRG).hex
 	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex

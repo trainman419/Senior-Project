@@ -35,12 +35,20 @@ volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
 /* recieve interrupt 0 */
 ISR(USART0_RX_vect) /* receive complete */
 {
+   cli();
    /* read into fifo, allow overruns for now. */
-   /*rx_buf[0][rx_head[0]++] = UDR0;
-   rx_head[0] &= 127;
-   rx_size[0]++;*/
-   *rx_ptr[0] = UDR0;
-   rx_ptr[0] = (uint8_t*)((uint16_t)(rx_ptr[0]+1) & (uint16_t)0xFFF8);
+   rx_buf[0][rx_head[0]++] = UDR0;
+   rx_head[0] &= 7;
+   rx_size[0]++;
+
+   /*if( UCSR0A & ((1 << DOR0) | (1 << FE0)) ) {
+      PORTB |= (1 << 7);
+   } else {
+      PORTB &= ~(1 << 7);
+   }*/
+   //*rx_ptr[0] = UDR0;
+   //rx_ptr[0] = (uint8_t*)((uint16_t)(rx_ptr[0]+1) & (uint16_t)0xFFF8);
+   sei();
 }
 
 /* recieve interrupt 1 */
@@ -48,7 +56,7 @@ ISR(USART1_RX_vect) /* receive complete */
 {
    /* read into fifo, allow overruns for now. */
    rx_buf[1][rx_head[1]++] = UDR1;
-   rx_head[1] &= 127;
+   rx_head[1] &= 7;
    rx_size[1]++;
 }
 
@@ -57,18 +65,20 @@ ISR(USART2_RX_vect) /* receive complete */
 {
    /* read into fifo, allow overruns for now. */
    rx_buf[2][rx_head[2]++] = UDR2;
-   rx_head[2] &= 127;
+   rx_head[2] &= 7;
    rx_size[2]++;
 }
 
 /* recieve interrupt 3 */
 ISR(USART3_RX_vect) /* receive complete */
 {
+   cli();
    /* read into fifo, allow overruns for now. */
    rx_buf[3][rx_head[3]] = UDR3;
    rx_head[3]++;
-   rx_head[3] &= 127;
+   rx_head[3] &= 7;
    rx_size[3]++;
+   sei();
 }
 
 /* determine if there is data in the rx buffer */
@@ -80,30 +90,34 @@ uint8_t rx_ready(uint8_t port) {
 uint8_t rx_byte(uint8_t port) {
    while(!rx_size[port]);
 
+   cli();
    ucsr[port][B] &= ~(1 << 7); /* disable receive interrupt */
 
-   uint8_t res = rx_buf[port][(rx_head[port] - rx_size[port]) & 127];
+   uint8_t res = rx_buf[port][(rx_head[port] - rx_size[port]) & 7];
    rx_size[port]--;
 
    ucsr[port][B] |= (1 << 7); /* enable receive interrupt */
+   sei();
    return res;
 }
 
 /* transmit interrupt 0 */
 ISR(USART0_UDRE_vect) /* ready for more data to transmit */
 {
+   cli();
    if (tx_size[0]) {
-      UDR0 = tx_buf[0][(tx_head[0] - tx_size[0]--) & 127];
+      UDR0 = tx_buf[0][(tx_head[0] - tx_size[0]--) & 7];
    } else {
 	   UCSR0B &= ~(1 << 5); /* disable send interrupt */
    }
+   sei();
 }
 
 /* transmit interrupt 1 */
 ISR(USART1_UDRE_vect) /* ready for more data to transmit */
 {
    if (tx_size[1]) {
-      UDR1 = tx_buf[1][(tx_head[1] - tx_size[1]--) & 127];
+      UDR1 = tx_buf[1][(tx_head[1] - tx_size[1]--) & 7];
    } else {
 	   UCSR1B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -113,7 +127,7 @@ ISR(USART1_UDRE_vect) /* ready for more data to transmit */
 ISR(USART2_UDRE_vect) /* ready for more data to transmit */
 {
    if (tx_size[2]) {
-      UDR2 = tx_buf[2][(tx_head[2] - tx_size[2]--) & 127];
+      UDR2 = tx_buf[2][(tx_head[2] - tx_size[2]--) & 7];
    } else {
 	   UCSR2B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -122,11 +136,13 @@ ISR(USART2_UDRE_vect) /* ready for more data to transmit */
 /* transmit interrupt 3 */
 ISR(USART3_UDRE_vect) /* ready for more data to transmit */
 {
+   cli();
    if (tx_size[3]) {
-      UDR3 = tx_buf[3][(tx_head[3] - tx_size[3]--) & 127];
+      UDR3 = tx_buf[3][(tx_head[3] - tx_size[3]--) & 7];
    } else {
 	   UCSR3B &= ~(1 << 5); /* disable send interrupt */
    }
+   sei();
 }
 
 /* determine if there is space for another byte in the transmit buffer */
@@ -136,16 +152,18 @@ uint8_t tx_ready(uint8_t port) {
 
 /* put a byte in the transmit buffer. block until space available */
 void tx_byte(uint8_t port, uint8_t b) {
-   while (tx_size[port] > 127);
+   while (tx_size[port] > 7);
 
+   cli();
    /* messing with buffer pointers is not atomic; need locking here */
    ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (just enough locking) */
    tx_buf[port][tx_head[port]++] = b;
-   tx_head[port] &= 127;
+   tx_head[port] &= 7;
    tx_size[port]++;
    /* done messing with buffer pointers */
 
    ucsr[port][B] |= (1 << 5); /* enable send interrupt */
+   sei();
 }
 
 volatile uint8_t * rxtx[] = {&DDRE, &DDRD, &DDRH, &DDRJ};

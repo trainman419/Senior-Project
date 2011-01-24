@@ -1,10 +1,5 @@
-;Operating system for ATMega32 on Polybot board
-;compile with avr-gcc for ATmega32 @ 16Mhz
-
-;SCK:  PB7  , pin 3
-;MIso: PB6  , pin 2
-;MOSI: PB5  , pin 1
-;EN:   PB4  , pin 4
+;Operating system for ATMega2560 on Arduino Mega 2560
+;compile with avr-gcc for ATmega2560 @ 16Mhz
 
 .text
 
@@ -44,7 +39,7 @@
 ; push registers and SREG onto the stack
 
 #define P_SZ 5
-#define STACK_SZ 128
+#define STACK_SZ 250
 
 ;total space allocated per-process: 98 bytes
 ; not bad!
@@ -117,7 +112,6 @@ __vector_23:
 
 yeild:
    ;sei  ; enable nested interrupts
-   sbi 0x05, 7 ; PORTB7; turn LED on
    ; push all of the process registers onto the stack
    push r0
    push r1
@@ -174,6 +168,9 @@ yeild:
    ; SCHEDULER
 L2:
    ; priority scheduler
+   ; l[]: last run
+   ; s[]: scheduled frequency
+   ; p[]: priority; lower is favored
 ;   next = 0;
 ;   priority = 255;
 ;   for( i=0; i<num_pids; i++ ) {
@@ -290,8 +287,6 @@ L4:
    pop r2
    pop r1
    pop r0
-
-   cbi 0x05, 7 ; PORTB7; turn LED off
 
    reti ; return and enable interrupts
    ; measured run-time of <15 uS (about 13.5uS)
