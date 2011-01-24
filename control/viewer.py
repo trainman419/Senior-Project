@@ -8,7 +8,8 @@ import operator
 
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
-RED = (255, 0 ,0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
 
 width = 500
 height = 400
@@ -35,12 +36,20 @@ def process(data):
       y = center_y - y
       windowSurface.set_at((x, y), GREEN)
 
+   # line, pointing forward
    pygame.draw.line(windowSurface, RED, (center_x, 0), (center_x, height-1))
+
+   # box describing the robot
+   pygame.draw.line(windowSurface, BLUE, (center_x - 10, center_y - 15), (center_x + 10, center_y - 15))
+   pygame.draw.line(windowSurface, BLUE, (center_x - 10, center_y - 15), (center_x - 10, center_y + 30))
+   pygame.draw.line(windowSurface, BLUE, (center_x + 10, center_y - 15), (center_x + 10, center_y + 30))
+   pygame.draw.line(windowSurface, BLUE, (center_x - 10, center_y + 30), (center_x + 10, center_y + 30))
 
 
    pygame.display.update()
 
-ser = serial.Serial('/dev/rfcomm0', timeout = None )
+#ser = serial.Serial('/dev/rfcomm0', timeout = None )
+ser = serial.Serial('/dev/tty.FireFly-01DF-SPP-1', timeout = None )
 
 running = True
 
