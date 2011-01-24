@@ -1,0 +1,117 @@
+#!/usr/bin/env python
+
+import serial
+import struct
+import pygame
+import math
+import operator
+
+BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
+RED = (255, 0 ,0)
+
+width = 500
+height = 400
+
+center_x = width/2
+center_y = 3 * height/4
+
+scale = 1
+
+pygame.init()
+pygame.display.set_caption('Debug and control')
+windowSurface = pygame.display.set_mode((width, height), 0, 32)
+
+speed = 0
+steer = 127
+
+def process(data):
+   windowSurface.fill(BLACK)
+   for i in range(len(data)):
+      theta = (-math.pi/2.0) + (i * (math.pi/512.0))
+      y = scale * data[i] * math.cos(theta);
+      x = scale * data[i] * math.sin(theta);
+      x = center_x - x
+      y = center_y - y
+      windowSurface.set_at((x, y), GREEN)
+
+   pygame.draw.line(windowSurface, RED, (center_x, 0), (center_x, height-1))
+
+
+   pygame.display.update()
+
+ser = serial.Serial('/dev/rfcomm0', timeout = None )
+
+running = True
+
+while running:
+   # read serial data
+   start = ser.read()
+   if start == 'L' :
+      data = ser.read(512)
+      # convert string to tuple/array of integers
+      ranges = struct.unpack("512B", data)
+      process(ranges)
+      #process(data)
+      end = ser.read()
+      while end != '\r' :
+         end = ser.read()
+
+   # process user input
+   for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+         pygame.quit()
+         running = False
+      if event.type == pygame.KEYDOWN:
+         if event.key == ord('w'):
+            speed += 5
+            if speed > 50:
+               speed = 50
+   
+            outbuf = "M" + struct.pack('b', speed) + "\r"
+            ser.write(outbuf)
+            print "Speed " + str(speed)
+   
+         if event.key == ord('s'):
+            speed -= 5
+            if speed < -50:
+               speed = -50
+   
+            outbuf = "M" + struct.pack('b', speed) + "\r"
+            ser.write(outbuf)
+            print "Speed " + str(speed)
+   
+         if event.key == ord('a'):
+            steer -= 5
+            if steer < 0:
+               steer = 0
+   
+            outbuf = "S" + struct.pack('B', steer) + "\r"
+            ser.write(outbuf)
+            print "Steer " + str(steer)
+   
+         if event.key == ord('d'):
+            steer += 5
+            if steer > 255:
+               steer = 255
+   
+            outbuf = "S" + struct.pack('B', steer) + "\r"
+            ser.write(outbuf)
+            print "Steer " + str(steer)
+   
+         if event.key == ord(' '):
+            speed = 0
+            steer = 127
+   
+            outbuf = "S" + struct.pack('B', steer) + "\r"
+            ser.write(outbuf)
+            print "Steer " + str(steer)
+   
+   
+            outbuf = "M" + struct.pack('b', speed) + "\r"
+            ser.write(outbuf)
+            print "Speed " + str(speed)
+         if event.key == ord('q'):
+            ser.write("ZZZZZZZZ\r")
+            print "Sent shutdown command"
+   
