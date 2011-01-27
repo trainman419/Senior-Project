@@ -6,8 +6,11 @@
    Author: Austin Hendrix
  */
 
+#define F_CPU 16000000UL
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include "pwm.h"
 #include "motor.h"
 #include "serial.h"
@@ -35,21 +38,26 @@ void tx_string(uint8_t port, char * s) {
 
 volatile uint16_t shutdown_count;
 
-// this doesn't work... yet. something wrong with system() or the scheduler
 void shutdown(void) {
    while( shutdown_count == 0 ) {
       yeild();
+      PORTB |= (1 << 7);
+      yeild();
+      PORTB &= ~(1 << 7);
    }
    while( shutdown_count > 0 ) {
+      //PORTB |= (1 << 7);
       shutdown_count--;
       yeild();
+      /*PORTB &= ~(1 << 7);
+      shutdown_count--;
+      yeild();*/
    }
    // LED ON
    while(1) {
       PORTB |= (1 << 7);
       yeild();
    }
-   while(1);
 }
 
 /*void tx_batteries(uint8_t port) {
@@ -134,6 +142,79 @@ uint8_t handle_bluetooth(uint8_t port) {
    return res;
 }
 
+// dump the stack
+void stack(uint8_t bar) {
+   uint8_t * foo = &bar;
+   uint8_t tmp = 0;
+   uint8_t tmpa = 0;
+   static uint8_t * end = (uint8_t*)0x21FF; // top of memory
+
+   char outbuf[7];
+   outbuf[0] = '0';
+   outbuf[1] = 'x';
+   outbuf[4] = '\r';
+   outbuf[5] = '\n';
+   outbuf[6] = 0;
+
+   tx_byte(BT, '0');
+   tx_byte(BT, 'x');
+   uint16_t tmp_sp = SP;
+   for( tmp=0; tmp < 16; tmp += 4 ) {
+      tmpa = (tmp_sp >> (12-tmp));
+      tmpa &= 0xF;
+      if( tmpa > 0x9 ) {
+         tx_byte(BT, tmpa - 0xA + 'A');
+      } else {
+         tx_byte(BT, tmpa + '0');
+      }
+   }
+   tx_byte(BT, '\r');
+   tx_byte(BT, '\n');
+
+   while(foo < end) {
+      tmp = *foo;
+      tmpa = (tmp & 0xF0) >> 4;
+      if( tmpa > 0x9 ) {
+         outbuf[2] = tmpa - 0xA + 'A';
+      } else {
+         outbuf[2] = tmpa + '0';
+      }
+      tmpa = (tmp & 0x0F);
+      if( tmpa > 0x9 ) {
+         outbuf[3] = tmpa - 0xA + 'A';
+      } else {
+         outbuf[3] = tmpa + '0';
+      }
+      tx_string(BT, outbuf);
+
+      foo++;
+   }
+
+   /* stack dump:
+      0x21EB      // stack pointer; start of frame (size 8)
+0x21EC
+0x21ED
+0x21EE
+0x21EF
+0x21F1
+0x21F2
+0x21F3
+0x21F4      0x42        // top of stack; (end of frame)
+
+0x21F5      0xFF        // prologue frame start
+0x21F6      0x21
+0x21F7      0x06
+0x21F8      0x00
+0x21F9      0x4E
+0x21FA      0x21        // prologue frame end
+0x21FB      0x00        ; high
+0x21FC      0x01        ; middle
+0x21FD      0x75        ; low
+0x21FE      0x00
+0x21FF      0x00        // bottom of stack
+      */
+}
+
 // too big to stick on the stack
 uint8_t laser_buffer[512];
 
@@ -180,10 +261,6 @@ int main() {
    pwm_set_freq(1, 200);
    pwm_set_duty(PWM13, 0.5);*/
 
-   // initialize the shutdown process
-   shutdown_count = 0;
-   //system(shutdown, 250, 2);
-
    // serial port 3: bluetooth
    serial_init(BT);
    // set baud rate: 115.2k baud
@@ -197,6 +274,9 @@ int main() {
    UCSR0A |= (1 << U2X0);
    UBRR0 = 16;
 
+   // initialize the shutdown process
+   shutdown_count = 0;
+   system(shutdown, 250, 2); // func, schedule, priority
 
    // GPS initialization
    serial_init_rx(GPS);
@@ -325,7 +405,7 @@ int main() {
             case MODE_SHUT:
                if( input == 'Z' ) {
                   z_count++;
-               } else if( input == '\r' && z_count == 8 ) {
+               } else if( input == '\r' && z_count == 9 ) {
                   tx_string(BRAIN, "ZZZZZZZZ\r");
                   // launch the shutdown timer
                   shutdown_count = 4*60; // 60-second timer 

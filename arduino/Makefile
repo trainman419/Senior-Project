@@ -1,5 +1,5 @@
 DEVICE=atmega2560
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O3
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -save-temps
 LDFLAGS=-mmcu=$(DEVICE) -lm
 ASFLAGS=-mmcu=$(DEVICE)
 
