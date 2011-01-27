@@ -41,6 +41,8 @@
 #define P_SZ 5
 #define STACK_SZ 250
 
+#define PORTB 0x05
+
 ;total space allocated per-process: 98 bytes
 ; not bad!
 
@@ -112,6 +114,8 @@ __vector_23:
 
 yeild:
    ;sei  ; enable nested interrupts
+
+;   sbi PORTB, 7
    ; push all of the process registers onto the stack
    push r0
    push r1
@@ -288,6 +292,8 @@ L4:
    pop r1
    pop r0
 
+   ;cbi PORTB, 7
+
    reti ; return and enable interrupts
    ; measured run-time of <15 uS (about 13.5uS)
 
@@ -351,8 +357,9 @@ system:
    ; sched in r22
    ; pri in r20
 
-   ; function pointer now in Z 
    ; DEBUG
+   ;movw r30, r18
+   ; function pointer now in Z 
    ;icall
    ; END DEBUG
 
@@ -399,10 +406,10 @@ system:
    ; TODO: figure out if this will cause problems and come up with a fix
    st -Z, r1 ; set highest byte to 0. gcc uses 2 bytes for function pointers
 
+   ; store function pointer
    st -Z, r18 ; store low byte of function pointer
    st -Z, r19 ; store high byte of function pointer
    st -Z, r1  ; store 0, since gcc uses 16-bit function pointers. see above
-
    
    ; store 0 to register locations; next 32 bytes on stack
    ldi r25, 32 ; use r25 for counting
@@ -411,9 +418,13 @@ L1:
    dec r25
    brne L1
 
+   ; TODO: figure out why this makes it work...
+   st -Z, r1
+
    ; store SREG
    ldi r25, 0b10000000 ; only I (interrupts) enabled
    st -Z, r25
+
 
    ldi r26, P_SZ
    mul r26, r27
@@ -422,6 +433,7 @@ L1:
    add r26, r0
    adc r27, r1 ; now address into process_table is in X
    clr r1 ; reset gcc's zero register
+   clr r0
    
    ; store new stack pointer
    st X+, r30
