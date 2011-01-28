@@ -56,6 +56,7 @@ void shutdown(void) {
    // LED ON
    while(1) {
       PORTB |= (1 << 7);
+      pwr_off();
       yeild();
    }
 }
