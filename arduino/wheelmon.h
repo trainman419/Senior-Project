@@ -4,16 +4,18 @@
    Author: Austin Hendrix
  */
 
+#include <stdint.h>
+
 #ifndef WHEELMON_H
 #define WHEELMON_H
 
-extern volatile s16 lspeed; /* left wheel speed (Hz) */
-extern volatile s16 rspeed; /* right wheel speed (Hz) */
-extern volatile u16 lcount; /* left wheel count, revolutions */
-extern volatile u16 rcount; /* right wheel count, revolutions */
+extern volatile int16_t lspeed; /* left wheel speed (Hz) */
+extern volatile int16_t rspeed; /* right wheel speed (Hz) */
+extern volatile uint16_t lcount; /* left wheel count, revolutions */
+extern volatile uint16_t rcount; /* right wheel count, revolutions */
 
-extern volatile s16 qspeed; /* quaderature encoder speed */
-extern volatile u16 qcount; /* quaderature encoder speed */
+extern volatile int16_t qspeed; /* quaderature encoder speed */
+extern volatile uint16_t qcount; /* quaderature encoder speed */
 
 void wheelmon();
 

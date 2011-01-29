@@ -4,6 +4,8 @@
    Author: Austin Hendrix
  */
 
+#include <stdint.h>
+
 #ifndef SPEEDMAN_H
 #define SPEEDMAN_h
 
@@ -12,10 +14,10 @@
 #define M_FORWARD 1
 #define M_BRAKE 2
 #define M_REVERSE 3
-extern u08 mode;
+extern uint8_t mode;
 
-extern volatile s16 power;
-extern volatile s16 target_speed;
+extern volatile int16_t power;
+extern volatile int16_t target_speed;
 
 void speedman();
 
