@@ -4,39 +4,53 @@
    Author: Austin Hendrix
  */
 
-#include "polybot_library/globals.h"
+#include <avr/io.h>
 #include "system.h"
 
-volatile s16 lspeed; /* left wheel speed (Hz) */
-volatile s16 rspeed; /* right wheel speed (Hz) */
-volatile u16 lcount; /* left wheel count, revolutions */
-volatile u16 rcount; /* right wheel count, revolutions */
+volatile int16_t lspeed; /* left wheel speed (Hz) */
+volatile int16_t rspeed; /* right wheel speed (Hz) */
+volatile uint16_t lcount; /* left wheel count, revolutions */
+volatile uint16_t rcount; /* right wheel count, revolutions */
 
-volatile s16 qspeed; /* quaderature encoder speed */
-volatile u16 qcount; /* quaderature encoder 1/4 turn count */
+volatile int16_t qspeed; /* quaderature encoder speed */
+volatile uint16_t qcount; /* quaderature encoder 1/4 turn count */
+
+// TODO: check the wiring diagram and make sure these are right.
+#define L 0x80
+#define R 0x40
+// front
+#define Q1 0x20
+// back
+#define Q2 0x10
 
 /* extend the OS to run this on a strict schedule: DONE! */
 #define WHEELDIV 2000
 void wheelmon() {
-   u16 lcnt = 0;
-   u16 rcnt = 0;
-   u08 l, r;
+   uint16_t lcnt = 0;
+   uint16_t rcnt = 0;
+   uint16_t qcnt = 0;
+
+   uint8_t input, input_old;
+
+   // TODO: figure out which port we're on and set up input bits
+   DDRC &= ~( L | R | Q1 | Q2);
+
+   input = input_old = PORTC;
+   /*uint8_t l, r;
    l = digital(0);
    r = digital(1);
 
    qcount = 0;
 
-   u08 q1, q2, q1_old, q2_old;
+   uint8_t q1, q2, q1_old, q2_old;
    q1_old = digital(4);
-   q2_old = digital(5);
-   u16 qcnt = 0;
+   q2_old = digital(5);*/
 
    while(1) {
       /* read sensors early so we don't get jitter */
-      q1 = digital(4);
-      q2 = digital(5);
+      input = PORTC;
       /* read wheel sensors and update computed wheel speed */
-      if( digital(0) == l ) {
+      if( ~(input ^ input_old) & L ) {
          lcnt++;
          if( lspeed > WHEELDIV/lcnt ) lspeed = WHEELDIV/lcnt;
          if( lcnt > WHEELDIV+1) {
@@ -44,13 +58,12 @@ void wheelmon() {
             lspeed = 0;
          }
       } else {
-         if(l) lcount++;
+         if(input & L) lcount++;
          lspeed = WHEELDIV/lcnt;
          lcnt = 0;
-         l = digital(0);
       }
 
-      if( digital(1) == r ) {
+      if( ~(input ^ input_old) & R ) {
          rcnt++;
          if( rspeed > WHEELDIV/rcnt ) rspeed = WHEELDIV/rcnt;
          if( rcnt > WHEELDIV+1 ) {
@@ -58,34 +71,31 @@ void wheelmon() {
             rspeed = 0;
          }
       } else {
-         if(r) rcount++;
+         if(input & R) rcount++;
          rspeed = WHEELDIV/rcnt;
          rcnt = 0;
-         r = digital(1);
       }
 
       /* read the quaderature encoder on the drive gear to get better
          direction and speed data */
-      if( q1 != q1_old ) {
-         if( q1 == q2 ) {
+      if( (input ^ input_old) & Q1 ) {
+         if( (input >> 1) & input & Q2 ) { // q1 == q2
             // turning forward
             qspeed = WHEELDIV/qcnt;
          } else {
             // turning backward
             qspeed = -(WHEELDIV/qcnt);
          }
-         q1_old = q1;
          qcnt = 0;
          qcount++;
-      } else if( q2 != q2_old ) {
-         if( q1 == q2 ) {
+      } else if( (input ^ input_old) & Q2 ) {
+         if( (input >> 1) & input & Q2 ) { // q1 == q2
             // turning backward
             qspeed = -(WHEELDIV/qcnt);
          } else {
             // turning forward
             qspeed = WHEELDIV/qcnt;
          }
-         q2_old = q2;
          qcnt = 0;
          qcount++;
       } else {
@@ -99,6 +109,7 @@ void wheelmon() {
             if( qspeed < -(WHEELDIV/qcnt) ) qspeed = -(WHEELDIV/qcnt);
          }
       }
+      input_old = input;
 
       /* updated estimates:
          212 instructions; estimate 2 cycles each
