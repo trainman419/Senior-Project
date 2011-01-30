@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import time
 import serial
 import struct
 import pygame
@@ -22,6 +23,9 @@ scale = 1
 pygame.init()
 pygame.display.set_caption('Debug and control')
 windowSurface = pygame.display.set_mode((width, height), 0, 32)
+
+# set repeat rate
+pygame.key.set_repeat(200, 50)
 
 speed = 0
 steer = 127
@@ -49,7 +53,7 @@ def process(data):
    pygame.display.update()
 
 #ser = serial.Serial('/dev/rfcomm0', timeout = None )
-ser = serial.Serial('/dev/tty.FireFly-01DF-SPP-1', timeout = None )
+ser = serial.Serial('/dev/tty.FireFly-01DF-SPP-1', timeout = 0.1 )
 
 running = True
 
@@ -57,14 +61,22 @@ while running:
    # read serial data
    start = ser.read()
    if start == 'L' :
+      ser.timeout = None
       data = ser.read(512)
       # convert string to tuple/array of integers
       ranges = struct.unpack("512B", data)
-      process(ranges)
-      #process(data)
       end = ser.read()
-      while end != '\r' :
+      drop = 0
+      while end != '\r' and end != '\n':
+#         print "Dropping " + end
          end = ser.read()
+         drop += 1
+         if (drop%100) == 0:
+            print "Dropping " + str(drop) + " bytes"
+#if drop < 5:
+      print "Dropped " + str(drop) + " bytes"
+      process(ranges)
+      ser.timeout = 0.1
 
    # process user input
    for event in pygame.event.get():
@@ -91,7 +103,7 @@ while running:
             print "Speed " + str(speed)
    
          if event.key == ord('a'):
-            steer -= 5
+            steer -= 10
             if steer < 0:
                steer = 0
    
@@ -100,7 +112,7 @@ while running:
             print "Steer " + str(steer)
    
          if event.key == ord('d'):
-            steer += 5
+            steer += 10
             if steer > 255:
                steer = 255
    
@@ -121,6 +133,6 @@ while running:
             ser.write(outbuf)
             print "Speed " + str(speed)
          if event.key == ord('q'):
-            ser.write("ZZZZZZZZ\r")
+            ser.write("ZZZZZZZZZ\r")
             print "Sent shutdown command"
    
