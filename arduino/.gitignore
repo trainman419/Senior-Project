@@ -2,3 +2,5 @@ main.hex
 main.elf
 *.o
 Makefile.device
+*.i
+*.s

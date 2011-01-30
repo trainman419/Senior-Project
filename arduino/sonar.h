@@ -4,6 +4,9 @@
  * Author: Austin Hendrix
  */
 
+#ifndef SONAR_H
+#define SONAR_H
+
 /* initalize sonar driver */
 void sonar_init(uint8_t port);
 
@@ -12,3 +15,5 @@ void sonar_init(uint8_t port);
 
 /* get the value of a sonar */
 uint8_t get_sonar(uint8_t sonar);
+
+#endif

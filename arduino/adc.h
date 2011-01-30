@@ -12,8 +12,13 @@
  * Author: Austin Hendrix
  */
 
+#ifndef ADC_H
+#define ADC_H
+
 /* initialize the ADC */
 void adc_init();
 
 /* read from the specified ADC channel */
 uint16_t adc_read(uint8_t channel);
+
+#endif

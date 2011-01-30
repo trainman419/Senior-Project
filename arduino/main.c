@@ -17,13 +17,11 @@
 #include "power.h"
 #include "servo.h"
 #include "system.h"
+#include "comm.h"
+#include "main.h"
 
 #define CLK 16000
 
-#define BRAIN 0
-#define BT 3
-#define GPS 2
-#define SONAR 1
 
 int8_t speed;
 int8_t steer;
@@ -73,7 +71,7 @@ uint8_t laser_buffer[512];
 #define MODE_WAIT 255
 
 int main() {
-   uint16_t laser_rx_index;
+   /*uint16_t laser_rx_index;
    uint16_t laser_tx_index;
    uint16_t laser_count;
    
@@ -83,7 +81,7 @@ int main() {
    uint8_t bt_rx_mode;
    uint8_t bt_tx_mode;
 
-   uint8_t z_count = 0;
+   uint8_t z_count = 0;//*/
 
    DDRB |= 1 << 7;
    motor_init();
@@ -133,20 +131,24 @@ int main() {
    // power up!
    pwr_on();
 
-   laser_rx_index = 0;
+   /*laser_rx_index = 0;
    laser_tx_index = 0;
    laser_count = 0;
    brain_rx_mode = MODE_IDLE;
    brain_tx_mode = MODE_IDLE;
    bt_rx_mode = MODE_IDLE;
    bt_tx_mode = MODE_IDLE;
-   uint8_t input;
+   uint8_t input;//*/
+
+   //system(brain_rx_thread, 0, 5); // start brain thread
+   system(bt_rx_thread, 1, 5);    // start bluetooth thread
    
    // main loop. Manage data flow between bluetooth and computer
    while(1) {
+      brain_rx_thread();
 
       // receive data from the brain and process it
-      if( rx_ready(BRAIN) ) {
+      /*if( rx_ready(BRAIN) ) {
          input = rx_byte(BRAIN);
          // at this point, we expect two types of messages: laser and shutdown
          switch(brain_rx_mode) {
@@ -267,7 +269,7 @@ int main() {
                }
                break;
          }
-      }
+      }//*/
    }
 
    // if we're here, we're done. power down.

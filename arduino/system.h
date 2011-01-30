@@ -4,6 +4,9 @@
  * defines system(), system_init() and yeild() functions
  */
 
+#ifndef SYSTEM_H
+#define SYSTEM_H
+
 char system( void (*)(void), unsigned char sched, unsigned char pri);
 
 void system_init(void);
@@ -26,3 +29,5 @@ void schedule(unsigned char sched);
 void priority(unsigned char pri);
 
 extern struct pid_entry process_table[4];
+
+#endif
