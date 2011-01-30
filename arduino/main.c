@@ -327,7 +327,6 @@ int main() {
                   tx_byte(BT, 'L');
                }
                if( bt_tx_mode == MODE_LASER ) {
-                  // FIXME: this will transmit buffered data out of order
                   while( laser_tx_index < laser_rx_index && tx_ready(BT) ) {
                      tx_byte(BT, laser_buffer[laser_tx_index]);
                      laser_tx_index++;

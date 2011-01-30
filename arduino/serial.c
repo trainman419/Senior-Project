@@ -9,6 +9,7 @@
 */
 
 #include "serial.h"
+#include "lock.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -150,11 +151,14 @@ uint8_t tx_ready(uint8_t port) {
    return tx_size[port] < 8;
 }
 
+uint8_t tx_lock[4];
+
 /* put a byte in the transmit buffer. block until space available */
 void tx_byte(uint8_t port, uint8_t b) {
+   acquire_lock(tx_lock + port);
    while (tx_size[port] > 7);
 
-   cli();
+//   cli();
    /* messing with buffer pointers is not atomic; need locking here */
    ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (just enough locking) */
    tx_buf[port][tx_head[port]++] = b;
@@ -163,7 +167,26 @@ void tx_byte(uint8_t port, uint8_t b) {
    /* done messing with buffer pointers */
 
    ucsr[port][B] |= (1 << 5); /* enable send interrupt */
-   sei();
+   //sei();
+   release_lock(tx_lock + port);
+}
+
+/* transmit a series of bytes */
+void tx_bytes(uint8_t port, uint8_t * buf, uint16_t sz) {
+   acquire_lock(tx_lock + port);
+   uint16_t i;
+   for( i=0; i<sz; i++ ) {
+      while(tx_size[port] > 7);
+
+      ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
+      tx_buf[port][tx_head[port]++] = buf[i];
+      tx_head[port] &= 7;
+      tx_size[port]++;
+      /* done messing with buffer pointers */
+
+      ucsr[port][B] |= (1 << 5); /* enable send interrupt */
+   }
+   release_lock(tx_lock + port);
 }
 
 volatile uint8_t * rxtx[] = {&DDRE, &DDRD, &DDRH, &DDRJ};
@@ -183,6 +206,9 @@ void serial_init_tx(uint8_t port) {
    /* buffer init */
    tx_head[port] = 0;
    tx_size[port] = 0;
+
+   /* lock init */
+   tx_lock[port] = 0;
 }
 
 /* initialize serial rx */

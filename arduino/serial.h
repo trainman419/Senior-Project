@@ -31,6 +31,9 @@ void serial_stop(uint8_t port);
 /* put a byte in the transmit buffer. block until space available */
 void tx_byte(uint8_t port, uint8_t b);
 
+/* transmit a series of bytes */
+void tx_bytes(uint8_t port, uint8_t * buf, uint16_t sz);
+
 /* determine if there is space for another byte in the transmit buffer */
 uint8_t tx_ready(uint8_t port);
 
