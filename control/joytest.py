@@ -19,7 +19,7 @@ if pygame.joystick.get_count > 0:
    
 
    while True:
-      time.sleep(1)
+      time.sleep(0.1)
       pygame.event.pump()
       for i in range(numaxes):
          print "Axis " + str(i) + ": " + str(joystick.get_axis(i))
