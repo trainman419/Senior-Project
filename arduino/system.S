@@ -39,7 +39,8 @@
 ; push registers and SREG onto the stack
 
 #define P_SZ 5
-#define STACK_SZ 250
+#define P_CNT 8
+#define STACK_SZ 128
 
 #define PORTB 0x05
 
@@ -86,6 +87,26 @@ __vector_23:
    ldi r31, hi8(process_table+3)
    ldi r30, lo8(process_table+3)
 
+   ld r29, Z
+   inc r29
+   st Z, r29
+
+   adiw r30, P_SZ
+   ld r29, Z
+   inc r29
+   st Z, r29
+
+   adiw r30, P_SZ
+   ld r29, Z
+   inc r29
+   st Z, r29
+
+   adiw r30, P_SZ
+   ld r29, Z
+   inc r29
+   st Z, r29
+
+   adiw r30, P_SZ
    ld r29, Z
    inc r29
    st Z, r29
@@ -374,7 +395,7 @@ system:
    ; disable interrupts while we increment process count.
    cli
    lds r27, num_pids
-   cpi r27, 4      ; check that we're not running too many processes
+   cpi r27, P_CNT      ; check that we're not running too many processes
    brge system_end ; return with error if we are running too many
 
    ; increment number of running processes 
@@ -491,9 +512,9 @@ system_loop:
 ; global OS variables
 .global process_table
    .type process_table, @object
-   .size process_table, P_SZ*4 ; space for 4 processes @P_SZ bytes each
+   .size process_table, P_SZ*P_CNT ; space for P_CNT processes @P_SZ bytes each
 process_table:
-   .skip P_SZ*4,0 ; layout: SPL, SPH, schedule, last, priority
+   .skip P_SZ*P_CNT,0 ; layout: SPL, SPH, schedule, last, priority
 .global current_pid
    .type current_pid, @object
    .size current_pid, 1

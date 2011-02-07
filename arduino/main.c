@@ -11,6 +11,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <stdio.h>
+
 #include "pwm.h"
 #include "motor.h"
 #include "serial.h"
@@ -19,6 +21,8 @@
 #include "system.h"
 #include "comm.h"
 #include "main.h"
+#include "wheelmon.h"
+#include "speedman.h"
 
 #define CLK 16000
 
@@ -36,8 +40,17 @@ void tx_string(uint8_t port, char * s) {
 
 volatile uint16_t shutdown_count;
 
+uint8_t buffer[80];
+
 void shutdown(void) {
+//   uint8_t i;
    while( shutdown_count == 0 ) {
+      // Query command, for debugging
+      // read speeds and output them
+//      i = sprintf((char*)buffer, "Rspeed: %d, Lspeed: %d, Qspeed: %d\r\n",
+//            rspeed, lspeed, qspeed);
+//      tx_bytes(BRAIN, buffer, i);
+
       yeild();
       PORTB |= (1 << 7);
       yeild();
@@ -71,18 +84,6 @@ uint8_t laser_buffer[512];
 #define MODE_WAIT 255
 
 int main() {
-   /*uint16_t laser_rx_index;
-   uint16_t laser_tx_index;
-   uint16_t laser_count;
-   
-   uint8_t brain_rx_mode;
-   uint8_t brain_tx_mode;
-
-   uint8_t bt_rx_mode;
-   uint8_t bt_tx_mode;
-
-   uint8_t z_count = 0;//*/
-
    DDRB |= 1 << 7;
    motor_init();
 
@@ -100,10 +101,6 @@ int main() {
    priority(250); // run only when nothing else wants to
 
    sei(); // enable interrupts
-   // LED pwm setup
-   /*pwm_init(PWM13);
-   pwm_set_freq(1, 200);
-   pwm_set_duty(PWM13, 0.5);*/
 
    // serial port 3: bluetooth
    serial_init(BT);
@@ -131,14 +128,8 @@ int main() {
    // power up!
    pwr_on();
 
-   /*laser_rx_index = 0;
-   laser_tx_index = 0;
-   laser_count = 0;
-   brain_rx_mode = MODE_IDLE;
-   brain_tx_mode = MODE_IDLE;
-   bt_rx_mode = MODE_IDLE;
-   bt_tx_mode = MODE_IDLE;
-   uint8_t input;//*/
+   system(wheelmon, 1, 1); // wheel monitor; frequent and high priority
+   system(speedman, 100, 2); // speed manager; frequency: 10Hz
 
    //system(brain_rx_thread, 0, 5); // start brain thread
    system(bt_rx_thread, 1, 5);    // start bluetooth thread
@@ -146,130 +137,6 @@ int main() {
    // main loop. Manage data flow between bluetooth and computer
    while(1) {
       brain_rx_thread();
-
-      // receive data from the brain and process it
-      /*if( rx_ready(BRAIN) ) {
-         input = rx_byte(BRAIN);
-         // at this point, we expect two types of messages: laser and shutdown
-         switch(brain_rx_mode) {
-            case MODE_IDLE:
-               switch(input) {
-                  case 'L':
-                     brain_rx_mode = MODE_LASER;
-                     laser_rx_index = 0;
-                     laser_tx_index = 0;
-                     laser_count = 0;
-                     break;
-                  case 'P':
-                     brain_rx_mode = MODE_POWER;
-                     tx_string(BRAIN, "power\n\r");
-                     break;
-               }
-               break;
-            case MODE_LASER:
-               laser_buffer[laser_rx_index++] = input;
-               laser_count++;
-               if( bt_tx_mode == MODE_IDLE ) {
-                  bt_tx_mode = MODE_LASER;
-                  tx_byte(BT, 'L');
-               }
-               if( bt_tx_mode == MODE_LASER ) {
-                  while( laser_tx_index < laser_rx_index && tx_ready(BT) ) {
-                     tx_byte(BT, laser_buffer[laser_tx_index]);
-                     laser_tx_index++;
-                  }
-               }
-               if( laser_count == 512 && bt_tx_mode == MODE_LASER ) {
-                  tx_byte(BT, '\r');
-                  bt_tx_mode = MODE_IDLE;
-                  brain_rx_mode = MODE_WAIT;
-               }
-               break;
-            case MODE_POWER:
-               switch(input) {
-                  case '0':
-                     break;
-                  case '1':
-                     pwr_on();
-                     tx_string(BRAIN, "power on\n\r");
-                     break;
-                  case '2':
-                     pwr_sleep();
-                     tx_string(BRAIN, "power sleep\n\r");
-                     break;
-                  case '3':
-                     // TODO: work out shutdown timer and set it here
-                     break;
-               }
-               brain_rx_mode = MODE_WAIT;
-               break;
-            case MODE_WAIT:
-               if( input == '\n' || input == '\r' ) {
-                  brain_rx_mode = MODE_IDLE;
-                  //tx_string(BRAIN, "ready\n\r");
-               }
-               break;
-         }
-      }
-
-      // receive data from BT and process/pass it
-      if( rx_ready(BT) ) {
-         input = rx_byte(BT);
-         // at this point, we expect several messages:
-         // * shutdown
-         // * motor control
-         // * steering control
-         switch(bt_rx_mode) {
-            case MODE_IDLE:
-               switch(input) {
-                  case 'Z':
-                     // send shutdown to computer
-                     bt_rx_mode = MODE_SHUT;
-                     z_count = 1;
-                     break;
-                  case 'M':
-                     bt_rx_mode = MODE_MOTOR;
-                     break;
-                  case 'S':
-                     bt_rx_mode = MODE_STEER;
-                     break;
-               }
-               break;
-            case MODE_MOTOR:
-               {
-               int8_t speed = (int8_t)input;
-               speed = speed>50?50:speed;
-               speed = speed<-50?-50:speed;
-               motor_speed(speed);
-
-               bt_rx_mode = MODE_WAIT;
-               }
-               break;
-            case MODE_STEER:
-               servo_set(0, input);
-               bt_rx_mode = MODE_WAIT;
-               break;
-            case MODE_SHUT:
-               if( input == 'Z' ) {
-                  z_count++;
-               } else if( input == '\r' && z_count == 9 ) {
-                  tx_string(BRAIN, "ZZZZZZZZ\r");
-                  // launch the shutdown timer
-                  shutdown_count = 4*60; // 60-second timer 
-                  bt_rx_mode = MODE_IDLE;
-                  z_count = 0;
-               } else {
-                  bt_rx_mode = MODE_WAIT;
-                  z_count = 0;
-               }
-               break;
-            case MODE_WAIT:
-               if( input == '\n' || input == '\r' ) {
-                  bt_rx_mode = MODE_IDLE;
-               }
-               break;
-         }
-      }//*/
    }
 
    // if we're here, we're done. power down.

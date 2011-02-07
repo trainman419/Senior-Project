@@ -32,23 +32,19 @@ void wheelmon() {
 
    uint8_t input, input_old;
 
-   // TODO: figure out which port we're on and set up input bits
+   uint8_t q1;
+   uint8_t q2;
+
+   // set motor pins as input
    DDRC &= ~( L | R | Q1 | Q2);
+   // set pull-ups on inputs
+   PORTC |= ( L | R | Q1 | Q2);
 
-   input = input_old = PORTC;
-   /*uint8_t l, r;
-   l = digital(0);
-   r = digital(1);
-
-   qcount = 0;
-
-   uint8_t q1, q2, q1_old, q2_old;
-   q1_old = digital(4);
-   q2_old = digital(5);*/
+   input = input_old = PINC;
 
    while(1) {
       /* read sensors early so we don't get jitter */
-      input = PORTC;
+      input = PINC;
       /* read wheel sensors and update computed wheel speed */
       if( ~(input ^ input_old) & L ) {
          lcnt++;
@@ -76,10 +72,12 @@ void wheelmon() {
          rcnt = 0;
       }
 
+      q1 = (input >> 5) & 0x1;
+      q2 = (input >> 4) & 0x1;
       /* read the quaderature encoder on the drive gear to get better
          direction and speed data */
-      if( (input ^ input_old) & Q1 ) {
-         if( (input >> 1) & input & Q2 ) { // q1 == q2
+      if( (input ^ input_old) & Q1 ) { // Q1 change
+         if( q1 == q2 ) { // q1 == q2
             // turning forward
             qspeed = WHEELDIV/qcnt;
          } else {
@@ -88,8 +86,8 @@ void wheelmon() {
          }
          qcnt = 0;
          qcount++;
-      } else if( (input ^ input_old) & Q2 ) {
-         if( (input >> 1) & input & Q2 ) { // q1 == q2
+      } else if( (input ^ input_old) & Q2 ) { // Q2 change
+         if( q1 == q2 ) { // q1 == q2
             // turning backward
             qspeed = -(WHEELDIV/qcnt);
          } else {

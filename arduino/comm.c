@@ -6,6 +6,7 @@
  */
 
 #include <stdint.h>
+
 #include "motor.h"
 #include "servo.h"
 #include "serial.h"
@@ -13,6 +14,7 @@
 #include "system.h"
 #include "comm.h"
 #include "main.h"
+#include "speedman.h"
 
 uint8_t brain_buffer[520];
 
@@ -79,7 +81,8 @@ void bt_rx_thread(void) {
                speed = speed>50?50:speed;
                speed = speed<-50?-50:speed;
 
-               motor_speed(speed);
+               //motor_speed(speed);
+               target_speed = speed;
             }
             break;
          case 'S':
