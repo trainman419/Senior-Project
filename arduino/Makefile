@@ -22,6 +22,8 @@ all: $(TRG).hex
 
 main.elf: main.o pwm.o motor.o serial.o power.o adc.o system.o servo.o gps.o sonar.o comm.o wheelmon.o speedman.o protocol.o
 
+protocol.o: protocol.cpp protocol.h
+
 program: $(TRG).hex
 	avrdude -pm2560 -cusbtiny -u -U flash:w:$(TRG).hex
 #	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
