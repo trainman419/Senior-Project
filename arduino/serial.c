@@ -172,7 +172,7 @@ void tx_byte(uint8_t port, uint8_t b) {
 }
 
 /* transmit a series of bytes */
-void tx_bytes(uint8_t port, uint8_t * buf, uint16_t sz) {
+void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz) {
    acquire_lock(tx_lock + port);
    uint16_t i;
    for( i=0; i<sz; i++ ) {

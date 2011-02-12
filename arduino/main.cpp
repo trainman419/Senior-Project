@@ -26,6 +26,8 @@ extern "C" {
 #include "speedman.h"
 }
 
+#include "protocol.h"
+
 #define CLK 16000
 
 
@@ -42,7 +44,7 @@ void tx_string(uint8_t port, char * s) {
 
 volatile uint16_t shutdown_count;
 
-uint8_t buffer[80];
+Packet odom('O');
 
 inline void writes16(int16_t s, uint8_t * buf) {
    buf[0] = s & 0xFF;
@@ -54,15 +56,15 @@ void shutdown(void) {
    while( shutdown_count == 0 ) {
       // Query command, for debugging
       // read speeds and output them
-      buffer[0] = 'O';
-      writes16(rcount, buffer+1);
-      writes16(lcount, buffer+3);
-      writes16(qcount, buffer+5);
-      writes16(rspeed, buffer+7);
-      writes16(lspeed, buffer+9);
-      writes16(qspeed, buffer+11);
-      buffer[13] = '\r';
-      tx_bytes(BRAIN, buffer, 14);
+      odom.reset();
+      odom.append(rcount);
+      odom.append(lcount);
+      odom.append(qcount);
+      odom.append(rspeed);
+      odom.append(lspeed);
+      odom.append(qspeed);
+      odom.checksum();
+      tx_bytes(BRAIN, (const uint8_t *)odom.outbuf(), odom.outsz());
 
       yeild();
       PORTB |= (1 << 7);
