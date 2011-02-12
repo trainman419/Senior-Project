@@ -13,6 +13,7 @@
 #include <util/delay.h>
 #include <stdio.h>
 
+extern "C" {
 #include "pwm.h"
 #include "motor.h"
 #include "serial.h"
@@ -23,6 +24,7 @@
 #include "main.h"
 #include "wheelmon.h"
 #include "speedman.h"
+}
 
 #define CLK 16000
 

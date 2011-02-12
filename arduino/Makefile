@@ -2,6 +2,7 @@ DEVICE=atmega2560
 CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -save-temps
 LDFLAGS=-mmcu=$(DEVICE) -lm
 ASFLAGS=-mmcu=$(DEVICE)
+CXXFLAGS=$(CFLAGS)
 
 CC=avr-gcc 
 CPP=avr-gcc -E
@@ -19,7 +20,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o power.o adc.o system.o servo.o gps.o sonar.o comm.o wheelmon.o speedman.o
+main.elf: main.o pwm.o motor.o serial.o power.o adc.o system.o servo.o gps.o sonar.o comm.o wheelmon.o speedman.o protocol.o
 
 program: $(TRG).hex
 	avrdude -pm2560 -cusbtiny -u -U flash:w:$(TRG).hex
