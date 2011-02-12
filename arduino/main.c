@@ -42,14 +42,25 @@ volatile uint16_t shutdown_count;
 
 uint8_t buffer[80];
 
+inline void writes16(int16_t s, uint8_t * buf) {
+   buf[0] = s & 0xFF;
+   buf[1] = (s >> 8) & 0xFF;
+}
+
 void shutdown(void) {
-//   uint8_t i;
+   //uint8_t i;
    while( shutdown_count == 0 ) {
       // Query command, for debugging
       // read speeds and output them
-//      i = sprintf((char*)buffer, "Rspeed: %d, Lspeed: %d, Qspeed: %d\r\n",
-//            rspeed, lspeed, qspeed);
-//      tx_bytes(BRAIN, buffer, i);
+      buffer[0] = 'O';
+      writes16(rcount, buffer+1);
+      writes16(lcount, buffer+3);
+      writes16(qcount, buffer+5);
+      writes16(rspeed, buffer+7);
+      writes16(lspeed, buffer+9);
+      writes16(qspeed, buffer+11);
+      buffer[13] = '\r';
+      tx_bytes(BRAIN, buffer, 14);
 
       yeild();
       PORTB |= (1 << 7);
@@ -71,17 +82,6 @@ void shutdown(void) {
       yeild();
    }
 }
-
-// too big to stick on the stack
-uint8_t laser_buffer[512];
-
-#define MODE_IDLE 0
-#define MODE_LASER 1
-#define MODE_POWER 2
-#define MODE_MOTOR 3
-#define MODE_STEER 4
-#define MODE_SHUT  5
-#define MODE_WAIT 255
 
 int main() {
    DDRB |= 1 << 7;

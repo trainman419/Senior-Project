@@ -78,8 +78,8 @@ void bt_rx_thread(void) {
             input = rx_byte(BT);
             {
                int8_t speed = (int8_t)input;
-               speed = speed>50?50:speed;
-               speed = speed<-50?-50:speed;
+               speed = speed>100?100:speed;
+               speed = speed<-100?-100:speed;
 
                //motor_speed(speed);
                target_speed = speed;

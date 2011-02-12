@@ -30,8 +30,9 @@
 #include "serial.h"
 #include "main.h"
 
-// amount of history to keep for PID integral
-#define I_SZ 5
+#define DIV 256
+
+#define abs(a) ((a)>0?(a):-(a))
 
 // speed controller mode
 uint8_t mode;
@@ -43,8 +44,7 @@ uint8_t buf[80];
 
 void speedman() {
    int16_t speed = 0;
-   uint8_t i;
-   uint16_t mult = 16;
+   uint16_t mult = DIV;
    // keep track of what the speed control thinks we're doing
    //s08 dir = 0; // 0: stopped 1: forward -1: reverse
    mode = M_OFF;
@@ -54,12 +54,7 @@ void speedman() {
    // MV = Kp*e + Ki*integral(e, 0 to t) + Kd*de/dt
    int16_t e = 0; // error
 
-   const static int16_t Kp = 0; // proportional constant
-   uint8_t last_p = 0;
-   for( last_p = 0; last_p < I_SZ; last_p++ ) {
-      last[last_p] = 0;
-   }
-   last_p = 0;
+   const static int16_t Kp = 1; // proportional constant
 
    schedule(100); // 10 times/second
    //schedule(200); // 5 times/second
@@ -68,10 +63,12 @@ void speedman() {
       speed = qspeed;
 
       e = target_speed - speed; 
+      if( target_speed < 0 ) e = -e;
 
-      mult += e * Ke;
+      mult += e * Kp;
 
       if( mult < 1 ) mult = 1;
+      if( mult > DIV ) mult = DIV;
 
       power = mult * target_speed;
 
@@ -79,11 +76,11 @@ void speedman() {
       if( target_speed == 0 && speed == 0 ) power = 0;
 
       // power limits
-      if( power/16 > 50 ) power = 16*50;
-      if( power/16 < -50 ) power = -16*50;
+      if( power/DIV > 100 ) power = DIV*100;
+      if( power/DIV < -100 ) power = -DIV*100;
 
       // output
-      motor_speed(power/16);
+      motor_speed(power/DIV);
 
       yeild();
    }
