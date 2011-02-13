@@ -26,8 +26,8 @@ class Packet {
       void append(uint16_t s);
       void append(int16_t  s);
 
-      void append(volatile uint16_t & s);
-      void append(volatile int16_t  & s);
+      //void append(volatile uint16_t & s);
+      //void append(volatile int16_t  & s);
 
       // read various types from a packet
       unsigned char  readu8();
@@ -40,6 +40,6 @@ class Packet {
       unsigned char outsz() { return sz; }
 
       // utility methods
-      void checksum() { ; /* do nothing */ }
+      void finish();
       void reset() { sz = 1; idx = 1; }
 };

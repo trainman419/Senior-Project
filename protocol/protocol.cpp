@@ -19,7 +19,7 @@ Packet::Packet(char * in, uint8_t in_sz) {
 }
 
 // append methods
-inline void Packet::append(uint8_t c) {
+void Packet::append(uint8_t c) {
    if( sz < 64 ) {
       if( c != '\r' && c != esc ) {
          buffer[sz++] = c;
@@ -30,11 +30,11 @@ inline void Packet::append(uint8_t c) {
    }
 }
 
-inline void Packet::append(int8_t c) {
+void Packet::append(int8_t c) {
    append((uint8_t) c);
 }
 
-inline void Packet::append(uint16_t s) {
+void Packet::append(uint16_t s) {
    uint8_t tmp;
    tmp = s & 0xFF;
    append(tmp);
@@ -42,17 +42,17 @@ inline void Packet::append(uint16_t s) {
    append(tmp);
 }
 
-inline void Packet::append(int16_t s) {
+void Packet::append(int16_t s) {
    append((uint16_t) s);
 }
 
-void Packet::append(volatile int16_t & s) {
+/*void Packet::append(volatile int16_t & s) {
    append((int16_t)s);
 }
 
 void Packet::append(volatile uint16_t & s) {
    append((uint16_t)s);
-}
+}*/
 
 // read methods
 unsigned char Packet::readu8() {
@@ -77,4 +77,11 @@ unsigned short Packet::readu16() {
 
 signed short Packet::reads16() {
    return readu16();
+}
+
+// utility functions
+
+// do any final prep before transmitting a packet
+void Packet::finish() {
+   buffer[sz++] = '\r';
 }
