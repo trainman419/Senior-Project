@@ -117,8 +117,8 @@ while running:
       if event.type == pygame.KEYDOWN:
          if event.key == ord('w'):
             speed += 5
-            if speed > 50:
-               speed = 50
+            if speed > 100:
+               speed = 100
 
             outbuf = "M" + struct.pack('b', speed) + "\r"
             ser.write(outbuf)
@@ -126,8 +126,8 @@ while running:
 
          if event.key == ord('s'):
             speed -= 5
-            if speed < -50:
-               speed = -50
+            if speed < -100:
+               speed = -100
 
             outbuf = "M" + struct.pack('b', speed) + "\r"
             ser.write(outbuf)

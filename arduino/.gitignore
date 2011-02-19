@@ -3,4 +3,5 @@ main.elf
 *.o
 Makefile.device
 *.i
+*.ii
 *.s

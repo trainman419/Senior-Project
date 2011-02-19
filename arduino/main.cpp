@@ -57,13 +57,13 @@ void shutdown(void) {
       // Query command, for debugging
       // read speeds and output them
       odom.reset();
-      odom.append(rcount);
-      odom.append(lcount);
-      odom.append(qcount);
-      odom.append(rspeed);
-      odom.append(lspeed);
-      odom.append(qspeed);
-      odom.checksum();
+      odom.append((uint16_t)rcount);
+      odom.append((uint16_t)lcount);
+      odom.append((uint16_t)qcount);
+      odom.append((int16_t)rspeed);
+      odom.append((int16_t)lspeed);
+      odom.append((int16_t)qspeed);
+      odom.finish();
       tx_bytes(BRAIN, (const uint8_t *)odom.outbuf(), odom.outsz());
 
       yeild();
