@@ -1,0 +1,12 @@
+<package>
+  <description brief="global_map">
+    A global map server based on GPS coordinates.
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/global_map</url>
+
+</package>
+
+
