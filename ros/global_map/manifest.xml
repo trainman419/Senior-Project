@@ -6,6 +6,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/global_map</url>
+  <depend package="roscpp"/>
 
 </package>
 
