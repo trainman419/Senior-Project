@@ -1,0 +1,9 @@
+# A server that provides maps within a global perspective.
+float64 lat
+float64 lon
+int16 width
+int16 height
+int16 offset_w
+int16 offset_h
+---
+int8[] map
