@@ -1,0 +1,7 @@
+# update the global map by replacing the specified values with the given values
+int16 col
+int16 row
+int16 width
+int16 height
+int8[] map
+---

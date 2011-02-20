@@ -1,9 +1,7 @@
-# A server that provides maps within a global perspective.
-float64 lat
-float64 lon
+# Get the specified portion of the map, in the current meridian
 int16 width
 int16 height
-int16 offset_w
-int16 offset_h
+int16 offset_col
+int16 offset_row
 ---
 int8[] map
