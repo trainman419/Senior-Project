@@ -5,3 +5,5 @@ Makefile.device
 *.i
 *.ii
 *.s
+arduino.hex
+rfcomm.sh
