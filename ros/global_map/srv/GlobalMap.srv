@@ -4,4 +4,5 @@ int16 height
 int16 offset_col
 int16 offset_row
 ---
+# map in row-major order
 int8[] map

@@ -3,5 +3,6 @@ int16 col
 int16 row
 int16 width
 int16 height
+# map in row-major order
 int8[] map
 ---
