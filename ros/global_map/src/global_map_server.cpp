@@ -15,6 +15,11 @@
  *  meridian to another
  */
 
+/* TODO: (for proper functionality)
+ *  unloading of map segments when maximum is reached
+ *  updating of last-used values
+ */
+
 #include <map>
 #include <string>
 #include <stdint.h>
@@ -92,7 +97,10 @@ bool setMeridian(global_map::SetMeridian::Request &req,
 // compute row/column offsets for lat/lon from current meridian
 // see: http://en.wikipedia.org/wiki/Transverse_Mercator_projection#Formulae_for_the_spherical_Transverse_Mercator
 const static double EARTH_RADIUS = 6378.1; // kilometers
-const static double A = 1.0;
+const static double SEGMENT_SIZE = 10.0; // in centimeters
+// A: radius of sphere
+//   in our case, the earth's radius in decimeters (10cm-increments)
+const static double A = EARTH_RADIUS * 1000.0 * 100.0 / SEGMENT_SIZE;
 
 // row (or Y)
 int16_t row(double lon) {
@@ -177,6 +185,7 @@ void load_hunk(hunk_idx idx) {
    free(path);
 }
 
+// save a map hunk to disk
 void save_hunk(hunk_idx idx) {
    char * path = hunk_path(idx);
 
@@ -201,6 +210,125 @@ void save_hunk(hunk_idx idx) {
    return;
 }
 
+// get the hunk index for a row and column location
+hunk_idx get_hunk_idx(int32_t col, int32_t row) {
+   hunk_idx res;
+
+   res.first = col / HUNK_SIDE;
+   res.second = row / HUNK_SIDE;
+
+   return res;
+}
+
+// Map service; retrieve an arbitrary chunk of the map
+bool getMap(global_map::Map::Request &req,
+            global_map::Map::Response &resp) {
+   hunk_idx hunk_start, hunk_end, idx;
+
+   hunk_start = get_hunk_idx(req.offset_col, req.offset_row);
+   hunk_end = get_hunk_idx(req.offset_col + req.width, 
+                           req.offset_row + req.height);
+
+   cache_type::iterator cache_itr;
+
+   for( idx.first = hunk_start.first; 
+        idx.first <= hunk_end.first; 
+        idx.first++ ) {
+      for( idx.second = hunk_start.second; 
+           idx.second <= hunk_end.second; 
+           idx.second++ ) {
+         // get the iterator for our map hunk
+         cache_itr = cache->find(idx);
+         // if the hunk we're looking for doesn't exist load it
+         if( cache_itr == cache->end() ) {
+            load_hunk(idx);
+            cache_itr = cache->find(idx);
+         }
+
+         // compute start and end indices in hunk buffer
+         int colstart = idx.first == hunk_start.first ? 
+                           (req.offset_col%HUNK_SIDE) : 0;
+         int rowstart = idx.second == hunk_start.second ? 
+                           (req.offset_row%HUNK_SIDE) : 0;
+
+         int colend = idx.first == hunk_end.first ? 
+                        ((req.offset_col + req.width)%HUNK_SIDE) : HUNK_SIDE;
+         int rowend = idx.second == hunk_end.second ? 
+                        ((req.offset_row + req.height)%HUNK_SIDE) : HUNK_SIDE;
+
+         // compute offsets into output buffer
+         int xx = idx.first == hunk_start.first ? 0 : 
+            (idx.first-hunk_start.first)*HUNK_SIDE - req.offset_col%HUNK_SIDE;
+         int yy = idx.second == hunk_start.second ? 0 : 
+            (idx.second-hunk_start.second)*HUNK_SIDE - req.offset_row%HUNK_SIDE;
+
+         // copy data from this hunk to portion of output buffer
+         for( int col = colstart; col < colend; col++ ) {
+            for( int row = rowstart; row < rowend; row++ ) {
+               resp.map[(xx + col) + (yy + row)*req.width] =
+                  cache_itr->second.data[row + (col)*HUNK_SIDE];
+            }
+         }
+      }
+   }
+
+   return true;
+}
+
+// Update service: update an arbitrary chunk of the map
+bool updateMap(global_map::Update::Request &req,
+               global_map::Update::Response &resp) {
+   hunk_idx hunk_start, hunk_end, idx;
+
+   hunk_start = get_hunk_idx(req.col, req.row);
+   hunk_end = get_hunk_idx(req.col + req.width, req.row + req.height);
+
+   cache_type::iterator cache_itr;
+
+   for( idx.first = hunk_start.first; 
+        idx.first <= hunk_end.first; 
+        idx.first++ ) {
+      for( idx.second = hunk_start.second; 
+           idx.second <= hunk_end.second; 
+           idx.second++ ) {
+         // get the iterator for our map hunk
+         cache_itr = cache->find(idx);
+         // if the hunk we're looking for doesn't exist load it
+         if( cache_itr == cache->end() ) {
+            load_hunk(idx);
+            cache_itr = cache->find(idx);
+         }
+
+         // compute start and end indices in hunk buffer
+         int colstart = idx.first == hunk_start.first ? 
+                           (req.col%HUNK_SIDE) : 0;
+         int rowstart = idx.second == hunk_start.second ? 
+                           (req.row%HUNK_SIDE) : 0;
+
+         int colend = idx.first == hunk_end.first ? 
+                        ((req.col + req.width)%HUNK_SIDE) : HUNK_SIDE;
+         int rowend = idx.second == hunk_end.second ? 
+                        ((req.row + req.height)%HUNK_SIDE) : HUNK_SIDE;
+
+         // compute offsets into output buffer
+         int xx = idx.first == hunk_start.first ? 0 : 
+            (idx.first-hunk_start.first)*HUNK_SIDE - req.col%HUNK_SIDE;
+         int yy = idx.second == hunk_start.second ? 0 : 
+            (idx.second-hunk_start.second)*HUNK_SIDE - req.row%HUNK_SIDE;
+
+         // copy data from this hunk to portion of output buffer
+         for( int col = colstart; col < colend; col++ ) {
+            for( int row = rowstart; row < rowend; row++ ) {
+               cache_itr->second.data[row + (col)*HUNK_SIDE] = 
+                  req.map[(xx + col) + (yy + row)*req.width];
+            }
+         }
+      }
+   }
+
+   return true;
+}
+
 int main(int argc, char ** argv, char ** envp) {
 
    ros::init(argc, argv, "global_map_server");
@@ -217,6 +345,7 @@ int main(int argc, char ** argv, char ** envp) {
    ros::ServiceServer set_m_serv = n.advertiseService("SetMeridian",
                                                       setMeridian);
    ros::ServiceServer offset_serv = n.advertiseService("Offset", getOffset);
+   ros::ServiceServer getmap_serv = n.advertiseService("Map", getMap);
 
    return 0;
 }

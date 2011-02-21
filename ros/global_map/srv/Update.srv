@@ -1,8 +1,8 @@
 # update the global map by replacing the specified values with the given values
-int16 col
-int16 row
-int16 width
-int16 height
+int32 col
+int32 row
+int32 width
+int32 height
 # map in row-major order
 int8[] map
 ---

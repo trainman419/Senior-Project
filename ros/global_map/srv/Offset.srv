@@ -2,5 +2,5 @@
 float64 lat
 float64 lon
 ---
-int16 col
-int16 row
+int32 col
+int32 row
