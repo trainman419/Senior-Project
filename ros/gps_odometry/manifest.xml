@@ -1,0 +1,17 @@
+<package>
+  <description brief="gps_odometry">
+
+     gps_odometry
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/gps_odometry</url>
+  <depend package="roscpp"/>
+  <depend package="nav_msgs"/>
+  <depend package="gps_common"/>
+
+</package>
+
+
