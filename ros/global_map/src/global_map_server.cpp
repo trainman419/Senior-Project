@@ -346,6 +346,11 @@ int main(int argc, char ** argv, char ** envp) {
                                                       setMeridian);
    ros::ServiceServer offset_serv = n.advertiseService("Offset", getOffset);
    ros::ServiceServer getmap_serv = n.advertiseService("Map", getMap);
+   ros::ServiceServer updatemap_serv = n.advertiseService("Update", updateMap);
+
+   ROS_INFO("Map server ready");
+
+   ros::spin();
 
    return 0;
 }
