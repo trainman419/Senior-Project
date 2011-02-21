@@ -9,6 +9,8 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/localization</url>
   <depend package="roscpp"/>
+  <depend package="nav_msgs"/>
+  <depend package="sensor_msgs"/>
 
 </package>
 
