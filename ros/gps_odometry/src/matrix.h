@@ -8,11 +8,11 @@
 #include <assert.h>
 #include <iostream>
 
-template<int N, int M>
+/*template<int N, int M>
 class matrix;
 
 template<int N, int M>
-std::ostream & operator<<( std::ostream &, matrix<N, M> m);
+std::ostream & operator<<( std::ostream &, matrix<N, M> m);*/
 
 template<int N, int M>
 class matrix {
@@ -25,34 +25,19 @@ class matrix {
       // addition
       matrix operator+(matrix &o);
 
-      // matrix multiplication
-      //  this is defined as a friend function rather than a member because
-      //  templated friend classes aren't allowed.
-      template<int K, int L, int J> 
-         friend matrix<K, J> operator*(matrix<K, L> a, matrix<L, J> o);
-
       // matrix transpose
       matrix<M, N> T();
 
-      // inversion and determinants are defined as friends so that the 
-      // compiler checks that they're only operating on square matrices
-
-      // inversion
-      template<int K> friend matrix<K, K> invert(matrix<K, K> &m);
-      // determinant
-      template<int K> friend double det(matrix<K, K> &m);
-
-      // identity matrix
-      template<int K> friend matrix<K, K> I();
-
-      // print matrix
-      friend std::ostream & operator<<<>( std::ostream &, matrix<N, M> m);
-   private:
       double data[N][M];
+
+      // not sure we need these, but they shouldn't hurt.
+      static const int n = N;
+      static const int m = M;
+   private:
 
 };
 
-// constructor. initialize to 0
+// constructor. initialize to value
 template<int N, int M> matrix<N, M>::matrix(double init) {
    for( int i=0; i<N; i++ )
       for( int j=0; j<M; j++ )
@@ -123,15 +108,17 @@ matrix<K, K> invert(matrix<K, K> & m) {
    }
 
    // do gaussian elimination
+
+   // upper triangularize input matrix
    for( int i=0; i<K; i++ ) {
       // per row:
       
       // cancel inital values to 0
       for( int j=0; j<i; j++ ) {
          if( tmp.data[i][j] != 0.0 ) {
-            double m = tmp.data[i][j] / tmp.data[j-1][j];
+            double m = tmp.data[i][j] / tmp.data[j][j];
             for( int k=j; k<2*K; k++ ) { // we should be able to start at k=j
-               tmp.data[i][k] -= tmp.data[j-1][j]*m;
+               tmp.data[i][k] -= tmp.data[j][k]*m;
             }
          }
       }
@@ -143,6 +130,18 @@ matrix<K, K> invert(matrix<K, K> & m) {
       assert( s != 0.0 );
       for( int j=0; j<K*2; j++ ) {
          tmp.data[i][j] /= s;
+      }
+   }
+
+   // row operations to transform input to identity (no need to do last row)
+   for( int i=K-2; i>=0; i-- ) {
+      // for each row below the current row, subtract a multiple of that row
+      for( int j=K-1; j>i; j-- ) {
+         // multiply the subracted row by the first constant in this row
+         double m = tmp.data[i][j];
+         for( int k=0; k<K*2; k++ ) {
+            tmp.data[i][k] -= tmp.data[j][k]*m;
+         }
       }
    }
 
