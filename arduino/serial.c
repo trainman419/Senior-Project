@@ -3,8 +3,6 @@
  * Serial routines for ATmega32
  * Modified to support the multiple UARTS of the Atmega2560
  *
- * TODO: modify to add separate TX and RX init functions
- *
  * Author: Austin Hendrix
 */
 
@@ -14,7 +12,7 @@
 #include <avr/interrupt.h>
 
 // maybe increase size since the atmega2560 has more memory?
-#define BUF_SZ 8
+#define BUF_SZ 32
 
 
 /* recieve circular fifo (10 bytes total 20% overhead) */
@@ -89,7 +87,7 @@ uint8_t rx_byte(uint8_t port) {
    cli();
    ucsr[port][B] &= ~(1 << 7); /* disable receive interrupt */
 
-   uint8_t res = rx_buf[port][(rx_head[port] - rx_size[port]) & 7];
+   uint8_t res = rx_buf[port][(rx_head[port] - rx_size[port]) % BUF_SZ];
    rx_size[port]--;
 
    ucsr[port][B] |= (1 << 7); /* enable receive interrupt */
@@ -102,7 +100,7 @@ ISR(USART0_UDRE_vect) /* ready for more data to transmit */
 {
    cli();
    if (tx_size[0]) {
-      UDR0 = tx_buf[0][(tx_head[0] - tx_size[0]--) & 7];
+      UDR0 = tx_buf[0][(tx_head[0] - tx_size[0]--) % BUF_SZ];
    } else {
 	   UCSR0B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -113,7 +111,7 @@ ISR(USART0_UDRE_vect) /* ready for more data to transmit */
 ISR(USART1_UDRE_vect) /* ready for more data to transmit */
 {
    if (tx_size[1]) {
-      UDR1 = tx_buf[1][(tx_head[1] - tx_size[1]--) & 7];
+      UDR1 = tx_buf[1][(tx_head[1] - tx_size[1]--) % BUF_SZ];
    } else {
 	   UCSR1B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -123,7 +121,7 @@ ISR(USART1_UDRE_vect) /* ready for more data to transmit */
 ISR(USART2_UDRE_vect) /* ready for more data to transmit */
 {
    if (tx_size[2]) {
-      UDR2 = tx_buf[2][(tx_head[2] - tx_size[2]--) & 7];
+      UDR2 = tx_buf[2][(tx_head[2] - tx_size[2]--) % BUF_SZ];
    } else {
 	   UCSR2B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -134,7 +132,7 @@ ISR(USART3_UDRE_vect) /* ready for more data to transmit */
 {
    cli();
    if (tx_size[3]) {
-      UDR3 = tx_buf[3][(tx_head[3] - tx_size[3]--) & 7];
+      UDR3 = tx_buf[3][(tx_head[3] - tx_size[3]--) % BUF_SZ];
    } else {
 	   UCSR3B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -151,7 +149,7 @@ uint8_t tx_lock[4];
 /* put a byte in the transmit buffer. block until space available */
 void tx_byte(uint8_t port, uint8_t b) {
    acquire_lock(tx_lock + port);
-   while (tx_size[port] > 7);
+   while (tx_size[port] >= BUF_SZ );
 
 //   cli();
    /* messing with buffer pointers is not atomic; need locking here */
@@ -172,7 +170,7 @@ void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz) {
    acquire_lock(tx_lock + port);
    uint16_t i;
    for( i=0; i<sz; i++ ) {
-      while(tx_size[port] > 7);
+      while(tx_size[port] >= BUF_SZ);
 
       ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
       tx_buf[port][tx_head[port]++] = buf[i];
