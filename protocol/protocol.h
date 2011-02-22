@@ -7,7 +7,7 @@
 
 class Packet {
    private:
-      char buffer[64];
+      char buffer[128];
       unsigned char sz;
       unsigned char idx;
 

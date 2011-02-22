@@ -20,7 +20,7 @@ Packet::Packet(char * in, uint8_t in_sz) {
 
 // append methods
 void Packet::append(uint8_t c) {
-   if( sz < 64 ) {
+   if( sz < 128 ) {
       if( c != '\r' && c != esc ) {
          buffer[sz++] = c;
       } else {

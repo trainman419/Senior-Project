@@ -14,7 +14,7 @@
 #include <avr/interrupt.h>
 
 // maybe increase size since the atmega2560 has more memory?
-#define BUF_SZ 256
+#define BUF_SZ 8
 
 
 /* recieve circular fifo (10 bytes total 20% overhead) */
@@ -37,12 +37,12 @@ volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
 /* recieve interrupt 0 */
 ISR(USART0_RX_vect) /* receive complete */
 {
-   //cli();
+   cli();
    /* read into fifo, allow overruns for now. */
    rx_buf[0][rx_head[0]++] = UDR0;
-   //rx_head[0] &= 7;
+   rx_head[0] %= BUF_SZ;
    rx_size[0]++;
-   //sei();
+   sei();
 }
 
 /* recieve interrupt 1 */
@@ -51,6 +51,7 @@ ISR(USART1_RX_vect) /* receive complete */
    /* read into fifo, allow overruns for now. */
    rx_buf[1][rx_head[1]++] = UDR1;
    //rx_head[1] &= 7;
+   rx_head[1] %= BUF_SZ;
    rx_size[1]++;
 }
 
@@ -60,18 +61,20 @@ ISR(USART2_RX_vect) /* receive complete */
    /* read into fifo, allow overruns for now. */
    rx_buf[2][rx_head[2]++] = UDR2;
    //rx_head[2] &= 7;
+   rx_head[2] %= BUF_SZ;
    rx_size[2]++;
 }
 
 /* recieve interrupt 3 */
 ISR(USART3_RX_vect) /* receive complete */
 {
-   //cli();
+   cli();
    /* read into fifo, allow overruns for now. */
    rx_buf[3][rx_head[3]++] = UDR3;
    //rx_head[3] &= 7;
+   rx_head[3] %= BUF_SZ;
    rx_size[3]++;
-   //sei();
+   sei();
 }
 
 /* determine if there is data in the rx buffer */
@@ -155,6 +158,7 @@ void tx_byte(uint8_t port, uint8_t b) {
    ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (just enough locking) */
    tx_buf[port][tx_head[port]++] = b;
    //tx_head[port] &= 7;
+   tx_head[port] %= BUF_SZ;
    tx_size[port]++;
    /* done messing with buffer pointers */
 
@@ -173,6 +177,7 @@ void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz) {
       ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
       tx_buf[port][tx_head[port]++] = buf[i];
       //tx_head[port] &= 7;
+      tx_head[port] %= BUF_SZ;
       tx_size[port]++;
       /* done messing with buffer pointers */
 

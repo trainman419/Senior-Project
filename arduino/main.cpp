@@ -27,6 +27,7 @@ extern "C" {
 }
 
 #include "protocol.h"
+#include "gps.h"
 
 #define CLK 16000
 
@@ -65,6 +66,7 @@ void shutdown(void) {
       odom.append((int16_t)qspeed);
       odom.finish();
       tx_bytes(BRAIN, (const uint8_t *)odom.outbuf(), odom.outsz());
+      
 
       yeild();
       PORTB |= (1 << 7);
@@ -119,15 +121,12 @@ int main() {
    UCSR0A |= (1 << U2X0);
    UBRR0 = 16;
 
+   // GPS initialization
+   gps_init(GPS);
+
    // initialize the shutdown process
    shutdown_count = 0;
    system(shutdown, 250, 2); // func, schedule, priority
-
-   // GPS initialization
-   serial_init_rx(GPS);
-   serial_baud(GPS, 4800);
-   DDRH |= (1 << 1);
-   PORTH &= ~(1 << 1);
 
    // power up!
    pwr_on();
@@ -135,8 +134,10 @@ int main() {
    system(wheelmon, 1, 1); // wheel monitor; frequent and high priority
    system(speedman, 100, 2); // speed manager; frequency: 10Hz
 
+   system(gps_thread, 5, 10); // gps thread. relatively low priority, 20Hz
+
    //system(brain_rx_thread, 0, 5); // start brain thread
-   system(bt_rx_thread, 1, 5);    // start bluetooth thread
+   system(bt_rx_thread, 1, 20);    // start bluetooth thread
    
    // main loop. Manage data flow between bluetooth and computer
    while(1) {
