@@ -10,8 +10,8 @@
 
 #include <avr/io.h>
 
-extern volatile uint8_t rx_size[4];
-extern volatile uint8_t tx_size[4];
+//extern volatile uint16_t rx_size[4];
+//extern volatile uint16_t tx_size[4];
 
 /* setup and enable serial interrupts */
 void serial_init(uint8_t port);
