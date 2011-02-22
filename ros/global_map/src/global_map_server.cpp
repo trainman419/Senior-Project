@@ -54,6 +54,7 @@ public:
       }
    }
    ~map_hunk() { free(data); }
+   // TODO: copy constructor. deal with handling buffer/reference counting
 };
 //typedef uint8_t map_hunk[HUNK_SZ][HUNK_SZ];
 
