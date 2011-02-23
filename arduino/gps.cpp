@@ -53,7 +53,7 @@ void gps_thread(void) {
 
             // reset packet for next time
             gps_packet.reset();
-         } else {
+         } else if( input != '\r' ) {
             gps_packet.append(input);
          }
       }
