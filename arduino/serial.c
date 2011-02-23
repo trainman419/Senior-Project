@@ -12,7 +12,7 @@
 #include <avr/interrupt.h>
 
 // maybe increase size since the atmega2560 has more memory?
-#define BUF_SZ 32
+#define BUF_SZ 128
 
 
 /* recieve circular fifo (10 bytes total 20% overhead) */
