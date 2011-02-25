@@ -107,7 +107,7 @@ handler(gps_h) {
    char * buf = (char*)malloc(l + 2);
    memcpy(buf, p.outbuf() + 1, l);
    buf[l] = 0;
-   ROS_INFO("Received GPS: %s", p.outbuf());
+   ROS_INFO("Received GPS: %s", buf);
    if( gps_file >= 0 ) {
       buf[l] = '\n';
       write(gps_file, buf, l+1);
@@ -228,7 +228,6 @@ int main(int argc, char ** argv) {
          // append a null byte
          in_buffer[cnt + in_cnt] = 0;
          //ROS_INFO("Read %d characters", cnt);
-         //ROS_INFO("Read %s", in_buffer);
          in_cnt += cnt;
          ROS_INFO("Buffer size %d", in_cnt);
 
@@ -238,7 +237,7 @@ int main(int argc, char ** argv) {
          while( i < in_cnt ) {
             for( ; i < in_cnt && in_buffer[i] != '\r' ; i++);
 
-            if( in_buffer[i] == '\r' ) {
+            if( i < in_cnt && in_buffer[i] == '\r' ) {
                // check that our string isn't just the terminating character
                if( i - start > 1 ) {
                   // we got a string. call the appropriate function
