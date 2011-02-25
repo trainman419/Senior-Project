@@ -5,9 +5,12 @@
  * Author: Austin Hendrix
  */
 
+
 class Packet {
    private:
-      char buffer[128];
+      const static uint8_t PACKET_SZ = 128;
+
+      char buffer[PACKET_SZ];
       unsigned char sz;
       unsigned char idx;
 

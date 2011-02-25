@@ -11,16 +11,16 @@
 // constructors
 Packet::Packet(char * in, uint8_t in_sz) {
    uint8_t i;
-   for( i=0; i<sz; i++) {
+   for( i=0; i<in_sz && i<PACKET_SZ; i++) {
       buffer[i] = in[i];
    }
-   sz = in_sz;
+   sz = in_sz<PACKET_SZ?in_sz:PACKET_SZ;
    idx = 1;
 }
 
 // append methods
 void Packet::append(uint8_t c) {
-   if( sz < 128 ) {
+   if( sz < PACKET_SZ ) {
       if( c != '\r' && c != esc ) {
          buffer[sz++] = c;
       } else {
