@@ -4,6 +4,8 @@
 #  compute average and standard deviation of each (no correlations yet)
 #  and output a more easily parsable list of lat/lon coordinates
 
+use strict;
+
 my @lat;
 my @lon;
 
@@ -12,6 +14,8 @@ my $cumLat = 0;
 my $cumLon = 0;
 my $l1;
 my $l2;
+
+open( DATA, ">gps.data") or die "Can't open gps.data: $!";
 
 open( KML, ">gps.kml" ) or die "Can't open gps.kml: $!";
 
@@ -40,12 +44,15 @@ while(<>) {
 
       print KML "<Placemark><Point><coordinates>-$l2,$l1</coordinates></Point></Placemark>\n";
 #      print "Lat $1, Lon $2\n";
+      print DATA "$l1, $l2\n";
    }
 }
 
 print KML "</kml>\n";
 
 close KML;
+
+close DATA;
 
 # conpute averages
 my $avgLat = $cumLat / $count;
