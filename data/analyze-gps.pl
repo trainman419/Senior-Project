@@ -21,6 +21,7 @@ open( KML, ">gps.kml" ) or die "Can't open gps.kml: $!";
 
 print KML "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <kml xmlns=\"http://www.opengis.net/kml/2.2\">
+<Document>
 ";
 
 sub convert($) {
@@ -33,14 +34,14 @@ sub convert($) {
 
 while(<>) {
    if( m/\$GPRMC,\d+,A,(\d+\.\d+),N,(\d+\.\d+),W/ ) {
-      push @lat, $1;
-      push @lon, $2;
-      $count++;
-      $cumLat += $1;
-      $cumLon += $2;
-
       $l1 = convert($1);
       $l2 = convert($2);
+
+      push @lat, $l1;
+      push @lon, $l2;
+      $count++;
+      $cumLat += $l1;
+      $cumLon += $l2;
 
       print KML "<Placemark><Point><coordinates>-$l2,$l1</coordinates></Point></Placemark>\n";
 #      print "Lat $1, Lon $2\n";
@@ -48,7 +49,7 @@ while(<>) {
    }
 }
 
-print KML "</kml>\n";
+print KML "</Document></kml>\n";
 
 close KML;
 
@@ -76,3 +77,27 @@ $stdLon = sqrt( $stdLon / $count );
 print "$count data points\n";
 print "Average Latitue $avgLat, standard deviation $stdLat\n";
 print "Average Longitude $avgLon, standard deviation $stdLon\n";
+
+# output KML for polygon around average
+open KML, ">gps-avg.kml" or die "Can't open gps-avg.kml: $!";
+print KML "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<kml xmlns=\"http://www.opengis.net/kml/2.2\">
+<Document>
+";
+
+print KML "<Placemark><Polygon>\n";
+print KML "<altitudeMode>relativeToGround</altitudeMode>\n";
+print KML "<outerBoundaryIs>\n";
+print KML "<LinearRing><coordinates>\n";
+
+# corner coordinates of polygon roughly encompassing 1 standard deviation
+print KML "-".($avgLon - $stdLon).",$avgLat,1\n";
+print KML "-$avgLon,".($avgLat + $stdLat).",1\n";
+print KML "-".($avgLon + $stdLon).",$avgLat,1\n";
+print KML "-$avgLon,".($avgLat - $stdLat).",1\n";
+print KML "-".($avgLon - $stdLon).",$avgLat,1\n";
+
+print KML "</coordinates></LinearRing>\n";
+print KML "</outerBoundaryIs>\n";
+print KML "</Polygon></Placemark>\n";
+print KML "</Document></kml>\n";
