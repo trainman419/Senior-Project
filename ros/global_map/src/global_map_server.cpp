@@ -103,22 +103,24 @@ const static double SEGMENT_SIZE = 10.0; // in centimeters
 //   in our case, the earth's radius in decimeters (10cm-increments)
 const static double A = EARTH_RADIUS * 1000.0 * 100.0 / SEGMENT_SIZE;
 
-// row (or Y)
-int16_t row(double lon) {
+// col (or X)
+int32_t col(double lon) {
    double lon_tmp = lon - meridian;
    // we should never be more than 1 degree from the meridian
    ROS_ASSERT(lon_tmp < 1.0);
    ROS_ASSERT(lon_tmp > -1.0);
+
+   lon_tmp *= M_PI / 180.0;
 
    double y = A / 2 * log( (1 + sin(lon_tmp)) / (1 - sin(lon_tmp)) );
    cout << "lon: " << lon << " y: " << y << endl;
    return y; // implicit cast on return
 }
 
-// col (or X)
-int16_t col(double lat) {
+// row (or Y)
+int32_t row(double lat) {
    //double lon_tmp = lon - meridian;
-   double x = -A * lat;
+   double x = -A * (lat * M_PI / 180.0 );
    cout << "lat: " << lat << " x: " << x << endl;
    return x; // implicit cast on return
 }
@@ -126,8 +128,8 @@ int16_t col(double lat) {
 // Service to get offset from meridian center to specific lat/lon
 bool getOffset(global_map::Offset::Request &req,
                global_map::Offset::Response &resp) {
-   resp.row = row(req.lon);
-   resp.col = col(req.lat);
+   resp.row = row(req.lat);
+   resp.col = col(req.lon);
    return true;
 }
 
