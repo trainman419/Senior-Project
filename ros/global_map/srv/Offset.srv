@@ -1,4 +1,4 @@
-# get offsets from 0,0 in current meridian for given lat/lon
+# get offsets from 0,0 in current meridian for given lat/lon in degrees
 float64 lat
 float64 lon
 ---

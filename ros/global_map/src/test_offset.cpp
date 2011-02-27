@@ -8,9 +8,26 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <math.h>
+#include <vector>
+
 #include "ros/ros.h"
 #include "global_map/Offset.h"
 #include "global_map/SetMeridian.h"
+
+using namespace std;
+
+inline int min(int a, int b) {
+   if( a < b ) 
+      return a;
+   return b;
+}
+
+inline int max(int a, int b) {
+   if( a > b )
+      return a;
+   return b;
+}
 
 int main(int argc, char ** argv) {
    
@@ -36,11 +53,27 @@ int main(int argc, char ** argv) {
    ros::ServiceClient m_client = n.serviceClient<global_map::SetMeridian>("SetMeridian");
    global_map::SetMeridian m_srv;
 
-   uint16_t old_meridian = 0;
+   int16_t old_meridian = 0;
+
+   vector<int> rows;
+   vector<int> cols;
+
+   long int row_avg = 0;
+   long int col_avg = 0;
+   int row_max = INT_MIN;
+   int row_min = INT_MAX;
+   int col_max = INT_MIN;
+   int col_min = INT_MAX;
+   int count = 0;
+
+   int row;
+   int col;
+
+   ROS_INFO("row_avg size: %ld", sizeof(row_avg));
 
    while( fscanf(infile, "%lf,%lf", &lat, &lon) == 2 ) {
-      ROS_INFO("Lat: %lf, Lon: %lf", lat, lon);
-      uint16_t meridian = lon;
+      //ROS_INFO("Lat: %lf, Lon: %lf", lat, lon);
+      int16_t meridian = round(lon);
 
       if( meridian != old_meridian ) {
          ROS_INFO("New meridian: %d", meridian);
@@ -54,11 +87,51 @@ int main(int argc, char ** argv) {
       o_srv.request.lat = lat;
       o_srv.request.lon = lon;
       if( o_client.call(o_srv) ) {
-         ROS_INFO("Row: %d, Col: %d", o_srv.response.row, o_srv.response.col);
+         row = o_srv.response.row;
+         col = o_srv.response.col;
+         row_avg += row;
+         col_avg += col;
+         row_min = min(row_min, row);
+         row_max = max(row_max, row);
+         col_min = min(col_min, col);
+         col_max = max(col_max, col);
+         count++;
+
+         rows.push_back(row);
+         cols.push_back(col);
+         //ROS_INFO("Row: %d, Col: %d", o_srv.response.row, o_srv.response.col);
       } else {
          ROS_ERROR("Failed to call service Offset");
       }
    }
+
+   row_avg /= count;
+   col_avg /= count;
+
+   long int row_var = 0;
+   long int col_var = 0;
+
+   vector<int>::iterator itr;
+
+   for( itr = rows.begin(); itr != rows.end(); itr++ ) {
+      row_var += (*itr - row_avg) * (*itr - row_avg);
+   }
+
+   for( itr = cols.begin(); itr != cols.end(); itr++ ) {
+      col_var += (*itr - col_avg) * (*itr - col_avg);
+   }
+
+   row_var /= count;
+   col_var /= count;
+
+   ROS_INFO("Row Average: %ld", row_avg);
+   ROS_INFO("Col Average: %ld", col_avg);
+   ROS_INFO("Row Std Dev: %lf", sqrt(row_var));
+   ROS_INFO("Col Std Dev: %lf", sqrt(col_var));
+   ROS_INFO("Row min: %d", row_min);
+   ROS_INFO("Row max: %d", row_max);
+   ROS_INFO("Col min: %d", col_min);
+   ROS_INFO("Col max: %d", col_max);
 
    return 0;
 }
