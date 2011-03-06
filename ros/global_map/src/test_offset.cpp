@@ -128,10 +128,46 @@ int main(int argc, char ** argv) {
    ROS_INFO("Col Average: %ld", col_avg);
    ROS_INFO("Row Std Dev: %lf", sqrt(row_var));
    ROS_INFO("Col Std Dev: %lf", sqrt(col_var));
-   ROS_INFO("Row min: %d", row_min);
-   ROS_INFO("Row max: %d", row_max);
-   ROS_INFO("Col min: %d", col_min);
-   ROS_INFO("Col max: %d", col_max);
+
+   FILE * outdata = fopen("subsample.csv", "w");
+
+   // N samples, covering N consecutive seconds
+   for( int N = 2; N < 720; N++ ) {
+      ROS_INFO("Subsample Size: %d", N);
+      // subsampling: sample N consecutive measurements and take an average
+      vector<double> row_avgs;
+      vector<double> col_avgs;
+      double subsample_row_var = 0;
+      double subsample_col_var = 0;
+      for( int start = 0; start < count - N; start++ ) {
+         double tmp_row_avg = 0;
+         double tmp_col_avg = 0;
+         for( int i=0; i<N; i++ ) {
+            tmp_row_avg += rows[i+start];
+            tmp_col_avg += cols[i+start];
+         }
+         tmp_row_avg /= N;
+         tmp_col_avg /= N;
+
+         row_avgs.push_back(tmp_row_avg);
+         col_avgs.push_back(tmp_col_avg);
+
+         subsample_row_var += (tmp_row_avg - row_avg) * (tmp_row_avg - row_avg);
+         subsample_col_var += (tmp_col_avg - col_avg) * (tmp_row_avg - row_avg);
+      }
+      subsample_row_var /= (count-N);
+      subsample_col_var /= (count-N);
+
+      ROS_INFO("Subsample Row Std Dev: %lf", sqrt(subsample_row_var));
+      ROS_INFO("Subsample Col Std Dev: %lf", sqrt(subsample_col_var));
+      fprintf(outdata, "%d, %lf, %lf\n", N, sqrt(subsample_row_var), 
+            sqrt(subsample_col_var));
+   }
+   fclose(outdata);
+   /*ROS_INFO("Row min: %d", row_min);
+     ROS_INFO("Row max: %d", row_max);
+     ROS_INFO("Col min: %d", col_min);
+     ROS_INFO("Col max: %d", col_max);*/
 
    return 0;
 }
