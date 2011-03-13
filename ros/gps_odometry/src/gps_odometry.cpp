@@ -16,13 +16,33 @@
 matrix<1, 3> position(0.0);
 matrix<3, 3> covariance(0.0);
 
-matrix<3, 3> gain; // kalman filter gain
 
 // receive a GPS update
 void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
    ROS_INFO("Got gps message");
 
+   matrix<3, 3> gain; // kalman filter gain
    // Kalman filter update step
+   // lat: gps->latitude  (float64)
+   // lon: gps->longitude (float64)
+   
+   // input covariance
+   matrix<3, 3> Q;
+   
+   // input measurement
+   matrix<1, 3> z;
+
+   // measurement update step:
+   // C: 3x3 identity matrix
+   // Q: measurement covariance
+   // z: measurement
+   // I: identity matrix
+   // gain = cov * C^T * (C * cov * C^T + Q)^-1
+   // pos = pos + gain*(z - C*pos)
+   // cov = (I - gain*C)*cov
+
+   gain = covariance * invert(covariance + Q);
+   position = position + (z - position) * gain;
 }
 
 // receive an odometry update
@@ -63,7 +83,7 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
 
 int main(int argc, char ** argv) {
    // set up kalman gains
-   gain.data[0][0] = 1.0;
+   /*gain.data[0][0] = 1.0;
    gain.data[0][1] = 1.0;
    gain.data[0][2] = 1.0;
    gain.data[1][0] = 1.0;
@@ -72,6 +92,7 @@ int main(int argc, char ** argv) {
    gain.data[2][0] = 1.0;
    gain.data[2][1] = 1.0;
    gain.data[2][2] = 1.0;
+   */
 
    ros::init(argc, argv, "gps_odometry");
 
