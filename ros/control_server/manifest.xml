@@ -1,0 +1,15 @@
+<package>
+  <description brief="control_server">
+
+     control_server
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/control_server</url>
+  <depend package="roscpp"/>
+
+</package>
+
+
