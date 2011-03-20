@@ -12,13 +12,13 @@ GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 
-width = 500
-height = 400
+width = 1000
+height = 800
 
 center_x = width/2
 center_y = 3 * height/4
 
-scale = 1
+scale = 2
 
 pygame.init()
 pygame.display.set_caption('Debug and control')
@@ -54,16 +54,16 @@ def process(data):
    pygame.draw.line(windowSurface, RED, (center_x, 0), (center_x, height-1))
 
    # box describing the robot
-   pygame.draw.line(windowSurface, BLUE, (center_x - 10, center_y - 15), (center_x + 10, center_y - 15))
-   pygame.draw.line(windowSurface, BLUE, (center_x - 10, center_y - 15), (center_x - 10, center_y + 30))
-   pygame.draw.line(windowSurface, BLUE, (center_x + 10, center_y - 15), (center_x + 10, center_y + 30))
-   pygame.draw.line(windowSurface, BLUE, (center_x - 10, center_y + 30), (center_x + 10, center_y + 30))
+   pygame.draw.line(windowSurface, BLUE, (center_x - 10*scale, center_y - 15*scale), (center_x + 10*scale, center_y - 15*scale))
+   pygame.draw.line(windowSurface, BLUE, (center_x - 10*scale, center_y - 15*scale), (center_x - 10*scale, center_y + 30*scale))
+   pygame.draw.line(windowSurface, BLUE, (center_x + 10*scale, center_y - 15*scale), (center_x + 10*scale, center_y + 30*scale))
+   pygame.draw.line(windowSurface, BLUE, (center_x - 10*scale, center_y + 30*scale), (center_x + 10*scale, center_y + 30*scale))
 
 
    pygame.display.update()
 
-ser = serial.Serial('/dev/rfcomm0', timeout = None )
-#ser = serial.Serial('/dev/tty.FireFly-01DF-SPP-1', timeout = 0.1 )
+#ser = serial.Serial('/dev/rfcomm0', timeout = None )
+ser = serial.Serial('/dev/tty.FireFly-01DF-SPP-1', timeout = 0.1 )
 
 running = True
 

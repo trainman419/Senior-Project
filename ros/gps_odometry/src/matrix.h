@@ -23,7 +23,10 @@ class matrix {
       // default copy constructor is ok
 
       // addition
-      matrix operator+(matrix &o);
+      matrix operator+(matrix o);
+
+      // subtraction
+      matrix operator-(matrix o);
 
       // matrix transpose
       matrix<M, N> T();
@@ -33,8 +36,6 @@ class matrix {
       // not sure we need these, but they shouldn't hurt.
       static const int n = N;
       static const int m = M;
-   private:
-
 };
 
 // constructor. initialize to value
@@ -45,11 +46,23 @@ template<int N, int M> matrix<N, M>::matrix(double init) {
 }
 
 // add matrices
-template<int N, int M> matrix<N, M> matrix<N, M>::operator+(matrix<N, M> &o) {
+template<int N, int M> matrix<N, M> matrix<N, M>::operator+(matrix<N, M> o) {
    matrix<N, M> res; // no initialization needed
    for( int i=0; i<N; i++ ) {
       for( int j=0; j<M; j++ ) {
          res.data[i][j] = data[i][j] + o.data[i][j];
+      }
+   }
+
+   return res;
+}
+
+// subtract matrices
+template<int N, int M> matrix<N, M> matrix<N, M>::operator-(matrix<N, M> o) {
+   matrix<N, M> res; // no initialization needed
+   for( int i=0; i<N; i++ ) {
+      for( int j=0; j<M; j++ ) {
+         res.data[i][j] = data[i][j] - o.data[i][j];
       }
    }
 
@@ -89,7 +102,7 @@ matrix<M, N> matrix<N, M>::T() {
 
 // inversion
 template<int K>
-matrix<K, K> invert(matrix<K, K> & m) {
+matrix<K, K> invert(matrix<K, K> m) {
    matrix<K, K*2> tmp;
    matrix<K, K> res;
 
