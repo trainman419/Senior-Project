@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/control_server</url>
   <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
 
 </package>
 
