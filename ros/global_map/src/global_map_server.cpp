@@ -113,15 +113,15 @@ int32_t col(double lon) {
    lon_tmp *= M_PI / 180.0;
 
    double y = A / 2 * log( (1 + sin(lon_tmp)) / (1 - sin(lon_tmp)) );
-   cout << "lon: " << lon << " y: " << y << endl;
+   //cout << "lon: " << lon << " y: " << y << endl;
    return y; // implicit cast on return
 }
 
 // row (or Y)
 int32_t row(double lat) {
    //double lon_tmp = lon - meridian;
-   double x = -A * (lat * M_PI / 180.0 );
-   cout << "lat: " << lat << " x: " << x << endl;
+   double x = A * (lat * M_PI / 180.0 );
+   //cout << "lat: " << lat << " x: " << x << endl;
    return x; // implicit cast on return
 }
 
