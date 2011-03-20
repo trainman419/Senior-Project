@@ -1,0 +1,15 @@
+<package>
+  <description brief="active_localization">
+
+     active_localization
+
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/active_localization</url>
+  <depend package="roscpp"/>
+
+</package>
+
+
