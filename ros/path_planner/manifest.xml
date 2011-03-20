@@ -1,0 +1,15 @@
+<package>
+  <description brief="path_planner">
+
+     path_planner
+
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/path_planner</url>
+  <depend package="roscpp"/>
+
+</package>
+
+
