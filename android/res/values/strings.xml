@@ -2,4 +2,8 @@
 <resources>
     <string name="hello">Hello World, RobotControl!</string>
     <string name="app_name">RobotControl</string>
+    <string name="bluetooth_choose">Please Choose a bluetooth device</string>
+    <string name="bluetooth_noDevices">No Bluetooth devices available</string>
+    <string name="bluetooth_picker">Select Bluetooth Device</string>
+    <string name="bluetooth_stop">Disconnect Bluetooth</string>
 </resources>
