@@ -6,4 +6,5 @@
     <string name="bluetooth_noDevices">No Bluetooth devices available</string>
     <string name="bluetooth_picker">Select Bluetooth Device</string>
     <string name="bluetooth_stop">Disconnect Bluetooth</string>
+    <string name="shutdown">Shut down robot</string>
 </resources>

@@ -97,7 +97,8 @@ public class RobotControl extends MapActivity implements SensorEventListener {
 	}
 	
 	private static final int CHOOSE_ID = Menu.FIRST;
-	private static final int STOP_ID = Menu.FIRST + 1;
+	private static final int SHUTDOWN_ID = Menu.FIRST + 1;
+	private static final int STOP_ID = Menu.FIRST + 2;
 	/**
 	 * create the context menu for this Activity
 	 */
@@ -105,6 +106,7 @@ public class RobotControl extends MapActivity implements SensorEventListener {
     public boolean onCreateOptionsMenu(Menu menu) {
     	super.onCreateOptionsMenu(menu);
     	menu.add(0, CHOOSE_ID, 0, R.string.bluetooth_picker);
+    	menu.add(0, SHUTDOWN_ID, 0, R.string.shutdown);
     	menu.add(0, STOP_ID, 0, R.string.bluetooth_stop);
     	return true;
     }
@@ -155,6 +157,10 @@ public class RobotControl extends MapActivity implements SensorEventListener {
 	        	dialog = builder.setMessage("No Bluetooth found").create();
 	        	dialog.show();
 	        }
+        	return true;
+        case SHUTDOWN_ID:
+        	// send the shutdown command
+        	mApp.getHwMan().setShutdown();
         	return true;
         case STOP_ID:
         	// stop the HardwareManager
@@ -264,7 +270,7 @@ public class RobotControl extends MapActivity implements SensorEventListener {
 		}*/
 		
 		double forward_angle = (Math.atan2(a[2], a[1]) - Math.PI/2)/(Math.PI/4)*4*20;
-		double lr_angle = (Math.atan2(a[2], a[0]) - Math.PI/2)/(Math.PI/4)*4*50;
+		double lr_angle = (Math.atan2(Math.hypot(a[2], a[1]), a[0]) - Math.PI/2)/(Math.PI/4)*4*50;
 		
 		StringBuffer str = new StringBuffer();
 		//str.append("Forward: ").append(forward_angle);

@@ -42,7 +42,7 @@ import android.bluetooth.BluetoothSocket;
 public class HardwareManager extends Thread {
 	
 	public static final byte MAX_SPEED = (byte)100;
-   public static final byte MAX_HEADING = (byte)60;
+   public static final byte MAX_HEADING = (byte)100;
 	
 	private BluetoothDevice mDevice;
 	private boolean mStop;
@@ -52,6 +52,7 @@ public class HardwareManager extends Thread {
 	private Boolean mUpdateSent;
 	private byte mSpeed;
 	private byte mDirection;
+	private boolean mShutdown;
 		
 	/**
 	 * Create a hardware manager instance. Talk to the robot on the other of socket s, send status messages
@@ -62,6 +63,7 @@ public class HardwareManager extends Thread {
 		mDevice = d;
 		mStop = false;
 		
+		mShutdown = false;
 		mUpdateSent = false;
 		mSpeed = 0;
 		mDirection = 120;
@@ -125,19 +127,26 @@ public class HardwareManager extends Thread {
 				if( !mUpdateSent ) {
 					synchronized(mUpdateSent) {
 						mUpdateSent = true;
-						byte data[] = new byte[3];
-						
-						data[0] = 'M';
-						data[1] = mSpeed;
-						data[2] = '\r';
-						// speed command
-						out.write(data);
-						
-						// direction command
-						data[0] = 'S';
-						data[1] = mDirection;
-						data[2] = '\r';
-						out.write(data);
+						if( mShutdown ) {
+							byte data[] = new byte[10];
+							for( i=0; i<9; i++) data[i] = 'Z';
+							data[9] = '\r';
+							out.write(data);
+						} else {
+							byte data[] = new byte[3];
+							
+							data[0] = 'M';
+							data[1] = mSpeed;
+							data[2] = '\r';
+							// speed command
+							out.write(data);
+							
+							// direction command
+							data[0] = 'S';
+							data[1] = mDirection;
+							data[2] = '\r';
+							out.write(data);
+						}
 					}
 					//message("Update sent");
 				}
@@ -205,6 +214,16 @@ public class HardwareManager extends Thread {
 			mUpdateSent = false;
 			mSpeed = 0;
 			mDirection = 0;
+		}
+	}
+	
+	/**
+	 * Send a shutdown command to the robot
+	 */
+	public void setShutdown() {
+		synchronized(mUpdateSent) {
+			mUpdateSent = false;
+			mShutdown = true;
 		}
 	}
 }
