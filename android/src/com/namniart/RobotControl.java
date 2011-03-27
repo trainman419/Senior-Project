@@ -14,20 +14,21 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
 import android.os.Bundle;
-import android.os.Parcelable;
-import android.view.Display;
+import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Surface;
+import android.view.MotionEvent;
 
+import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
-import com.google.android.maps.MapView;
 import com.google.android.maps.MyLocationOverlay;
 import com.google.android.maps.Overlay;
+import com.google.android.maps.Projection;
 
-public class RobotControl extends MapActivity implements SensorEventListener {
+public class RobotControl extends MapActivity implements SensorEventListener, GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener {
 
 	// instance variables
 	RobotApplication mApp;
@@ -35,6 +36,9 @@ public class RobotControl extends MapActivity implements SensorEventListener {
 	// map-related variables
 	private MyLocationOverlay mMyLoc;
 	private MapController mMapController;
+	private GestureDetector mGestureDetector;
+	private LocationListOverlay mLocList;
+	private MyMapView mMapView;
 
 	// bluetooth-related variables
 	private BluetoothDevice mDevice;
@@ -67,16 +71,20 @@ public class RobotControl extends MapActivity implements SensorEventListener {
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
 
-        MapView mapView = (MapView)findViewById(R.id.mapview);
-		mapView.setBuiltInZoomControls(true);
-		mapView.setSatellite(true);
-		mapView.setTraffic(false);
+        mMapView = (MyMapView)findViewById(R.id.mapview);
+		mMapView.setBuiltInZoomControls(true);
+		mMapView.setSatellite(true);
+		mMapView.setTraffic(false);
 		
-		mMapController = mapView.getController();
+		mGestureDetector = new GestureDetector(mMapView.getContext(), this);
+		mGestureDetector.setOnDoubleTapListener(this);
+		mMapView.setGestureDetector(mGestureDetector);
+		
+		mMapController = mMapView.getController();
 
-		mMyLoc = new MyLocationOverlay(this, mapView);
+		mMyLoc = new MyLocationOverlay(this, mMapView);
 
-		List<Overlay> overlays = mapView.getOverlays();
+		List<Overlay> overlays = mMapView.getOverlays();
 		overlays.add(mMyLoc);
 		
 		// second-to-highest zoom level. comfortable for what we're doing
@@ -89,11 +97,21 @@ public class RobotControl extends MapActivity implements SensorEventListener {
 				mMapController.animateTo(mMyLoc.getMyLocation());
 			}
 		});
+		
+		// Green button from: http://commons.wikimedia.org/wiki/File:Button-Green.svg
+		mLocList = new LocationListOverlay(getResources().getDrawable(R.drawable.button_green),
+				mMapView.getContext());
+		overlays.add(mLocList);
     }
 
 	@Override
 	protected boolean isRouteDisplayed() {
 		return false; // TODO: update this if/when we display a map
+	}
+	
+	@Override
+	protected boolean isLocationDisplayed() {
+		return true;
 	}
 	
 	private static final int CHOOSE_ID = Menu.FIRST;
@@ -223,18 +241,7 @@ public class RobotControl extends MapActivity implements SensorEventListener {
 
 	@Override
 	public void onSensorChanged(SensorEvent arg0) {
-		/* dump values to stdout
-		StringBuffer str = new StringBuffer();
-		
-		str.append("Size: ");
-		str.append(arg0.values.length);
-		str.append(", values: ");
-		for(float val : arg0.values) {
-			str.append(val);
-			str.append(", ");
-		}
-		System.out.println(str);
-		*/
+
 		float a[] = new float[3];
 		
 		a[0] = arg0.values[0];
@@ -272,11 +279,6 @@ public class RobotControl extends MapActivity implements SensorEventListener {
 		double forward_angle = (Math.atan2(a[2], a[1]) - Math.PI/2)/(Math.PI/4)*4*20;
 		double lr_angle = (Math.atan2(Math.hypot(a[2], a[1]), a[0]) - Math.PI/2)/(Math.PI/4)*4*50;
 		
-		StringBuffer str = new StringBuffer();
-		//str.append("Forward: ").append(forward_angle);
-		//str.append(", ");
-		//str.append("Left/Right: ").append(lr_angle);
-
 		int steer = (int)lr_angle;
 		if( steer > 100 ) steer = 100;
 		if( steer < -100 ) steer = -100;
@@ -284,16 +286,80 @@ public class RobotControl extends MapActivity implements SensorEventListener {
 		byte s = (byte)steer;
 		s += 120;
 		mApp.getHwMan().setDirection(s);
-		//str.append(", ");
-		//str.append("steer: ").append(s);
 
 		int speed = (int)forward_angle;
 		if( speed > 100 ) speed = 100;
 		if( speed < -100 ) speed = -100;
 		byte m = (byte)speed;
 		mApp.getHwMan().setSpeed(m);
+	}
+
+	@Override
+	public boolean onDoubleTap(MotionEvent e) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean onDoubleTapEvent(MotionEvent e) {
+		// TODO Auto-generated method stub
+		if( e.getAction() == MotionEvent.ACTION_UP ) {
+			Projection projection = mMapView.getProjection();
+			float x = e.getX();
+			float y = e.getY();
+			System.out.println("Double-tap at (" + x + ", " + y +"); action: " + e.getAction());
+			GeoPoint point = projection.fromPixels((int)x, (int)y);
+			System.out.println("Point: " + point.toString());
+			Location l = new Location("user");
+			l.setLatitude(point.getLatitudeE6() / 1000000.0);
+			l.setLongitude(point.getLongitudeE6() / 1000000.0);
+			mLocList.addLocation(l);
+		}
+		return false;
+	}
+
+	@Override
+	public boolean onSingleTapConfirmed(MotionEvent e) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean onDown(MotionEvent arg0) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean onFling(MotionEvent arg0, MotionEvent arg1, float arg2,
+			float arg3) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void onLongPress(MotionEvent e) {
+		// TODO Auto-generated method stub
 		
-		//System.out.println(str);
+	}
+
+	@Override
+	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX,
+			float distanceY) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void onShowPress(MotionEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean onSingleTapUp(MotionEvent e) {
+		// TODO Auto-generated method stub
+		return false;
 	}
     
 }
