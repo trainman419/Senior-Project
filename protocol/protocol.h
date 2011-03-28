@@ -28,6 +28,12 @@ class Packet {
       void append(int8_t   c);
       void append(uint16_t s);
       void append(int16_t  s);
+      void append(uint32_t i);
+      void append(int32_t  i);
+      void append(uint64_t i);
+      void append(int64_t  i);
+      void append(float    f);
+      void append(double   d);
 
       //void append(volatile uint16_t & s);
       //void append(volatile int16_t  & s);

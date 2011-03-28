@@ -46,6 +46,74 @@ void Packet::append(int16_t s) {
    append((uint16_t) s);
 }
 
+void Packet::append(uint32_t i) {
+   uint8_t tmp;
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+   tmp = i & 0xFF;
+   append(tmp);
+}
+
+void Packet::append(int32_t i) {
+   append((uint32_t)i);
+}
+
+void Packet::append(uint64_t i) {
+   uint8_t tmp;
+
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+
+   tmp = i & 0xFF;
+   append(tmp);
+   tmp >>= 8;
+
+   tmp = i & 0xFF;
+   append(tmp);
+}
+
+void Packet::append(int64_t i) {
+   append((uint64_t)i);
+}
+
+void Packet::append(float f) {
+   uint32_t t = *((uint32_t*)(&f));
+   append(t);
+}
+
+void Packet::append(double d) {
+   uint64_t t = *((uint64_t*)(&d));
+   append(t);
+}
+
 /*void Packet::append(volatile int16_t & s) {
    append((int16_t)s);
 }
