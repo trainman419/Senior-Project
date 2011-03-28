@@ -11,13 +11,20 @@
 #include <termios.h>
 #include <math.h>
 #include <errno.h>
+#include <stropts.h>
+
+#include <set>
 
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
 #include "protocol.h"
 
+using namespace std;
+
 char laser_data[512];
 int laser_ready;
+
+#define ROS_PERROR(str) ROS_ERROR("%s: %s", str, strerror(errno))
 
 // callback on laser scan received.
 void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
@@ -71,7 +78,9 @@ handler(shutdown_h) {
    if( shutdown ) {
       ROS_INFO("Received shutdown");
       // FIXME: shutdown here
-      //system("sudo poweroff");
+      if( system("sudo poweroff") < 0 ) {
+         ROS_ERROR("Failed to execute shutdown command");
+      }
    } else {
       char * buf = (char*)malloc(l + 1);
       memcpy(buf, in, l);
@@ -82,20 +91,45 @@ handler(shutdown_h) {
 }
 
 int gps_file;
+#define GPS_PIPE "/home/hendrix/gps/gps.out"
+
 // set up whatever we decide to do for GPS
 void gps_setup(void) {
+   gps_file = -1;
+   // create a named FIFO and open it for writing
+
+   struct stat file_info;
+   int res = stat(GPS_PIPE, &file_info);
+   // if our stat filed or the file isn't a fifo, destroy it and make a fifo
+   if( res < 0 || !S_ISFIFO(file_info.st_mode) ) {
+      ROS_INFO("File %s wasn't a FIFO; destroying it and making a FIFO",
+            GPS_PIPE);
+      // remove old whatever
+      unlink(GPS_PIPE);
+      // create our fifo
+      if( mkfifo(GPS_PIPE, 0644) < 0 ) {
+         ROS_PERROR("Error creating fifo");
+      return;
+      }
+   }
+   // open fifo for writing
+   if( (gps_file = open(GPS_PIPE, O_WRONLY | O_APPEND, 0644)) < 0 ) {
+      ROS_PERROR("Error opening GPS pipe");
+      return;
+   }
+
    // open gps log file for writing
-   gps_file = open("/home/hendrix/log/gps.log", 
+   /*gps_file = open("/home/hendrix/log/gps.log", 
          O_WRONLY | O_APPEND | O_CREAT, 0644);
    if( gps_file < 0 ) {
       ROS_ERROR("Error opening GPS log file: %s", strerror(errno));
    } else {
       write(gps_file, "GPS log starting\n", 17);
-   }
+   }*/
 }
 
 void gps_end(void) {
-   if( gps_file > 0 ) 
+   if( gps_file >= 0 ) 
       close(gps_file);
 }
 
@@ -110,7 +144,9 @@ handler(gps_h) {
    ROS_INFO("Received GPS: %s", buf);
    if( gps_file >= 0 ) {
       buf[l] = '\n';
-      write(gps_file, buf, l+1);
+      if( write(gps_file, buf, l+1) != l+1 ) {
+         ROS_INFO("Write to GPS file failed");
+      }
    }
    free(buf);
 }
@@ -137,7 +173,7 @@ handler(odometry_h) {
 #define IN_BUFSZ 1024
 
 int main(int argc, char ** argv) {
-   char in_buffer[IN_BUFSZ];
+   unsigned char in_buffer[IN_BUFSZ];
    int in_cnt = 0;
    int cnt = 0;
    int i;
@@ -241,7 +277,7 @@ int main(int argc, char ** argv) {
                // check that our string isn't just the terminating character
                if( i - start > 1 ) {
                   // we got a string. call the appropriate function
-                  Packet p(in_buffer+start, i-start);
+                  Packet p((char*)(in_buffer+start), i-start);
                   handlers[in_buffer[start]](p);
                }
                start = i+1;

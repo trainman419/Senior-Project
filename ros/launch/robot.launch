@@ -2,5 +2,6 @@
 
    <node pkg="hokuyo_node" name="hokuyo" type="hokuyo_node"/>
    <node pkg="hardware_interface" name="hardware" type="hardware_interface"/>
+   <node pkg="gpsd_client" name="gps" type="gpsd_client"/>
 
 </launch>
