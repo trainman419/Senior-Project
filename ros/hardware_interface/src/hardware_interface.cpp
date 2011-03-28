@@ -17,6 +17,7 @@
 
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
+#include "gps_common/GPSFix.h"
 #include "protocol.h"
 
 using namespace std;
@@ -49,6 +50,12 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
       */
 
    laser_ready = 1;
+}
+
+// callback on GPS location received
+void gpsCallback(const gps_common::GPSFix::ConstPtr & msg) {
+   ROS_INFO("Received GPS fix; lat: %f, lon: %f", msg->latitude,
+         msg->longitude);
 }
 
 #define handler(foo) void foo(Packet & p)
@@ -113,7 +120,7 @@ void gps_setup(void) {
       }
    }
    // open fifo for writing
-   if( (gps_file = open(GPS_PIPE, O_WRONLY | O_APPEND, 0644)) < 0 ) {
+   if( (gps_file = open(GPS_PIPE, O_RDWR | O_TRUNC | O_NONBLOCK, 0644)) < 0 ) {
       ROS_PERROR("Error opening GPS pipe");
       return;
    }
@@ -141,7 +148,7 @@ handler(gps_h) {
    char * buf = (char*)malloc(l + 2);
    memcpy(buf, p.outbuf() + 1, l);
    buf[l] = 0;
-   ROS_INFO("Received GPS: %s", buf);
+   //ROS_INFO("Received GPS: %s", buf);
    if( gps_file >= 0 ) {
       buf[l] = '\n';
       if( write(gps_file, buf, l+1) != l+1 ) {
@@ -241,6 +248,7 @@ int main(int argc, char ** argv) {
    tcsetattr(serial, TCSANOW, &tio);
 
    ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
+   ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
 
    ros::Rate loop_rate(10);
 
@@ -265,7 +273,7 @@ int main(int argc, char ** argv) {
          in_buffer[cnt + in_cnt] = 0;
          //ROS_INFO("Read %d characters", cnt);
          in_cnt += cnt;
-         ROS_INFO("Buffer size %d", in_cnt);
+         //ROS_INFO("Buffer size %d", in_cnt);
 
          // parse out newline-terminated strings and call appropriate functions
          int start = 0;
