@@ -69,7 +69,16 @@ handler(no_handler) {
    char * buf = (char*)malloc(l + 1);
    memcpy(buf, in, l);
    buf[l] = 0;
-   ROS_INFO("No handler for message: %s", buf);
+
+   char * tmpbuf = (char*)malloc(5*l);
+   int i;
+   for( i=0; i<l; i++ ) {
+      sprintf(tmpbuf + (i*5), "0x%02X ", 0xFF & buf[i+1]);
+   }
+   tmpbuf[i*5] = 0;
+
+   ROS_INFO("No handler for message: %c(%d) %s", buf[0], l, tmpbuf);
+
    free(buf);
 }
 
@@ -177,6 +186,21 @@ handler(odometry_h) {
             rcount, lcount, qcount, rspeed, lspeed, qspeed);
 }
 
+handler(gpslist_h) {
+   int cnt = p.readu8();
+   int cursor = p.readu8();
+   float * lat = (float*)malloc(cnt*sizeof(float));
+   float * lon = (float*)malloc(cnt*sizeof(float));
+   ROS_INFO("GPS List, size: %d, cursor: %d", cnt, cursor);
+   for( int i=0; i<cnt; i++ ) {
+      lat[i] = p.readfloat();
+      lon[i] = p.readfloat();
+      ROS_INFO("Lat: %f, Lon: %f", lat[i], lon[i]);
+   }
+   free(lat);
+   free(lon);
+}
+
 #define IN_BUFSZ 1024
 
 int main(int argc, char ** argv) {
@@ -202,6 +226,8 @@ int main(int argc, char ** argv) {
 
    gps_setup();
    handlers['G'] = gps_h;
+
+   handlers['L'] = gpslist_h;
 
    ros::init(argc, argv, "hardware_interface");
 
