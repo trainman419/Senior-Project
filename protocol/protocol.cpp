@@ -124,12 +124,17 @@ void Packet::append(volatile uint16_t & s) {
 
 // read methods
 unsigned char Packet::readu8() {
-   unsigned char tmp = buffer[idx++];
-   if( tmp != esc ) {
-      return tmp;
+   unsigned char tmp;
+   if(idx < sz) {
+      tmp = buffer[idx++];
+      if( tmp != esc ) {
+         return tmp;
+      } else {
+         tmp = buffer[idx++] ^ esc;
+         return tmp;
+      }
    } else {
-      tmp = buffer[idx++] ^ esc;
-      return tmp;
+      return 0;
    }
 }
 
@@ -145,6 +150,22 @@ unsigned short Packet::readu16() {
 
 signed short Packet::reads16() {
    return readu16();
+}
+
+uint32_t Packet::readu32() {
+   uint8_t bytes[4];
+   uint32_t res;
+   bytes[0] = readu8();
+   bytes[1] = readu8();
+   bytes[2] = readu8();
+   bytes[3] = readu8();
+   res = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
+   return res;
+}
+
+float Packet::readfloat() {
+   uint32_t tmp = readu32();
+   return *((float*)&tmp);
 }
 
 // utility functions

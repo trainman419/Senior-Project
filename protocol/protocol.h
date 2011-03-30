@@ -43,6 +43,8 @@ class Packet {
       signed char    reads8();
       unsigned short readu16();
       signed short   reads16();
+      uint32_t       readu32();
+      float          readfloat();
 
       // get data for sending packet
       const char * outbuf() { return buffer; }
