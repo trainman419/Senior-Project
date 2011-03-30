@@ -130,8 +130,12 @@ unsigned char Packet::readu8() {
       if( tmp != esc ) {
          return tmp;
       } else {
-         tmp = buffer[idx++] ^ esc;
-         return tmp;
+         if( idx < sz ) {
+            tmp = buffer[idx++] ^ esc;
+            return tmp;
+         } else {
+            return 0;
+         }
       }
    } else {
       return 0;
