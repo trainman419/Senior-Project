@@ -1,0 +1,6 @@
+# get offsets from 0,0 in current meridian for given lat/lon in degrees
+int32 col
+int32 row
+---
+float64 lat
+float64 lon
