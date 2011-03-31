@@ -33,7 +33,7 @@ Message types:
 Data from Robot:
 ID:   Description
 S     Sonar data
-G     GPS data (not sure if this is raw NMEA or parsed...)
+G     GPS position, parsed
 B     Bump sensor data
 O     Odometry count readings
 O     Speed readings
