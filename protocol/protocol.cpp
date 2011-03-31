@@ -157,7 +157,7 @@ signed short Packet::reads16() {
 }
 
 uint32_t Packet::readu32() {
-   uint8_t bytes[4];
+   uint32_t bytes[4];
    uint32_t res;
    bytes[0] = readu8();
    bytes[1] = readu8();
