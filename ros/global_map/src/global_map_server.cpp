@@ -35,6 +35,7 @@
 #include "global_map/GetMeridian.h"
 #include "global_map/SetMeridian.h"
 #include "global_map/Offset.h"
+#include "global_map/RevOffset.h"
 
 using namespace std;
 
@@ -103,6 +104,7 @@ const static double SEGMENT_SIZE = 10.0; // in centimeters
 //   in our case, the earth's radius in decimeters (10cm-increments)
 const static double A = EARTH_RADIUS * 1000.0 * 100.0 / SEGMENT_SIZE;
 
+// wrong wrong wrong
 // col (or X)
 int32_t col(double lon) {
    double lon_tmp = lon - meridian;
@@ -125,11 +127,47 @@ int32_t row(double lat) {
    return x; // implicit cast on return
 }
 
+/*
+// convert a column back to latitude
+double lon(int32_t col) {
+   return 0.0;
+}
+
+// convert a row back to longitude
+double lat(int32_t row) {
+   return 0.0;
+}
+*/
+
 // Service to get offset from meridian center to specific lat/lon
 bool getOffset(global_map::Offset::Request &req,
                global_map::Offset::Response &resp) {
+   /*
    resp.row = row(req.lat);
    resp.col = col(req.lon);
+   */
+   double lat = req.lat * M_PI / 180.0; // phi
+   double lon = (req.lon - meridian) * M_PI / 180.0; // lambda
+
+   double x = A * log( (1 + sin(lon)*cos(lat)) / (1 - sin(lon)*cos(lat))) / 2;
+   double y = A * atan( tan(lat) / cos(lon) );
+
+   resp.row = y;
+   resp.col = x;
+
+   return true;
+}
+
+bool reverseOffset(global_map::RevOffset::Request &req,
+                   global_map::RevOffset::Response &resp) {
+   double x = req.col;
+   double y = req.row;
+
+   double lon = atan( sinh(x / A) / cos(y / A));
+   double lat = asin( sin(y / A) / cosh(x / A));
+
+   resp.lon = lon;
+   resp.lat = lat;
    return true;
 }
 
@@ -348,6 +386,7 @@ int main(int argc, char ** argv, char ** envp) {
    ros::ServiceServer set_m_serv = n.advertiseService("SetMeridian",
                                                       setMeridian);
    ros::ServiceServer offset_serv = n.advertiseService("Offset", getOffset);
+   ros::ServiceServer revoffset_serv = n.advertiseService("RevOffset", reverseOffset);
    ros::ServiceServer getmap_serv = n.advertiseService("Map", getMap);
    ros::ServiceServer updatemap_serv = n.advertiseService("Update", updateMap);
 

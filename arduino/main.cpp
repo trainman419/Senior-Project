@@ -69,9 +69,9 @@ void shutdown(void) {
       
 
       yeild();
-      PORTB |= (1 << 7);
+      //PORTB |= (1 << 7);
       yeild();
-      PORTB &= ~(1 << 7);
+      //PORTB &= ~(1 << 7);
    }
    while( shutdown_count > 0 ) {
       //PORTB |= (1 << 7);

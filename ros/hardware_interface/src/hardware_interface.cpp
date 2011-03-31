@@ -11,13 +11,21 @@
 #include <termios.h>
 #include <math.h>
 #include <errno.h>
+#include <stropts.h>
+
+#include <set>
 
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
+#include "gps_common/GPSFix.h"
 #include "protocol.h"
+
+using namespace std;
 
 char laser_data[512];
 int laser_ready;
+
+#define ROS_PERROR(str) ROS_ERROR("%s: %s", str, strerror(errno))
 
 // callback on laser scan received.
 void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
@@ -44,6 +52,21 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
    laser_ready = 1;
 }
 
+int gps_ready = 0;
+Packet gps_packet('G');
+// callback on GPS location received
+void gpsCallback(const gps_common::GPSFix::ConstPtr & msg) {
+   ROS_INFO("Received GPS fix; lat: %f, lon: %f", msg->latitude,
+         msg->longitude);
+   gps_packet.reset();
+   int32_t lat = msg->latitude * 1000000.0;
+   int32_t lon = msg->longitude * 1000000.0;
+   gps_packet.append(lat);
+   gps_packet.append(lon);
+   gps_packet.finish();
+   gps_ready = 1;
+}
+
 #define handler(foo) void foo(Packet & p)
 typedef void (*handler_ptr)(Packet & p);
 
@@ -55,7 +78,16 @@ handler(no_handler) {
    char * buf = (char*)malloc(l + 1);
    memcpy(buf, in, l);
    buf[l] = 0;
-   ROS_INFO("No handler for message: %s", buf);
+
+   char * tmpbuf = (char*)malloc(5*l);
+   int i;
+   for( i=0; i<l; i++ ) {
+      sprintf(tmpbuf + (i*5), "0x%02X ", 0xFF & buf[i+1]);
+   }
+   tmpbuf[i*5] = 0;
+
+   ROS_INFO("No handler for message: %c(%d) %s", buf[0], l, tmpbuf);
+
    free(buf);
 }
 
@@ -71,7 +103,9 @@ handler(shutdown_h) {
    if( shutdown ) {
       ROS_INFO("Received shutdown");
       // FIXME: shutdown here
-      //system("sudo poweroff");
+      if( system("sudo poweroff") < 0 ) {
+         ROS_ERROR("Failed to execute shutdown command");
+      }
    } else {
       char * buf = (char*)malloc(l + 1);
       memcpy(buf, in, l);
@@ -82,20 +116,45 @@ handler(shutdown_h) {
 }
 
 int gps_file;
+#define GPS_PIPE "/home/hendrix/gps/gps.out"
+
 // set up whatever we decide to do for GPS
 void gps_setup(void) {
+   gps_file = -1;
+   // create a named FIFO and open it for writing
+
+   struct stat file_info;
+   int res = stat(GPS_PIPE, &file_info);
+   // if our stat filed or the file isn't a fifo, destroy it and make a fifo
+   if( res < 0 || !S_ISFIFO(file_info.st_mode) ) {
+      ROS_INFO("File %s wasn't a FIFO; destroying it and making a FIFO",
+            GPS_PIPE);
+      // remove old whatever
+      unlink(GPS_PIPE);
+      // create our fifo
+      if( mkfifo(GPS_PIPE, 0644) < 0 ) {
+         ROS_PERROR("Error creating fifo");
+      return;
+      }
+   }
+   // open fifo for writing
+   if( (gps_file = open(GPS_PIPE, O_RDWR | O_TRUNC | O_NONBLOCK, 0644)) < 0 ) {
+      ROS_PERROR("Error opening GPS pipe");
+      return;
+   }
+
    // open gps log file for writing
-   gps_file = open("/home/hendrix/log/gps.log", 
+   /*gps_file = open("/home/hendrix/log/gps.log", 
          O_WRONLY | O_APPEND | O_CREAT, 0644);
    if( gps_file < 0 ) {
       ROS_ERROR("Error opening GPS log file: %s", strerror(errno));
    } else {
       write(gps_file, "GPS log starting\n", 17);
-   }
+   }*/
 }
 
 void gps_end(void) {
-   if( gps_file > 0 ) 
+   if( gps_file >= 0 ) 
       close(gps_file);
 }
 
@@ -107,10 +166,12 @@ handler(gps_h) {
    char * buf = (char*)malloc(l + 2);
    memcpy(buf, p.outbuf() + 1, l);
    buf[l] = 0;
-   ROS_INFO("Received GPS: %s", buf);
+   //ROS_INFO("Received GPS: %s", buf);
    if( gps_file >= 0 ) {
       buf[l] = '\n';
-      write(gps_file, buf, l+1);
+      if( write(gps_file, buf, l+1) != l+1 ) {
+         ROS_INFO("Write to GPS file failed");
+      }
    }
    free(buf);
 }
@@ -134,10 +195,25 @@ handler(odometry_h) {
             rcount, lcount, qcount, rspeed, lspeed, qspeed);
 }
 
+handler(gpslist_h) {
+   int cnt = p.readu8();
+   int cursor = p.readu8();
+   double * lat = (double*)malloc(cnt*sizeof(double));
+   double * lon = (double*)malloc(cnt*sizeof(double));
+   ROS_INFO("GPS List, size: %d, cursor: %d", cnt, cursor);
+   for( int i=0; i<cnt; i++ ) {
+      lat[i] = (double)p.reads32() / 1000000.0;
+      lon[i] = (double)p.reads32() / 1000000.0;
+      ROS_INFO("Lat: %f, Lon: %f", lat[i], lon[i]);
+   }
+   free(lat);
+   free(lon);
+}
+
 #define IN_BUFSZ 1024
 
 int main(int argc, char ** argv) {
-   char in_buffer[IN_BUFSZ];
+   unsigned char in_buffer[IN_BUFSZ];
    int in_cnt = 0;
    int cnt = 0;
    int i;
@@ -159,6 +235,8 @@ int main(int argc, char ** argv) {
 
    gps_setup();
    handlers['G'] = gps_h;
+
+   handlers['L'] = gpslist_h;
 
    ros::init(argc, argv, "hardware_interface");
 
@@ -204,24 +282,12 @@ int main(int argc, char ** argv) {
    
    tcsetattr(serial, TCSANOW, &tio);
 
-   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
+//   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
+   ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
 
    ros::Rate loop_rate(10);
 
    while( ros::ok() ) {
-      
-      // write pending data to serial port
-      //ROS_INFO("start laser transmit");
-      if( laser_ready ) {
-         cnt = write(serial, "L", 1);
-         //ROS_INFO("Wrote %d bytes", cnt);
-         cnt = write(serial, laser_data, 512);
-         //ROS_INFO("Wrote %d bytes", cnt);
-         cnt = write(serial, "\r\r\r\r\r\r\r\r", 1);
-         //ROS_INFO("Wrote %d bytes", cnt);
-         laser_ready = 0;
-      }
-
       //ROS_INFO("start serial input");
       cnt = read(serial, in_buffer + in_cnt, IN_BUFSZ - in_cnt - 1); 
       if( cnt > 0 ) {
@@ -229,7 +295,7 @@ int main(int argc, char ** argv) {
          in_buffer[cnt + in_cnt] = 0;
          //ROS_INFO("Read %d characters", cnt);
          in_cnt += cnt;
-         ROS_INFO("Buffer size %d", in_cnt);
+         //ROS_INFO("Buffer size %d", in_cnt);
 
          // parse out newline-terminated strings and call appropriate functions
          int start = 0;
@@ -241,7 +307,7 @@ int main(int argc, char ** argv) {
                // check that our string isn't just the terminating character
                if( i - start > 1 ) {
                   // we got a string. call the appropriate function
-                  Packet p(in_buffer+start, i-start);
+                  Packet p((char*)(in_buffer+start), i-start);
                   handlers[in_buffer[start]](p);
                }
                start = i+1;
@@ -258,6 +324,23 @@ int main(int argc, char ** argv) {
       }
       
       ros::spinOnce();
+
+      // write pending data to serial port
+      if( gps_ready ) {
+         cnt = write(serial, gps_packet.outbuf(), gps_packet.outsz());
+         gps_ready = 0;
+      }
+
+      //ROS_INFO("start laser transmit");
+      if( laser_ready ) {
+         cnt = write(serial, "L", 1);
+         //ROS_INFO("Wrote %d bytes", cnt);
+         cnt = write(serial, laser_data, 512);
+         //ROS_INFO("Wrote %d bytes", cnt);
+         cnt = write(serial, "\r\r\r\r\r\r\r\r", 1);
+         //ROS_INFO("Wrote %d bytes", cnt);
+         laser_ready = 0;
+      }
 
       loop_rate.sleep();
    }

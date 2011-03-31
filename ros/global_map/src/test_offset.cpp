@@ -55,11 +55,15 @@ int main(int argc, char ** argv) {
 
    int16_t old_meridian = 0;
 
+   /*
    vector<int> rows;
    vector<int> cols;
+   */
+   vector<double> rows;
+   vector<double> cols;
 
-   long int row_avg = 0;
-   long int col_avg = 0;
+   double row_avg = 0;
+   double col_avg = 0;
    int row_max = INT_MIN;
    int row_min = INT_MAX;
    int col_max = INT_MIN;
@@ -103,6 +107,14 @@ int main(int argc, char ** argv) {
       } else {
          ROS_ERROR("Failed to call service Offset");
       }
+
+      /*
+      rows.push_back(lat);
+      cols.push_back(lon);
+      row_avg += lat;
+      col_avg += lon;
+      count++;
+      */
    }
 
    row_avg /= count;
@@ -111,7 +123,7 @@ int main(int argc, char ** argv) {
    long int row_var = 0;
    long int col_var = 0;
 
-   vector<int>::iterator itr;
+   vector<double>::iterator itr;
 
    for( itr = rows.begin(); itr != rows.end(); itr++ ) {
       row_var += (*itr - row_avg) * (*itr - row_avg);
@@ -124,22 +136,27 @@ int main(int argc, char ** argv) {
    row_var /= count;
    col_var /= count;
 
-   ROS_INFO("Row Average: %ld", row_avg);
-   ROS_INFO("Col Average: %ld", col_avg);
+   ROS_INFO("Row Average: %lf", row_avg);
+   ROS_INFO("Col Average: %lf", col_avg);
    ROS_INFO("Row Std Dev: %lf", sqrt(row_var));
    ROS_INFO("Col Std Dev: %lf", sqrt(col_var));
 
    FILE * outdata = fopen("subsample.csv", "w");
 
    // N samples, covering N consecutive seconds
-   for( int N = 2; N < 720; N++ ) {
+   for( int N = 2; N < count; N++ ) {
       ROS_INFO("Subsample Size: %d", N);
       // subsampling: sample N consecutive measurements and take an average
       vector<double> row_avgs;
       vector<double> col_avgs;
       double subsample_row_var = 0;
       double subsample_col_var = 0;
+
+      double subsample_row_std_avg = 0;
+      double subsample_col_std_avg = 0;
+
       for( int start = 0; start < count - N; start++ ) {
+         // compute average for this sample
          double tmp_row_avg = 0;
          double tmp_col_avg = 0;
          for( int i=0; i<N; i++ ) {
@@ -149,19 +166,38 @@ int main(int argc, char ** argv) {
          tmp_row_avg /= N;
          tmp_col_avg /= N;
 
+         // compute variance for this sample
+         double tmp_row_var = 0;
+         double tmp_col_var = 0;
+         for( int i=0; i<N; i++ ) {
+            tmp_row_var += (tmp_row_avg - rows[i+start]) * (tmp_row_avg - rows[i+start]);
+            tmp_col_var += (tmp_col_avg - cols[i+start]) * (tmp_col_avg - cols[i+start]);
+         }
+
+         tmp_row_var /= N;
+         tmp_col_var /= N;
+         subsample_row_std_avg += sqrt(tmp_row_var);
+         subsample_col_std_avg += sqrt(tmp_col_var);
+
          row_avgs.push_back(tmp_row_avg);
          col_avgs.push_back(tmp_col_avg);
 
          subsample_row_var += (tmp_row_avg - row_avg) * (tmp_row_avg - row_avg);
-         subsample_col_var += (tmp_col_avg - col_avg) * (tmp_row_avg - row_avg);
+         subsample_col_var += (tmp_col_avg - col_avg) * (tmp_col_avg - col_avg);
       }
       subsample_row_var /= (count-N);
       subsample_col_var /= (count-N);
 
+      subsample_row_std_avg /= (count-N);
+      subsample_col_std_avg /= (count-N);
+
       ROS_INFO("Subsample Row Std Dev: %lf", sqrt(subsample_row_var));
       ROS_INFO("Subsample Col Std Dev: %lf", sqrt(subsample_col_var));
-      fprintf(outdata, "%d, %lf, %lf\n", N, sqrt(subsample_row_var), 
-            sqrt(subsample_col_var));
+      ROS_INFO("Subsample Row Std Dev Avg: %lf", subsample_row_std_avg);
+      ROS_INFO("Subsample Col Std Dev Avg: %lf", subsample_col_std_avg);
+      fprintf(outdata, "%d, %lf, %lf, %lf, %lf\n", N, sqrt(subsample_row_var), 
+            sqrt(subsample_col_var), subsample_row_std_avg,
+            subsample_col_std_avg);
    }
    fclose(outdata);
    /*ROS_INFO("Row min: %d", row_min);
