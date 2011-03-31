@@ -12,8 +12,8 @@ package com.namniart;
  */
 public class StubHardwareManager extends HardwareManager {
 	
-	public StubHardwareManager() {
-		super(null);
+	public StubHardwareManager(RobotApplication app) {
+		super(null, app);
 	}
 	
 	@Override

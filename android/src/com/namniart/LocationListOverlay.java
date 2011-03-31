@@ -1,26 +1,22 @@
 package com.namniart;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.drawable.Drawable;
-import android.location.Location;
 
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.ItemizedOverlay;
 import com.google.android.maps.OverlayItem;
 
 public class LocationListOverlay extends ItemizedOverlay<OverlayItem> {
-	private List<Location> mItems;
+	private GPSQueue mItems;
 	private Context mContext;
 	
-	public LocationListOverlay(Drawable d, Context c) {
+	public LocationListOverlay(Drawable d, Context c, GPSQueue q) {
 		super(boundCenter(d));
 		mContext = c;
-		mItems = new ArrayList<Location>();
+		mItems = q;
 		populate();
 	}
 	
@@ -31,18 +27,15 @@ public class LocationListOverlay extends ItemizedOverlay<OverlayItem> {
 	
 	@Override
 	protected OverlayItem createItem(int i) {
-		int lat, lon;
-		lat = (int)(mItems.get(i).getLatitude() * 1E6);
-		lon = (int)(mItems.get(i).getLongitude() * 1E6);
-		return new OverlayItem(new GeoPoint(lat, lon), Integer.toString(i), Integer.toString(i));
+		return new OverlayItem(mItems.get(i), Integer.toString(i), Integer.toString(i));
 	}
 	
 	public void update() {
 		populate();
 	}
 	
-	public void addLocation(Location l) {
-		mItems.add(l);
+	public void addLocation(GeoPoint p) {
+		mItems.add(p);
 		populate();
 	}
 	

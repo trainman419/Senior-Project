@@ -1,11 +1,18 @@
 package com.namniart;
 
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 import android.app.Application;
 import android.bluetooth.BluetoothDevice;
 
 public class RobotApplication extends Application {
 
 	private HardwareManager mHwMan;
+	private GPSQueue mQueue;
+	private Map<Integer, List<PacketHandler>> mHandlers;
 
 	/**
 	 * Called when application is created.
@@ -15,7 +22,9 @@ public class RobotApplication extends Application {
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		mHwMan = new StubHardwareManager();
+		mHwMan = new StubHardwareManager(this);
+		mQueue = new GPSQueue(this);
+		mHandlers = new HashMap<Integer, List<PacketHandler>>();
 	}
 	
 	/**
@@ -42,7 +51,7 @@ public class RobotApplication extends Application {
 	 */
 	public void stopHwMan() {
 		mHwMan.sendStop();
-		mHwMan = new StubHardwareManager();
+		mHwMan = new StubHardwareManager(this);
 	}
 
 	/**
@@ -51,7 +60,43 @@ public class RobotApplication extends Application {
 	 */
 	public void startHwMan(BluetoothDevice device) {
 		mHwMan.sendStop();
-		mHwMan = new HardwareManager(device);
+		mHwMan = new HardwareManager(device, this);
 		mHwMan.start();
+	}
+	
+	/**
+	 * Get the instance of the GPS Queue
+	 */
+	public GPSQueue getGPSQueue() {
+		return mQueue;
+	}
+	
+	/**
+	 * Add a handler for a particular type of packet
+	 */
+	public void addHandler(int type, PacketHandler p) {
+		if( !mHandlers.containsKey(type) ) {
+			mHandlers.put(type, new LinkedList<PacketHandler>());
+		}
+		mHandlers.get(type).add(p);
+	}
+	
+	/**
+	 * Remove a handler for a particular type of packet
+	 */
+	public void removeHandler(int type, PacketHandler p) {
+		if( mHandlers.containsKey(type) ) {
+			mHandlers.get(type).remove(p);
+			// don't delete the list, even if it's empty, because we're very likely to reuse it
+		}
+	}
+	
+	/**
+	 * Get the packet handlers for a particular type of packet
+	 * @param type: The type of packet
+	 * @return a list of handlers
+	 */
+	public List<PacketHandler> getHandlers(int type) {
+		return mHandlers.get(type);
 	}
 }

@@ -2,6 +2,8 @@ package com.namniart;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 
 import android.bluetooth.BluetoothDevice;
@@ -42,10 +44,11 @@ import android.bluetooth.BluetoothSocket;
 public class HardwareManager extends Thread {
 	
 	public static final byte MAX_SPEED = (byte)100;
-   public static final byte MAX_HEADING = (byte)100;
+    public static final byte MAX_HEADING = (byte)100;
 	
 	private BluetoothDevice mDevice;
 	private boolean mStop;
+	private RobotApplication mApp;
 	
 	
 	// robot output variables
@@ -53,20 +56,26 @@ public class HardwareManager extends Thread {
 	private byte mSpeed;
 	private byte mDirection;
 	private boolean mShutdown;
+	
+	// raw bytes that the application has requested to send
+	private List<byte[]> outBytes;
 		
 	/**
 	 * Create a hardware manager instance. Talk to the robot on the other of socket s, send status messages
 	 * to master.
 	 * @param d Bluetooth device to talk to
 	 */
-	public HardwareManager(BluetoothDevice d) {
+	public HardwareManager(BluetoothDevice d, RobotApplication app) {
 		mDevice = d;
 		mStop = false;
+		mApp = app;
 		
 		mShutdown = false;
 		mUpdateSent = false;
 		mSpeed = 0;
 		mDirection = 120;
+		
+		outBytes = new LinkedList<byte[]>();
 	}
 	
 	private void message(String msg) {
@@ -100,27 +109,21 @@ public class HardwareManager extends Thread {
 			
 			// main thread loop
 			while( mStop != true ) {
-				while( in.available() < 1 && mUpdateSent ) sleep(10); // this limits how quickly we can send/receive updates from the hardware
+				while( in.available() < 1 
+						&& mUpdateSent ) sleep(10); // this limits how quickly we can send/receive updates from the hardware
 				//while( mUpdateSent && !mStop ) sleep(10);
 				
 				if( in.available() > 0 ) {
 					//message("Receiving data");
-					c = in.read();
-					switch(c) {
-					case 'S': // sonar message
-						break;
-					case 'L': // laser scan
-						// read laser scan and throw it away, for now
-						for( i=0; i<512; i++ ) {
-							c = in.read();
-						}
-						do {
-							c = in.read();
-						} while( c != '\r' && c != '\n');
-						//message("Received laser scan");
-					default:
-						// ignore unrecognized input
-						break;
+					int type = in.read(); // read type
+					List<Byte> data = new LinkedList<Byte>();
+					do {
+						c = in.read();
+						data.add((byte)c);
+					} while(c != '\r');
+					Packet p = new Packet(data);
+					for( PacketHandler h : mApp.getHandlers(type) ) {
+						h.handlePacket(p);
 					}
 				}
 				
@@ -149,6 +152,15 @@ public class HardwareManager extends Thread {
 						}
 					}
 					//message("Update sent");
+				}
+				
+				// send any raw data requested by the application
+				synchronized(outBytes) {
+					for(byte[] b : outBytes) {
+						System.out.println("Transmitting raw packet starting with " + b[0]);
+						out.write(b);
+					}
+					outBytes.clear();
 				}
 			}
 			
@@ -224,6 +236,15 @@ public class HardwareManager extends Thread {
 		synchronized(mUpdateSent) {
 			mUpdateSent = false;
 			mShutdown = true;
+		}
+	}
+	
+	/**
+	 * send raw bytes to the robot
+	 */
+	public void sendBytes(byte [] b) {
+		synchronized(outBytes) {
+			outBytes.add(b);
 		}
 	}
 }

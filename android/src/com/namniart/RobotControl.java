@@ -14,7 +14,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.Location;
 import android.os.Bundle;
 import android.view.GestureDetector;
 import android.view.Menu;
@@ -39,6 +38,7 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 	private GestureDetector mGestureDetector;
 	private LocationListOverlay mLocList;
 	private MyMapView mMapView;
+	private RobotLocationOverlay mLocOverlay;
 
 	// bluetooth-related variables
 	private BluetoothDevice mDevice;
@@ -100,8 +100,13 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 		
 		// Green button from: http://commons.wikimedia.org/wiki/File:Button-Green.svg
 		mLocList = new LocationListOverlay(getResources().getDrawable(R.drawable.button_green),
-				mMapView.getContext());
+				mMapView.getContext(), mApp.getGPSQueue());
 		overlays.add(mLocList);
+		
+		mLocOverlay = new RobotLocationOverlay(getResources().getDrawable(R.drawable.button_orange));
+		overlays.add(mLocOverlay);
+		
+		mApp.addHandler('G', mLocOverlay);
     }
 
 	@Override
@@ -229,6 +234,14 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
         // FIXME: make this work properly
         outState.putParcelable("BluetoothDevice", mDevice);
     }
+    
+    /**
+     * called when this activity is destroyed
+     */
+    @Override
+    protected void onDestroy() {
+    	mApp.removeHandler('G', mLocOverlay);
+    }
 
     /* methods to implement SensorEventListener
      */
@@ -310,10 +323,7 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 			System.out.println("Double-tap at (" + x + ", " + y +"); action: " + e.getAction());
 			GeoPoint point = projection.fromPixels((int)x, (int)y);
 			System.out.println("Point: " + point.toString());
-			Location l = new Location("user");
-			l.setLatitude(point.getLatitudeE6() / 1000000.0);
-			l.setLongitude(point.getLongitudeE6() / 1000000.0);
-			mLocList.addLocation(l);
+			mLocList.addLocation(point);
 		}
 		return false;
 	}
