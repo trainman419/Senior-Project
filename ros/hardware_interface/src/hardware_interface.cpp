@@ -189,12 +189,12 @@ handler(odometry_h) {
 handler(gpslist_h) {
    int cnt = p.readu8();
    int cursor = p.readu8();
-   float * lat = (float*)malloc(cnt*sizeof(float));
-   float * lon = (float*)malloc(cnt*sizeof(float));
+   double * lat = (double*)malloc(cnt*sizeof(double));
+   double * lon = (double*)malloc(cnt*sizeof(double));
    ROS_INFO("GPS List, size: %d, cursor: %d", cnt, cursor);
    for( int i=0; i<cnt; i++ ) {
-      lat[i] = p.readfloat();
-      lon[i] = p.readfloat();
+      lat[i] = (double)p.reads32() / 1000000.0;
+      lon[i] = (double)p.reads32() / 1000000.0;
       ROS_INFO("Lat: %f, Lon: %f", lat[i], lon[i]);
    }
    free(lat);
