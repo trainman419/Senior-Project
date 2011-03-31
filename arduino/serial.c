@@ -19,13 +19,12 @@
 uint8_t rx_head[4]; /* points to next writeable byte */
 volatile uint16_t rx_size[4]; /* number of byts in buffer */
 uint8_t rx_buf[4][BUF_SZ];
-uint8_t * rx_ptr[4];
 
 /* send circular fifo (10 bytes total, 20% overhead) */
 uint8_t tx_head[4]; /* next writeable byte */
 volatile uint16_t tx_size[4]; /* number of bytes in buffer */
 uint8_t tx_buf[4][BUF_SZ];
-uint8_t * tx_ptr;
+uint8_t tx_lock[4];
 
 volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
 #define A 0
@@ -144,24 +143,25 @@ uint8_t tx_ready(uint8_t port) {
    return tx_size[port] < 8;
 }
 
-uint8_t tx_lock[4];
-
-/* put a byte in the transmit buffer. block until space available */
-void tx_byte(uint8_t port, uint8_t b) {
-   acquire_lock(tx_lock + port);
+// transmit a byte without locking, for internal use
+void tx_internal(uint8_t port, uint8_t b) {
    while (tx_size[port] >= BUF_SZ );
 
-//   cli();
-   /* messing with buffer pointers is not atomic; need locking here */
-   ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (just enough locking) */
+   ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
    tx_buf[port][tx_head[port]++] = b;
-   //tx_head[port] &= 7;
    tx_head[port] %= BUF_SZ;
    tx_size[port]++;
    /* done messing with buffer pointers */
 
    ucsr[port][B] |= (1 << 5); /* enable send interrupt */
-   //sei();
+}
+
+/* put a byte in the transmit buffer. block until space available */
+void tx_byte(uint8_t port, uint8_t b) {
+   acquire_lock(tx_lock + port);
+
+   tx_internal(port, b);
+
    release_lock(tx_lock + port);
 }
 
@@ -170,16 +170,7 @@ void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz) {
    acquire_lock(tx_lock + port);
    uint16_t i;
    for( i=0; i<sz; i++ ) {
-      while(tx_size[port] >= BUF_SZ);
-
-      ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
-      tx_buf[port][tx_head[port]++] = buf[i];
-      //tx_head[port] &= 7;
-      tx_head[port] %= BUF_SZ;
-      tx_size[port]++;
-      /* done messing with buffer pointers */
-
-      ucsr[port][B] |= (1 << 5); /* enable send interrupt */
+      tx_internal(port, buf[i]);
    }
    release_lock(tx_lock + port);
 }
