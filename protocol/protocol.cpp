@@ -50,13 +50,13 @@ void Packet::append(uint32_t i) {
    uint8_t tmp;
    tmp = i & 0xFF;
    append(tmp);
-   tmp >>= 8;
+   i >>= 8;
    tmp = i & 0xFF;
    append(tmp);
-   tmp >>= 8;
+   i >>= 8;
    tmp = i & 0xFF;
    append(tmp);
-   tmp >>= 8;
+   i >>= 8;
    tmp = i & 0xFF;
    append(tmp);
 }
