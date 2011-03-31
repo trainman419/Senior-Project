@@ -167,6 +167,10 @@ uint32_t Packet::readu32() {
    return res;
 }
 
+int32_t Packet::reads32() {
+   return (int32_t)readu32();
+}
+
 float Packet::readfloat() {
    uint32_t tmp = readu32();
    return *((float*)&tmp);

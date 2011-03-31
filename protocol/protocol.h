@@ -44,6 +44,7 @@ class Packet {
       unsigned short readu16();
       signed short   reads16();
       uint32_t       readu32();
+      int32_t        reads32();
       float          readfloat();
 
       // get data for sending packet
