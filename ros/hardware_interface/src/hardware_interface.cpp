@@ -52,10 +52,19 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
    laser_ready = 1;
 }
 
+int gps_ready = 0;
+Packet gps_packet('G');
 // callback on GPS location received
 void gpsCallback(const gps_common::GPSFix::ConstPtr & msg) {
    ROS_INFO("Received GPS fix; lat: %f, lon: %f", msg->latitude,
          msg->longitude);
+   gps_packet.reset();
+   int32_t lat = msg->latitude * 1000000.0;
+   int32_t lon = msg->longitude * 1000000.0;
+   gps_packet.append(lat);
+   gps_packet.append(lon);
+   gps_packet.finish();
+   gps_ready = 1;
 }
 
 #define handler(foo) void foo(Packet & p)
@@ -273,25 +282,12 @@ int main(int argc, char ** argv) {
    
    tcsetattr(serial, TCSANOW, &tio);
 
-   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
+//   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
    ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
 
    ros::Rate loop_rate(10);
 
    while( ros::ok() ) {
-      
-      // write pending data to serial port
-      //ROS_INFO("start laser transmit");
-      if( laser_ready ) {
-         cnt = write(serial, "L", 1);
-         //ROS_INFO("Wrote %d bytes", cnt);
-         cnt = write(serial, laser_data, 512);
-         //ROS_INFO("Wrote %d bytes", cnt);
-         cnt = write(serial, "\r\r\r\r\r\r\r\r", 1);
-         //ROS_INFO("Wrote %d bytes", cnt);
-         laser_ready = 0;
-      }
-
       //ROS_INFO("start serial input");
       cnt = read(serial, in_buffer + in_cnt, IN_BUFSZ - in_cnt - 1); 
       if( cnt > 0 ) {
@@ -328,6 +324,23 @@ int main(int argc, char ** argv) {
       }
       
       ros::spinOnce();
+
+      // write pending data to serial port
+      if( gps_ready ) {
+         cnt = write(serial, gps_packet.outbuf(), gps_packet.outsz());
+         gps_ready = 0;
+      }
+
+      //ROS_INFO("start laser transmit");
+      if( laser_ready ) {
+         cnt = write(serial, "L", 1);
+         //ROS_INFO("Wrote %d bytes", cnt);
+         cnt = write(serial, laser_data, 512);
+         //ROS_INFO("Wrote %d bytes", cnt);
+         cnt = write(serial, "\r\r\r\r\r\r\r\r", 1);
+         //ROS_INFO("Wrote %d bytes", cnt);
+         laser_ready = 0;
+      }
 
       loop_rate.sleep();
    }
