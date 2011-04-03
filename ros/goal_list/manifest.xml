@@ -1,0 +1,15 @@
+<package>
+  <description brief="goal_list">
+
+     goal_list
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/goal_list</url>
+  <depend package="roscpp"/>
+
+</package>
+
+
