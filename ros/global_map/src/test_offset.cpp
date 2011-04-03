@@ -91,8 +91,8 @@ int main(int argc, char ** argv) {
       o_srv.request.lat = lat;
       o_srv.request.lon = lon;
       if( o_client.call(o_srv) ) {
-         row = o_srv.response.row;
-         col = o_srv.response.col;
+         row = o_srv.response.loc.row;
+         col = o_srv.response.loc.col;
          row_avg += row;
          col_avg += col;
          row_min = min(row_min, row);

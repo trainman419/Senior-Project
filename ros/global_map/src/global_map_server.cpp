@@ -152,16 +152,16 @@ bool getOffset(global_map::Offset::Request &req,
    double x = A * log( (1 + sin(lon)*cos(lat)) / (1 - sin(lon)*cos(lat))) / 2;
    double y = A * atan( tan(lat) / cos(lon) );
 
-   resp.row = y;
-   resp.col = x;
+   resp.loc.row = y;
+   resp.loc.col = x;
 
    return true;
 }
 
 bool reverseOffset(global_map::RevOffset::Request &req,
                    global_map::RevOffset::Response &resp) {
-   double x = req.col;
-   double y = req.row;
+   double x = req.loc.col;
+   double y = req.loc.row;
 
    double lon = atan( sinh(x / A) / cos(y / A));
    double lat = asin( sin(y / A) / cosh(x / A));

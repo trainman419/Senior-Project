@@ -1,6 +1,7 @@
-# get offsets from 0,0 in current meridian for given lat/lon in degrees
-int32 col
-int32 row
+# Convert coordinates in the current meridian back to lat/lon
+# int32 col
+# int32 row
+Location loc
 ---
 float64 lat
 float64 lon

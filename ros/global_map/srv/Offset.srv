@@ -2,5 +2,6 @@
 float64 lat
 float64 lon
 ---
-int32 col
-int32 row
+Location loc
+#int32 col
+#int32 row
