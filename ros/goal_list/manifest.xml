@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/goal_list</url>
   <depend package="roscpp"/>
+  <depend package="global_map"/>
 
 </package>
 
