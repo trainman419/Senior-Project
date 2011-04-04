@@ -16,6 +16,8 @@
 matrix<1, 3> position(0.0);
 matrix<3, 3> covariance(0.0);
 
+// client for retrieving offsets
+ros::ServiceClient o_client;
 
 // receive a GPS update
 void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
@@ -28,9 +30,31 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
    
    // input covariance
    matrix<3, 3> Q;
+   // diagonal matrix
+   Q.data[0][0] = 5.0;
+   Q.data[1][1] = 5.0;
+   Q.data[2][2] = 1.0; // TODO: update this value when we know more about the 
+   // remainder of values 0
+   Q.data[0][1] = 0;
+   Q.data[0][2] = 0;
+   Q.data[1][0] = 0;
+   Q.data[1][2] = 0;
+   Q.data[2][0] = 0;
+   Q.data[2][1] = 0;
+
+
+   // compass
    
+   global_map::Offset offset;
+   offset.request.lat = gps->latitude;
+   offset.request.lon = gps->longitude;
+   if( !o_client.call(offset) ) {
+      ROS_ERROR("Failed to call Offset service");
+   }
    // input measurement
    matrix<1, 3> z;
+   //z.data[0] TODO
+   //z.data[1] TODO
 
    // measurement update step:
    // C: 3x3 identity matrix
@@ -43,6 +67,7 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
 
    gain = covariance * invert(covariance + Q);
    position = position + (z - position) * gain;
+   covariance = (I<3>() - gain) * covariance;
 }
 
 // receive an odometry update
@@ -98,6 +123,8 @@ int main(int argc, char ** argv) {
 
    // subscribe to extended fix data from gps node.
    ros::NodeHandle n;
+
+   o_client = n.serviceClient<global_map::Offset>("Offset");
 
    ros::Subscriber gps_sub = n.subscribe("extended_fix", 10, gpsCallback);
    ros::Subscriber odo_sub = n.subscribe("base_odometry", 10, odometryCallback);
