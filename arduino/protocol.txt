@@ -41,6 +41,7 @@ W     Wheel slip notification?
 b     Battery level readings
 R     Reflex Settings
 H     Hardware sleep/wake status
+C     compass readings
 
 Data to Robot:
 M <s> Motor Command
