@@ -24,6 +24,7 @@ extern "C" {
 #include "main.h"
 #include "wheelmon.h"
 #include "speedman.h"
+#include "compass.h"
 }
 
 #include "protocol.h"
@@ -46,6 +47,7 @@ void tx_string(uint8_t port, char * s) {
 volatile uint16_t shutdown_count;
 
 Packet odom('O');
+Packet c_pack('C');
 
 inline void writes16(int16_t s, uint8_t * buf) {
    buf[0] = s & 0xFF;
@@ -53,10 +55,15 @@ inline void writes16(int16_t s, uint8_t * buf) {
 }
 
 void shutdown(void) {
-   //uint8_t i;
+   uint8_t i;
+   struct heading h;
    while( shutdown_count == 0 ) {
       // Query command, for debugging
       // read speeds and output them
+      cli();
+      compass();
+      sei();
+
       odom.reset();
       odom.append((uint16_t)rcount);
       odom.append((uint16_t)lcount);
@@ -66,9 +73,23 @@ void shutdown(void) {
       odom.append((int16_t)qspeed);
       odom.finish();
       tx_bytes(BRAIN, (const uint8_t *)odom.outbuf(), odom.outsz());
-      
 
-      yeild();
+      i=0;
+      do {
+         yeild();
+         cli();
+         h = compass_poll();
+         sei();
+         i++;
+      } while( h.x == 0 && h.y == 0 && i < 10);
+
+      c_pack.reset();
+      c_pack.append(h.x);
+      c_pack.append(h.y);
+      c_pack.finish();
+      tx_bytes(BRAIN, (const uint8_t *)c_pack.outbuf(), c_pack.outsz());
+
+      //yeild();
       //PORTB |= (1 << 7);
       yeild();
       //PORTB &= ~(1 << 7);
@@ -99,6 +120,8 @@ int main() {
 
    servo_set(0, 127);
    battery_init();
+
+   compass_init();
 
    system_init();
 

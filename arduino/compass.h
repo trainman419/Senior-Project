@@ -13,7 +13,8 @@ struct heading
 };
 
 /* take compass reading */
-struct heading compass();
+void compass();
+struct heading compass_poll();
 
 /* initialize compass */
 void compass_init();
