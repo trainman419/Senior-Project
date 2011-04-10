@@ -191,8 +191,14 @@ handler(odometry_h) {
    int lspeed = p.reads16();
    int qspeed = p.reads16();
    // TODO: publish odometry
-   ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
-            rcount, lcount, qcount, rspeed, lspeed, qspeed);
+//   ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
+//            rcount, lcount, qcount, rspeed, lspeed, qspeed);
+}
+
+handler(compass_h) {
+   int x = p.reads16();
+   int y = p.reads16();
+   ROS_INFO("Compass reading (%d, %d): %f", x, y, atan2(-y, x)*180/M_PI);
 }
 
 handler(gpslist_h) {
@@ -232,6 +238,7 @@ int main(int argc, char ** argv) {
 
    odometry_setup();
    handlers['O'] = odometry_h;
+   handlers['C'] = compass_h;
 
    gps_setup();
    handlers['G'] = gps_h;
