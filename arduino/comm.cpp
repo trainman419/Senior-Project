@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+extern "C" {
 #include "motor.h"
 #include "servo.h"
 #include "serial.h"
@@ -16,12 +17,18 @@
 #include "main.h"
 #include "speedman.h"
 #include "lock.h"
+};
+
+#include "protocol.h"
 
 uint8_t brain_buffer[520];
 
-// touch the internals of the serial library
-extern uint8_t tx_lock[4];
-void tx_internal(uint8_t port, uint8_t b);
+extern "C" {
+   // touch the internals of the serial library
+   extern uint8_t tx_lock[4];
+   void tx_internal(uint8_t port, uint8_t b);
+
+};
 
 /* Pass data from one uart to the other, without buffering it
    useful for datagrams that are too big to buffer, such as
@@ -41,6 +48,7 @@ void passthrough(uint8_t src, uint8_t dst, uint8_t first) {
    tx_internal(dst, first);
    while( (input = rx_byte(src)) != '\r' ) {
       tx_internal(dst, input);
+      while(!rx_ready(src)) yeild();
    }
    tx_internal(dst, input);
    release_lock(tx_lock + dst);
@@ -51,11 +59,15 @@ void finish(int src) {
    // LED on
    PORTB |= (1 << 7);
 
-   while( rx_byte(src) != '\r' );
+   do {
+      while(!rx_ready(src)) yeild();
+   } while( rx_byte(src) != '\r' );
 
    // LED off
    PORTB &= ~(1 << 7);
 }
+
+Packet<20> brain_pack(' ');
 
 // Receive data from the brain
 void brain_rx_thread(void) {
@@ -64,7 +76,7 @@ void brain_rx_thread(void) {
 
    while(1) {
       // apparently uncommenting this breaks things
-      //while(!rx_ready(BRAIN)) yeild();
+      while(!rx_ready(BRAIN)) yeild();
       input = rx_byte(BRAIN);
       switch(input) {
          case 'L':
@@ -142,11 +154,5 @@ void bt_rx_thread(void) {
             passthrough(BT, BRAIN, 'L');
             break;
       }
-
-      /*do {
-         while( !rx_ready(BT) ) yeild();
-         input = rx_byte(BT);
-      } while( input != '\r' && input != '\n' );
-      */
    }
 }

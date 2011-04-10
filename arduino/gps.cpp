@@ -32,7 +32,7 @@ void gps_init(uint8_t port) {
 }
 
 // output packet for GPS
-Packet gps_packet('G');
+Packet<128> gps_packet('G');
 
 /* GPS listen thread */
 void gps_thread(void) {
@@ -43,8 +43,22 @@ void gps_thread(void) {
       while(rx_ready(gps_port)) {
          input = rx_byte(gps_port);
 
+         if( input != '\n' && input != '\r' ) {
+            gps_packet.append(input);
+         }
+
+         if( input == '\n' || gps_packet.outsz() > 100 ) {
+            gps_packet.finish();
+            tx_bytes(BRAIN,
+                  (const uint8_t *)gps_packet.outbuf(), 
+                  gps_packet.outsz());
+
+            // reset packet for next time
+            gps_packet.reset();
+         }
+
          // if we get a terminating character, process the data
-         if(input == '\n') {
+         /*if(input == '\n') {
             // finish and transmit packet
             gps_packet.finish();
             tx_bytes(BRAIN,
@@ -55,7 +69,7 @@ void gps_thread(void) {
             gps_packet.reset();
          } else if( input != '\r' ) {
             gps_packet.append(input);
-         }
+         }*/
       }
       yeild();
    }

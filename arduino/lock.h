@@ -18,7 +18,7 @@ static inline void acquire_lock(uint8_t * l) {
       // disable interrupts
       cli();
       if( !*l ) {
-         *l = 1;
+         *l = current_pid+1;
          success = 1;
       }
       sei();
