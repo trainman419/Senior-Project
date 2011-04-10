@@ -18,6 +18,8 @@
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
 #include "gps_common/GPSFix.h"
+#include "nav_msgs/Odometry.h"
+
 #include "protocol.h"
 
 using namespace std;
@@ -53,7 +55,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
 }
 
 int gps_ready = 0;
-Packet gps_packet('G');
+Packet<32> gps_packet('G');
 // callback on GPS location received
 void gpsCallback(const gps_common::GPSFix::ConstPtr & msg) {
    ROS_INFO("Received GPS fix; lat: %f, lon: %f", msg->latitude,
@@ -67,8 +69,8 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr & msg) {
    gps_ready = 1;
 }
 
-#define handler(foo) void foo(Packet & p)
-typedef void (*handler_ptr)(Packet & p);
+#define handler(foo) void foo(Packet<250> & p)
+typedef void (*handler_ptr)(Packet<250> & p);
 
 handler_ptr handlers[256];
 
@@ -216,6 +218,13 @@ handler(gpslist_h) {
    free(lon);
 }
 
+handler(battery_h) {
+   uint8_t main = p.readu8();
+   uint8_t motor = p.readu8();
+   uint32_t idle = p.readu32();
+   ROS_INFO("Idle count: %d", idle);
+}
+
 #define IN_BUFSZ 1024
 
 int main(int argc, char ** argv) {
@@ -242,8 +251,8 @@ int main(int argc, char ** argv) {
 
    gps_setup();
    handlers['G'] = gps_h;
-
    handlers['L'] = gpslist_h;
+   handlers['b'] = battery_h;
 
    ros::init(argc, argv, "hardware_interface");
 
@@ -314,7 +323,7 @@ int main(int argc, char ** argv) {
                // check that our string isn't just the terminating character
                if( i - start > 1 ) {
                   // we got a string. call the appropriate function
-                  Packet p((char*)(in_buffer+start), i-start);
+                  Packet<250> p((char*)(in_buffer+start), i-start);
                   handlers[in_buffer[start]](p);
                }
                start = i+1;
