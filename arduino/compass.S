@@ -82,8 +82,6 @@ compass:
    mov r21,r18        ; copy to r21
    cbi 0x0B,7         ; set enable high
    sbr r18,0b00000101 ; set clock and out high
-   ldi r23,0          ; set r23 to 0 , x msb
-   ldi r24,0          ; set r24 to 0 , y lsb
 
 start_measure:
    ;this and loop2 send start measurement command, 1000
@@ -101,7 +99,6 @@ loop2:
    out 0x14,r21       ; clock low, output low
    brne loop2         ;  repeat loop if(r22!=0)   two cycles
    
-   ldi r25,0          ; set r25 to 0 , y msb
 
    ret
    
@@ -135,6 +132,11 @@ compass_poll:
    sbr r18,0b00000101 ; set clock and out high
    sbr r19,0b00000001 ; set output high
    sbr r20,0b00000100 ; set clock high
+
+   clr r23            ; set r23 to 0 , x msb
+   clr r24            ; set r24 to 0 , y lsb
+   clr r25            ; set r25 to 0 , y msb
+   clr r26            ; set r26 to 0; tmp for x lsb
 
 start_read:
    ;loops 3 and 4 send the read sequence 1100
@@ -188,12 +190,12 @@ read:
 ;   brne start_read
    brne notready
    
-   ldi r23,0          ;
    ldi r22,4          ;
 input1:
    out 0x14,r21       ;clock low
    sbic 0x12,1        ;
-   add r23,r22        ;
+   ;add r23,r22        ;
+   or r23,r22        ;
    out 0x14,r20       ;clock high
    lsr r22            ;
    brne input1        ;
@@ -202,10 +204,16 @@ input1:
 input2:
    out 0x14,r21       ;clock low
    sbic 0x12,1        ;
-   add r26,r22        ;
+   ;add r26,r22        ;
+   or r26,r22        ;
    out 0x14,r20       ;clock high
    lsr r22            ;
    brne input2        ;
+
+   nop
+   nop
+   nop
+   nop
    
    ldi r22,4          ;
 input3:
@@ -244,3 +252,4 @@ notready:
    clr r24
    clr r25
    ret
+
