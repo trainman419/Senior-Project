@@ -84,8 +84,8 @@ void shutdown(void) {
       } while( h.x == 0 && h.y == 0 && i < 10);
 
       c_pack.reset();
-      c_pack.append(h.x);
-      c_pack.append(h.y);
+      c_pack.append(h.x - 13);
+      c_pack.append(h.y - 48);
       c_pack.finish();
       tx_bytes(BRAIN, (const uint8_t *)c_pack.outbuf(), c_pack.outsz());
 
