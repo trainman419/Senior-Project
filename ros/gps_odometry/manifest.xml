@@ -12,6 +12,7 @@
   <depend package="nav_msgs"/>
   <depend package="gps_common"/>
   <depend package="global_map"/>
+  <depend package="hardware_interface"/>
 
 </package>
 

@@ -187,6 +187,7 @@ template<int N, int M>
 std::ostream & operator<<(std::ostream & out, matrix<N, M> m) {
    out << "[ ";
    for( int i=0; i<N; i++ ) {
+      if( i != 0 ) out << "  ";
       out << "[ ";
       for( int j=0; j<M; j++ ) {
          out << m.data[i][j];

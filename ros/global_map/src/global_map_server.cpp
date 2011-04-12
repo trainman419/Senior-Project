@@ -146,11 +146,11 @@ bool getOffset(global_map::Offset::Request &req,
    resp.row = row(req.lat);
    resp.col = col(req.lon);
    */
-   double lat = req.lat * M_PI / 180.0; // phi
-   double lon = (req.lon - meridian) * M_PI / 180.0; // lambda
+   long double lat = req.lat * M_PI / 180.0; // phi
+   long double lon = (req.lon - meridian) * M_PI / 180.0; // lambda
 
-   double x = A * log( (1 + sin(lon)*cos(lat)) / (1 - sin(lon)*cos(lat))) / 2;
-   double y = A * atan( tan(lat) / cos(lon) );
+   long double x = A * logl( (1 + sinl(lon)*cosl(lat)) / (1 - sinl(lon)*cosl(lat))) / 2;
+   long double y = A * atanl( tanl(lat) / cosl(lon) );
 
    resp.loc.row = y;
    resp.loc.col = x;
@@ -160,14 +160,14 @@ bool getOffset(global_map::Offset::Request &req,
 
 bool reverseOffset(global_map::RevOffset::Request &req,
                    global_map::RevOffset::Response &resp) {
-   double x = req.loc.col;
-   double y = req.loc.row;
+   long double x = req.loc.col;
+   long double y = req.loc.row;
 
-   double lon = atan( sinh(x / A) / cos(y / A));
-   double lat = asin( sin(y / A) / cosh(x / A));
+   long double lon = atanl( sinhl(x / A) / cosl(y / A));
+   long double lat = asinl( sinl(y / A) / coshl(x / A));
 
-   resp.lon = lon;
-   resp.lat = lat;
+   resp.lon = (lon * 180 / M_PI) + meridian;
+   resp.lat = (lat * 180 / M_PI);
    return true;
 }
 

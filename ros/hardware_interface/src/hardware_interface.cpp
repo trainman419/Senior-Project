@@ -19,6 +19,8 @@
 #include "sensor_msgs/LaserScan.h"
 #include "gps_common/GPSFix.h"
 #include "nav_msgs/Odometry.h"
+#include "hardware_interface/Compass.h"
+#include "global_map/RevOffset.h"
 
 #include "protocol.h"
 
@@ -26,6 +28,13 @@ using namespace std;
 
 char laser_data[512];
 int laser_ready;
+
+// for publishing odometry and compass data
+ros::Publisher odo_pub;
+ros::Publisher compass_pub;
+
+// for resolving offsets back to lat/lon for our user interface
+ros::ServiceClient r_offset;
 
 #define ROS_PERROR(str) ROS_ERROR("%s: %s", str, strerror(errno))
 
@@ -67,6 +76,23 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr & msg) {
    gps_packet.append(lon);
    gps_packet.finish();
    gps_ready = 1;
+}
+
+void posCallback(const nav_msgs::Odometry::ConstPtr & msg) {
+   global_map::RevOffset off;
+   off.request.loc.col = msg->pose.pose.position.x;
+   off.request.loc.row = msg->pose.pose.position.y;
+
+   if( r_offset.call(off) ) {
+      int32_t lat = off.response.lat * 1000000.0;
+      int32_t lon = off.response.lon * 1000000.0;
+      gps_packet.append(lat);
+      gps_packet.append(lon);
+      gps_packet.finish();
+      gps_ready = 1;
+   } else {
+      ROS_ERROR("Failed to call RevOffset");
+   }
 }
 
 #define handler(foo) void foo(Packet<250> & p)
@@ -201,6 +227,9 @@ handler(compass_h) {
    int x = p.reads16();
    int y = p.reads16();
    ROS_INFO("Compass reading (%d, %d): %f", x, y, atan2(-y, x)*180/M_PI);
+   hardware_interface::Compass c;
+   c.heading = atan2(-y, x);
+   compass_pub.publish(c);
 }
 
 handler(gpslist_h) {
@@ -299,7 +328,12 @@ int main(int argc, char ** argv) {
    tcsetattr(serial, TCSANOW, &tio);
 
 //   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
-   ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
+   //ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
+   ros::Subscriber pos_sub = n.subscribe("position", 5, posCallback);
+
+   compass_pub = n.advertise<hardware_interface::Compass>("compass", 10);
+
+   r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
 
    ros::Rate loop_rate(10);
 

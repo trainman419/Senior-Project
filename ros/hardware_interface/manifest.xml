@@ -12,6 +12,7 @@
   <depend package="sensor_msgs"/>
   <depend package="gps_common"/>
   <depend package="roscpp"/>
+  <depend package="global_map"/>
 
 </package>
 
