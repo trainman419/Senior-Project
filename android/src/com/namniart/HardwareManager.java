@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.util.Log;
 
 /**
  * Interface thread to the robot hardware. Runs as a thread, receives periodic updates from the robot
@@ -79,7 +80,8 @@ public class HardwareManager extends Thread {
 	}
 	
 	private void message(String msg) {
-		System.out.println(msg);
+		//System.out.println(msg);
+		Log.d("HardwareManager", msg);
 	}
 	
 	/**
@@ -110,20 +112,26 @@ public class HardwareManager extends Thread {
 			// main thread loop
 			while( mStop != true ) {
 				while( in.available() < 1 
-						&& mUpdateSent ) sleep(10); // this limits how quickly we can send/receive updates from the hardware
+						&& mUpdateSent 
+						&& !mStop ) sleep(10); // this limits how quickly we can send/receive updates from the hardware
 				//while( mUpdateSent && !mStop ) sleep(10);
 				
 				if( in.available() > 0 ) {
 					//message("Receiving data");
 					int type = in.read(); // read type
+					//message("Handling packet: " + type);
 					List<Byte> data = new LinkedList<Byte>();
 					do {
 						c = in.read();
 						data.add((byte)c);
+						//message("Got byte: " + c);
 					} while(c != '\r');
 					Packet p = new Packet(data);
-					for( PacketHandler h : mApp.getHandlers(type) ) {
-						h.handlePacket(p);
+					List<PacketHandler> handlers = mApp.getHandlers(type);
+					if( handlers != null ) {
+						for( PacketHandler h : mApp.getHandlers(type) ) {
+							h.handlePacket(p);
+						}
 					}
 				}
 				
@@ -157,7 +165,7 @@ public class HardwareManager extends Thread {
 				// send any raw data requested by the application
 				synchronized(outBytes) {
 					for(byte[] b : outBytes) {
-						System.out.println("Transmitting raw packet starting with " + b[0]);
+						message("Transmitting raw packet starting with " + b[0]);
 						out.write(b);
 					}
 					outBytes.clear();
@@ -178,7 +186,7 @@ public class HardwareManager extends Thread {
 			
 		} catch(Exception e) {
 			// tell the master why we died
-			message("HardwareManager failure: " + e.getMessage());
+			Log.e("HardwareManager", "Exception: " + e.toString(), e);
 		}
 		return; // I like seeing where the end of my function is
 	}
