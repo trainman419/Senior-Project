@@ -57,6 +57,7 @@ public class HardwareManager extends Thread {
 	private byte mSpeed;
 	private byte mDirection;
 	private boolean mShutdown;
+	private boolean mAutonomous;
 	
 	// raw bytes that the application has requested to send
 	private List<byte[]> outBytes;
@@ -73,6 +74,7 @@ public class HardwareManager extends Thread {
 		
 		mShutdown = false;
 		mUpdateSent = false;
+		mAutonomous = false;
 		mSpeed = 0;
 		mDirection = 120;
 		
@@ -146,17 +148,31 @@ public class HardwareManager extends Thread {
 						} else {
 							byte data[] = new byte[3];
 							
-							data[0] = 'M';
-							data[1] = mSpeed;
-							data[2] = '\r';
-							// speed command
-							out.write(data);
-							
-							// direction command
-							data[0] = 'S';
-							data[1] = mDirection;
-							data[2] = '\r';
-							out.write(data);
+							if( mAutonomous ) {
+								// set autonomous mode
+								data[0] = 'C';
+								data[1] = 0;
+								data[2] = '\r';
+								out.write(data);
+							} else {
+								// unset autonomous mode
+								data[0] = 'C';
+								data[1] = 1;
+								data[2] = '\r';
+								out.write(data);
+
+								data[0] = 'M';
+								data[1] = mSpeed;
+								data[2] = '\r';
+								// speed command
+								out.write(data);
+								
+								// direction command
+								data[0] = 'S';
+								data[1] = mDirection;
+								data[2] = '\r';
+								out.write(data);
+							}
 						}
 					}
 					//message("Update sent");
@@ -244,6 +260,20 @@ public class HardwareManager extends Thread {
 		synchronized(mUpdateSent) {
 			mUpdateSent = false;
 			mShutdown = true;
+		}
+	}
+	
+
+	/**
+	 * set whether the robot is in autonomous mode
+	 * @param a: true to put robot into autonomous mode
+	 */
+	public void setAutonomous(boolean a) {
+		if( a != mAutonomous ) {
+			synchronized(mUpdateSent) {
+				mUpdateSent = false;
+				mAutonomous = a;
+			}		
 		}
 	}
 	
