@@ -61,22 +61,26 @@ public class Packet {
 	
 	// read methods
 	public byte reads8() {
-		byte b = data.remove(0);
-		if( b == ESC ) {
-			b ^= data.remove(0);
+		if( data.size()  > 0) {
+			byte b = data.remove(0);
+			if( b == ESC ) {
+				if( data.size() > 0 )
+					b ^= data.remove(0);
+			}
+			return b;
 		}
-		return b;
+		return 0;
 	}
 	
 	public int reads32() {
 		int res = 0;
-		StringBuffer s = new StringBuffer("Got data: ");
+		//StringBuffer s = new StringBuffer("Got data: ");
 		for( int i=0; i<4; i++ ) {
 			byte b = reads8();
-			s.append((int)b).append(" ");
+			//s.append((int)b).append(" ");
 			res |= (((int)b) & 0xFF) << (8*i);
 		}
-		System.out.println(s);
+		//System.out.println(s);
 		return res;
 	}
 	

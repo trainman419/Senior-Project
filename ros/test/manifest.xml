@@ -1,0 +1,17 @@
+<package>
+  <description brief="test">
+
+     test
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/test</url>
+  <depend package="roscpp"/>
+  <depend package="hardware_interface"/>
+  <depend package="nav_msgs"/>
+
+</package>
+
+
