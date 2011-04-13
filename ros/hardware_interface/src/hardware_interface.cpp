@@ -36,6 +36,12 @@ ros::Publisher compass_pub;
 // for resolving offsets back to lat/lon for our user interface
 ros::ServiceClient r_offset;
 
+struct {
+   nav_msgs::Odometry last_pos;
+   uint8_t steer;
+   int8_t speed;
+} state;
+
 #define ROS_PERROR(str) ROS_ERROR("%s: %s", str, strerror(errno))
 
 // callback on laser scan received.
@@ -65,6 +71,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
 
 int gps_ready = 0;
 Packet<32> gps_packet('G');
+
 // callback on GPS location received
 void gpsCallback(const gps_common::GPSFix::ConstPtr & msg) {
    ROS_INFO("Received GPS fix; lat: %f, lon: %f", msg->latitude,
@@ -83,9 +90,15 @@ void posCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    off.request.loc.col = msg->pose.pose.position.x;
    off.request.loc.row = msg->pose.pose.position.y;
 
+   state.last_pos = *msg;
+
    if( r_offset.call(off) ) {
+      ROS_INFO("Received position lat: %lf, lon: %lf", off.response.lat,
+            off.response.lon);
       int32_t lat = off.response.lat * 1000000.0;
       int32_t lon = off.response.lon * 1000000.0;
+
+      gps_packet.reset();
       gps_packet.append(lat);
       gps_packet.append(lon);
       gps_packet.finish();
@@ -114,7 +127,7 @@ handler(no_handler) {
    }
    tmpbuf[i*5] = 0;
 
-   ROS_INFO("No handler for message: %c(%d) %s", buf[0], l, tmpbuf);
+   ROS_INFO("No handler for message: %02X(%d) %s", buf[0], l, tmpbuf);
 
    free(buf);
 }
@@ -194,7 +207,7 @@ handler(gps_h) {
    char * buf = (char*)malloc(l + 2);
    memcpy(buf, p.outbuf() + 1, l);
    buf[l] = 0;
-   //ROS_INFO("Received GPS: %s", buf);
+//   ROS_INFO("Received GPS: %s", buf);
    if( gps_file >= 0 ) {
       buf[l] = '\n';
       if( write(gps_file, buf, l+1) != l+1 ) {
@@ -208,25 +221,77 @@ handler(gps_h) {
 void odometry_setup(void) {
 }
 
-inline int read16(char * in) {
-   return in[0] | (in[1] << 8);
-}
+// squares per encoder count
+#define Q_SCALE 0.29
+
 handler(odometry_h) {
+   static int last_q = 0;
    int rcount = p.readu16();
    int lcount = p.readu16();
    int qcount = p.readu16();
    int rspeed = p.reads16();
    int lspeed = p.reads16();
    int qspeed = p.reads16();
-   // TODO: publish odometry
-//   ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
-//            rcount, lcount, qcount, rspeed, lspeed, qspeed);
+
+   // if we have a big jump in encoder count, assume something got reset
+   if( abs(last_q - qcount) > 10000 ) last_q = qcount;
+
+/*
+   ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
+            rcount, lcount, qcount, rspeed, lspeed, qspeed);
+            */
+   double dx = 0.0; // change in X
+   double dy = 0.0; // change in Y
+   double dt = 0.0; // change in theta
+
+   // use qcount to update distance traveled
+   double d = (qcount - last_q) * Q_SCALE;
+
+   // current heading in rad. points in same direction as forward
+   //  convert to unit-circle angle
+   double theta = (M_PI/2) - state.last_pos.pose.pose.orientation.x;
+   if( state.steer == 0 ) {
+      // if we're going straight, just generate a straight-line estimate
+      dx = d * cos(theta);
+      dy = d * sin(theta);
+      dt = 0.0;
+   } else {
+      // radius of turn
+      double r = (786.4 - 170.2 * log(fabs(state.steer))) / 10.0;
+      dt = d / r; // in rads
+
+      double theta_c1; // in radians
+      double theta_c2; // in radians
+      if( state.steer > 0 ) {
+         // turning right
+         theta_c1 = theta + M_PI;
+      } else {
+         // turning left
+         dt = -dt;
+         theta_c1 = theta - M_PI;
+      }
+      theta_c2 = theta_c1 + dt;
+
+      dx = r * (cos(theta_c2) - cos(theta_c1));
+      dy = r * (sin(theta_c2) - sin(theta_c1));
+   }
+
+   nav_msgs::Odometry update;
+   update.pose.pose.position.x = dx;
+   update.pose.pose.position.y = dy;
+   update.pose.pose.orientation.x = dt;
+
+   // TODO: measure std dev, compute, and place in update
+
+   odo_pub.publish(update);
+
+   last_q = qcount;
 }
 
 handler(compass_h) {
    int x = p.reads16();
    int y = p.reads16();
-   ROS_INFO("Compass reading (%d, %d): %f", x, y, atan2(-y, x)*180/M_PI);
+   //ROS_INFO("Compass reading (%d, %d): %f", x, y, atan2(-y, x)*180/M_PI);
    hardware_interface::Compass c;
    c.heading = atan2(-y, x);
    compass_pub.publish(c);
