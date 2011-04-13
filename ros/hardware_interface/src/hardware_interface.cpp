@@ -20,6 +20,7 @@
 #include "gps_common/GPSFix.h"
 #include "nav_msgs/Odometry.h"
 #include "hardware_interface/Compass.h"
+#include "hardware_interface/Control.h"
 #include "global_map/RevOffset.h"
 
 #include "protocol.h"
@@ -106,6 +107,18 @@ void posCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    } else {
       ROS_ERROR("Failed to call RevOffset");
    }
+}
+
+int control_ready = 0;
+Packet<16> control_packet('M');
+void controlCallback(const hardware_interface::Control::ConstPtr & msg) {
+   ROS_INFO("Control packet: (%d, %d)", msg->speed, msg->steer);
+   control_packet.reset();
+   control_packet.append(msg->speed);
+   control_packet.append(msg->steer);
+   control_packet.finish();
+
+   control_ready = 1;
 }
 
 #define handler(foo) void foo(Packet<250> & p)
@@ -395,8 +408,10 @@ int main(int argc, char ** argv) {
 //   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
    //ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
    ros::Subscriber pos_sub = n.subscribe("position", 5, posCallback);
+   ros::Subscriber control_sub = n.subscribe("control", 5, controlCallback);
 
    compass_pub = n.advertise<hardware_interface::Compass>("compass", 10);
+   odo_pub = n.advertise<nav_msgs::Odometry>("base_odometry", 100);
 
    r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
 
@@ -455,6 +470,11 @@ int main(int argc, char ** argv) {
          cnt = write(serial, "\r\r\r\r\r\r\r\r", 1);
          //ROS_INFO("Wrote %d bytes", cnt);
          laser_ready = 0;
+      }
+
+      if( control_ready ) {
+         cnt = write(serial, control_packet.outbuf(), control_packet.outsz());
+         control_ready = 0;
       }
 
       loop_rate.sleep();
