@@ -59,6 +59,7 @@ inline void writes16(int16_t s, uint8_t * buf) {
 
 void shutdown(void) {
    uint8_t i;
+   volatile uint16_t sz = 0;
    struct heading h;
    while( shutdown_count == 0 ) {
       // Query command, for debugging
@@ -76,7 +77,12 @@ void shutdown(void) {
       odom.append((int16_t)qspeed);
       odom.append(steer);
       odom.finish();
-      tx_bytes(BRAIN, (const uint8_t *)odom.outbuf(), odom.outsz());
+      //tx_bytes(BRAIN, (const uint8_t *)odom.outbuf(), odom.outsz());
+      while( sz != 0 ) yeild();
+      sz = odom.outsz();
+      brain_tx_buffer((uint8_t *)odom.outbuf(), (uint16_t*)&sz);
+
+      //PORTB |= (1 << 7); // LED on
 
       i=0;
       do {
@@ -91,7 +97,10 @@ void shutdown(void) {
       c_pack.append((int16_t)(h.x - 13));
       c_pack.append((int16_t)(h.y - 48));
       c_pack.finish();
-      tx_bytes(BRAIN, (const uint8_t *)c_pack.outbuf(), c_pack.outsz());
+      //tx_bytes(BRAIN, (const uint8_t *)c_pack.outbuf(), c_pack.outsz());
+      while( sz != 0 ) yeild();
+      sz = c_pack.outsz();
+      brain_tx_buffer((uint8_t *)c_pack.outbuf(), (uint16_t*)&sz);
 
       yeild();
 
@@ -100,13 +109,14 @@ void shutdown(void) {
       battery.append(motor_battery());
       battery.append(idle_cnt);
       battery.finish();
-      tx_bytes(BRAIN, (const uint8_t *)battery.outbuf(), battery.outsz());
+      //tx_bytes(BRAIN, (const uint8_t *)battery.outbuf(), battery.outsz());
+      while( sz != 0 ) yeild();
+      sz = battery.outsz();
+      brain_tx_buffer((uint8_t *)battery.outbuf(), (uint16_t*)&sz);
 
+      //PORTB &= ~(1 << 7); // LED off
 
-      //yeild();
-      //PORTB |= (1 << 7);
       yeild();
-      //PORTB &= ~(1 << 7);
    }
    while( shutdown_count > 0 ) {
       //PORTB |= (1 << 7);
@@ -174,15 +184,15 @@ int main() {
    // power up!
    pwr_on();
 
-   system(shutdown, 125, 2); // func, schedule, priority
+   system(shutdown, 125, 3); // func, schedule, priority
 
    system(wheelmon, 1, 1); // wheel monitor; frequent and high priority
    system(speedman, 100, 2); // speed manager; frequency: 10Hz
 
-   system(gps_thread, 5, 30); // gps thread. relatively low priority, 20Hz
+   system(gps_thread, 3, 20); // gps thread. relatively low priority, 20Hz
 
-   system(brain_rx_thread, 1, 5); // start brain thread
-   system(bt_rx_thread, 1, 20);    // start bluetooth thread
+   system(brain_rx_thread, 3, 20); // start brain thread
+   system(bt_rx_thread, 3, 20);    // start bluetooth thread
    
    // main loop. Manage data flow between bluetooth and computer
    //while(1) {

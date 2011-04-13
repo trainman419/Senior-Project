@@ -47,7 +47,6 @@ ISR(USART1_RX_vect) /* receive complete */
 {
    /* read into fifo, allow overruns for now. */
    rx_buf[1][rx_head[1]++] = UDR1;
-   //rx_head[1] &= 7;
    rx_head[1] %= BUF_SZ;
    rx_size[1]++;
 }
@@ -57,7 +56,6 @@ ISR(USART2_RX_vect) /* receive complete */
 {
    /* read into fifo, allow overruns for now. */
    rx_buf[2][rx_head[2]++] = UDR2;
-   //rx_head[2] &= 7;
    rx_head[2] %= BUF_SZ;
    rx_size[2]++;
 }
@@ -68,7 +66,6 @@ ISR(USART3_RX_vect) /* receive complete */
    cli();
    /* read into fifo, allow overruns for now. */
    rx_buf[3][rx_head[3]++] = UDR3;
-   //rx_head[3] &= 7;
    rx_head[3] %= BUF_SZ;
    rx_size[3]++;
    sei();
@@ -94,12 +91,44 @@ uint8_t rx_byte(uint8_t port) {
    return res;
 }
 
+uint8_t * tx_ptrs[4];
+uint16_t * tx_szs[4];
+uint16_t tx_pos = 0;
+
 /* transmit interrupt 0 */
+/* modified: transmit to brain */
 ISR(USART0_UDRE_vect) /* ready for more data to transmit */
 {
    cli();
+   /* New concept for transmitting whole packets:
+    * send a pointer to the buffer to the transmit routine
+    * rather than copying buffers around
+    *
+    * Implementation:
+    * store a circular buffer of pointers to buffers and pointers to 
+    * buffer sizes; when the interrupt is done transmitting, use the size 
+    * pointer to set the buffer size to 0
+    *
+    * TODO: test and propagate to other serial routines if appropriate
+    * TODO: re-implement legacy byte-oriented interface
+    * TODO: implement lower-level passthough so we don't need to buffer a whole
+    *    packet
+    */
+   
+   /*
    if (tx_size[0]) {
       UDR0 = tx_buf[0][(tx_head[0] - tx_size[0]--) % BUF_SZ];
+   */
+   if( tx_size[0]) {
+      uint8_t p = (tx_head[0] - tx_size[0]) % 4;
+      uint8_t b = tx_ptrs[p][tx_pos];
+      UDR0 = b;
+      tx_pos++;
+      if( tx_pos >= *tx_szs[p] ) {
+         tx_pos = 0;
+         *tx_szs[p] = 0;
+         tx_size[0]--;
+      }
    } else {
 	   UCSR0B &= ~(1 << 5); /* disable send interrupt */
    }
@@ -140,7 +169,7 @@ ISR(USART3_UDRE_vect) /* ready for more data to transmit */
 
 /* determine if there is space for another byte in the transmit buffer */
 uint8_t tx_ready(uint8_t port) {
-   return tx_size[port] < 8;
+   return tx_size[port] < BUF_SZ;
 }
 
 // transmit a byte without locking, for internal use
@@ -173,6 +202,26 @@ void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz) {
       tx_internal(port, buf[i]);
    }
    release_lock(tx_lock + port);
+}
+
+/* transmit an entire buffer
+ * the bufsz will be set to 0 when transmit is complete */
+void brain_tx_buffer(uint8_t * buf, uint16_t * bufsz) {
+   acquire_lock(tx_lock + 0);
+
+   while(tx_size[0] >= 4);
+
+   ucsr[0][B] &= ~(1 << 5); /* diable send interrupt (locking) */
+
+   tx_ptrs[tx_head[0]] = buf;
+   tx_szs[tx_head[0]] = bufsz;
+   tx_head[0]++;
+   tx_head[0] %= 4;
+   tx_size[0]++;
+
+   ucsr[0][B] |= (1 << 5); /* enable send interrupt */
+
+   release_lock(tx_lock + 0);
 }
 
 volatile uint8_t * rxtx[] = {&DDRE, &DDRD, &DDRH, &DDRJ};

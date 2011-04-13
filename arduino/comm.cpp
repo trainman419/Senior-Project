@@ -21,7 +21,7 @@ extern "C" {
 
 #include "protocol.h"
 
-uint8_t brain_buffer[520];
+//uint8_t brain_buffer[520];
 
 extern "C" {
    // touch the internals of the serial library
@@ -43,6 +43,7 @@ extern "C" {
    */
 void passthrough(uint8_t src, uint8_t dst, uint8_t first) {
    uint8_t input;
+
    // acquire lock on transmit device
    acquire_lock(tx_lock + dst);
    tx_internal(dst, first);
@@ -52,37 +53,35 @@ void passthrough(uint8_t src, uint8_t dst, uint8_t first) {
    }
    tx_internal(dst, input);
    release_lock(tx_lock + dst);
+
 }
 
 // eat the data on a uart until a carriage return is found
 void finish(int src) {
-   // LED on
-   PORTB |= (1 << 7);
-
    do {
       while(!rx_ready(src)) yeild();
    } while( rx_byte(src) != '\r' );
-
-   // LED off
-   PORTB &= ~(1 << 7);
 }
 
 Packet<20> brain_pack(' ');
 
+uint8_t bt_control = 1;
+
 // Receive data from the brain
 void brain_rx_thread(void) {
    uint8_t input;
-   uint16_t i;
+   //uint16_t i;
 
    while(1) {
-      // apparently uncommenting this breaks things
+      // wait for input
       while(!rx_ready(BRAIN)) yeild();
       input = rx_byte(BRAIN);
       switch(input) {
-         case 'L':
+/*         case 'L':
             // don't use passthrough, because laser data isn't properly escaped
             brain_buffer[0] = 'L';
             for( i=0; i<512; i++ ) {
+               while(!rx_ready(BRAIN)) yeild();
                brain_buffer[i+1] = rx_byte(BRAIN);
             }
             brain_buffer[513] = '\r';
@@ -103,17 +102,42 @@ void brain_rx_thread(void) {
             }
             while( rx_byte(BRAIN) != '\r' );
             break;
+            */
+         case 'M':
+            // receive motor command
+            brain_pack.reset();
+            do {
+               while(!rx_ready(BRAIN)) yeild();
+               input = rx_byte(BRAIN);
+               brain_pack.input((char)input);
+            } while( input != '\r');
+            if( !bt_control ) {
+               target_speed = brain_pack.reads8();
+               input = brain_pack.readu8() + 112; // steering zero set
+               servo_set(0, input);
+            }
+            break;
          case 'G':
             passthrough(BRAIN, BT, 'G');
             break;
+         default:
+            passthrough(BRAIN, BT, input);
+            break;
       }
+      /*
+      PORTB |= (1 << 7); // LED on
+      PORTB &= ~(1 << 7); // LED off
+      */
    }
 }
+
+uint8_t buffer[1024];
 
 // Receive data from bluetooth
 void bt_rx_thread(void) {
    uint8_t input;
    uint16_t i;
+   volatile uint16_t sz = 0;
 
    while(1) {
       while(!rx_ready(BT)) yeild();
@@ -128,14 +152,17 @@ void bt_rx_thread(void) {
                if( rx_byte(BT) != 'Z' ) input = 0;
             }
             if( input ) {
-               tx_bytes(BRAIN, (uint8_t*)"ZZZZZZZZ\r", 9);
+               //tx_bytes(BRAIN, (uint8_t*)"ZZZZZZZZ\r", 9);
+               while(sz != 0) yeild();
+               sz = 9;
+               brain_tx_buffer((uint8_t*)"ZZZZZZZZ\r", (uint16_t*)&sz);
                shutdown_count = 4*60;
             }
             finish(BT);
             break;
          case 'M':
             input = rx_byte(BT);
-            {
+            if( bt_control ) {
                int8_t speed = (int8_t)input;
                speed = speed>100?100:speed;
                speed = speed<-100?-100:speed;
@@ -147,11 +174,29 @@ void bt_rx_thread(void) {
             break;
          case 'S':
             input = rx_byte(BT);
-            servo_set(0, input);
+            if( bt_control ) {
+               servo_set(0, input);
+            }
+            finish(BT);
+            break;
+         case 'C':
+            bt_control = rx_byte(BT);
             finish(BT);
             break;
          case 'L':
-            passthrough(BT, BRAIN, 'L');
+            // at 8 bytes/pair, we can hold about 127 points
+            buffer[0] = 'L';
+            for( i=1, input=rx_byte(BT); 
+                  i<1023 && input != '\r'; 
+                  i++, input=rx_byte(BT) ) {
+               buffer[i] = input;
+            }
+            buffer[i] = '\r';
+            while( sz != 0 ) yeild();
+            sz = i+1;
+            brain_tx_buffer(buffer, (uint16_t*)&sz);
+            //passthrough(BT, BRAIN, 'L');
+            //finish(BT);
             break;
       }
    }
