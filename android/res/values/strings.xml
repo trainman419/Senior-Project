@@ -7,4 +7,6 @@
     <string name="bluetooth_picker">Select Bluetooth Device</string>
     <string name="bluetooth_stop">Disconnect Bluetooth</string>
     <string name="shutdown">Shut down robot</string>
+    <string name="autonomous_mode">Autonomous Mode</string>
+    <string name="rc_mode">RC Mode</string>
 </resources>

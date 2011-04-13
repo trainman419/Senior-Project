@@ -37,6 +37,7 @@ Packet<128> gps_packet('G');
 /* GPS listen thread */
 void gps_thread(void) {
    uint8_t input;
+   volatile uint16_t sz;
 
    // main loop
    while(1) {
@@ -49,9 +50,15 @@ void gps_thread(void) {
 
          if( input == '\n' || gps_packet.outsz() > 100 ) {
             gps_packet.finish();
+            /*
             tx_bytes(BRAIN,
                   (const uint8_t *)gps_packet.outbuf(), 
                   gps_packet.outsz());
+                  */
+            sz = gps_packet.outsz();
+            brain_tx_buffer((uint8_t*)gps_packet.outbuf(), (uint16_t*)&sz);
+
+            while(sz != 0) yeild();
 
             // reset packet for next time
             gps_packet.reset();

@@ -44,8 +44,7 @@ H     Hardware sleep/wake status
 C     compass readings
 
 Data to Robot:
-M <s> Motor Command
-S <s> Steering Command
+M <s> Motor/Steering Command
 R     Reflex enable/disable/query
 P     Power down (timed)
 P     Hardware sleep/wake

@@ -27,7 +27,6 @@
 #include "motor.h"
 
 #include <stdio.h>
-#include "serial.h"
 #include "main.h"
 
 #define DIV 256
@@ -39,8 +38,6 @@ uint8_t mode;
 
 volatile int16_t power = 0; 
 volatile int16_t target_speed;
-
-uint8_t buf[80];
 
 void speedman() {
    int16_t speed = 0;

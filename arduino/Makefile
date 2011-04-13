@@ -29,3 +29,6 @@ program: $(TRG).hex
 	avrdude -pm2560 -cusbtiny -u -U flash:w:$(TRG).hex
 #	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
 #  no need to specify baud rate with new Arduio UNO/Mega 2560 programmer
+
+size: $(TRG).elf
+	avr-size $(TRG).elf

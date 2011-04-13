@@ -73,6 +73,14 @@ Packet<PACKET_SZ>::Packet(char * in, uint8_t in_sz) {
    idx = 1;
 }
 
+// directly append a character to the internal buffer
+template <int PACKET_SZ>
+void Packet<PACKET_SZ>::input(char c) {
+   if( sz < PACKET_SZ ) {
+      buffer[sz++] = c;
+   }
+}
+
 // append methods
 template <int PACKET_SZ>
 void Packet<PACKET_SZ>::append(uint8_t c) {
