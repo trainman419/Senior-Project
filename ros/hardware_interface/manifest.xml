@@ -13,6 +13,7 @@
   <depend package="gps_common"/>
   <depend package="roscpp"/>
   <depend package="global_map"/>
+  <depend package="goal_list"/>
 
 </package>
 

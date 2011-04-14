@@ -22,6 +22,8 @@
 #include "hardware_interface/Compass.h"
 #include "hardware_interface/Control.h"
 #include "global_map/RevOffset.h"
+#include "global_map/Offset.h"
+#include "goal_list/GoalList.h"
 
 #include "protocol.h"
 
@@ -33,9 +35,11 @@ int laser_ready;
 // for publishing odometry and compass data
 ros::Publisher odo_pub;
 ros::Publisher compass_pub;
+ros::Publisher goalList_pub;
 
 // for resolving offsets back to lat/lon for our user interface
 ros::ServiceClient r_offset;
+ros::ServiceClient offset;
 
 struct {
    nav_msgs::Odometry last_pos;
@@ -335,12 +339,24 @@ handler(gpslist_h) {
    int cursor = p.readu8();
    double * lat = (double*)malloc(cnt*sizeof(double));
    double * lon = (double*)malloc(cnt*sizeof(double));
+
+   goal_list::GoalList list;
+   global_map::Offset o;
+
    ROS_INFO("GPS List, size: %d, cursor: %d", cnt, cursor);
    for( int i=0; i<cnt; i++ ) {
       lat[i] = (double)p.reads32() / 1000000.0;
       lon[i] = (double)p.reads32() / 1000000.0;
+      o.request.lat = lat[i];
+      o.request.lon = lon[i];
+      if( offset.call(o) ) {
+         list.goals.push_back(o.response.loc);
+      } else {
+         ROS_ERROR("Failed to call Offset");
+      }
       ROS_INFO("Lat: %f, Lon: %f", lat[i], lon[i]);
    }
+   goalList_pub.publish(list);
    free(lat);
    free(lon);
 }
@@ -432,8 +448,10 @@ int main(int argc, char ** argv) {
 
    compass_pub = n.advertise<hardware_interface::Compass>("compass", 10);
    odo_pub = n.advertise<nav_msgs::Odometry>("base_odometry", 100);
+   goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
 
    r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
+   offset = n.serviceClient<global_map::Offset>("Offset");
 
    ros::Rate loop_rate(20);
 
