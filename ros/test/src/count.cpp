@@ -26,7 +26,7 @@ void odoCallback(const nav_msgs::Odometry::ConstPtr & msg) {
 }
 
 int main(int argc, char ** argv) {
-   ros::init(argc, argv, "drive");
+   ros::init(argc, argv, "count");
 
    ROS_INFO("Counting");
 
