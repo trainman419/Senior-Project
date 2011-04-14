@@ -10,6 +10,7 @@
   <url>http://ros.org/wiki/goal_list</url>
   <depend package="roscpp"/>
   <depend package="global_map"/>
+  <depend package="nav_msgs"/>
 
 </package>
 
