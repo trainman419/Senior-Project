@@ -1,7 +1,10 @@
 <launch>
 
    <node pkg="hokuyo_node" name="hokuyo" type="hokuyo_node"/>
+   <node pkg="global_map" name="global_map_server" type="global_map_server"/>
    <node pkg="gpsd_client" name="gps" type="gpsd_client"/>
    <node pkg="hardware_interface" name="hardware" type="hardware_interface"/>
+   <node pkg="gps_odometry" name="gps_odometry" type="gps_odometry"/>
+   <node pkg="goal_list" name="goal_list" type="goal_list"/>
 
 </launch>
