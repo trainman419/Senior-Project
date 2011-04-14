@@ -113,7 +113,7 @@ void brain_rx_thread(void) {
             } while( input != '\r');
             if( !bt_control ) {
                target_speed = brain_pack.reads8();
-               input = brain_pack.readu8() + 112; // steering zero set
+               input = brain_pack.readu8() + 113; // steering zero set
                servo_set(0, input);
             }
             break;

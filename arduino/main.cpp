@@ -102,7 +102,7 @@ void shutdown(void) {
       sz = c_pack.outsz();
       brain_tx_buffer((uint8_t *)c_pack.outbuf(), (uint16_t*)&sz);
 
-      yeild();
+      //yeild();
 
       battery.reset();
       battery.append(main_battery());
@@ -116,7 +116,7 @@ void shutdown(void) {
 
       //PORTB &= ~(1 << 7); // LED off
 
-      yeild();
+      //yeild();
    }
    while( shutdown_count > 0 ) {
       //PORTB |= (1 << 7);
@@ -184,7 +184,8 @@ int main() {
    // power up!
    pwr_on();
 
-   system(shutdown, 125, 3); // func, schedule, priority
+   // func, schedule, priority
+   system(shutdown, 50, 3); // odometry updates and the like; 20Hz
 
    system(wheelmon, 1, 1); // wheel monitor; frequent and high priority
    system(speedman, 100, 2); // speed manager; frequency: 10Hz
