@@ -235,7 +235,7 @@ void odometry_setup(void) {
 }
 
 // squares per encoder count
-#define Q_SCALE 0.29
+#define Q_SCALE 0.30
 
 handler(odometry_h) {
    static int last_q = 0;
@@ -293,6 +293,26 @@ handler(odometry_h) {
    update.pose.pose.position.x = dx;
    update.pose.pose.position.y = dy;
    update.pose.pose.orientation.x = dt;
+
+   double var_x = 0.005 * d; // left/right drift varaince
+   double var_y = 0.0015 * d; // distance variance
+   update.pose.covariance[0 + 6*0] = 
+      var_x*cos(theta)*cos(theta) + var_y*sin(theta)*sin(theta); // x x
+   update.pose.covariance[0 + 6*1] = 
+      var_x*sin(theta)*cos(theta) - var_y*sin(theta)*cos(theta); // x y
+   update.pose.covariance[1 + 6*0] =
+      var_x*sin(theta)*cos(theta) - var_y*sin(theta)*cos(theta); // y x
+   update.pose.covariance[1 + 6*1] = 
+      var_y*cos(theta)*cos(theta) + var_x*sin(theta)*sin(theta); // y y
+
+   // TODO: take data to support that translation error and rotation error
+   // are unrelated
+   update.pose.covariance[0 + 6*3] = 0; //  x  rot
+   update.pose.covariance[1 + 6*3] = 0; //  y  rot
+   update.pose.covariance[3 + 6*0] = 0; // rot  x
+   update.pose.covariance[3 + 6*1] = 0; // rot  y
+   // TODO: take data and find a real value for this; currently a total SWAG
+   update.pose.covariance[3 + 6*3] = d * 0.01 * 0.01; // rot rot
 
    // TODO: measure std dev, compute, and place in update
 
@@ -415,7 +435,7 @@ int main(int argc, char ** argv) {
 
    r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
 
-   ros::Rate loop_rate(10);
+   ros::Rate loop_rate(20);
 
    while( ros::ok() ) {
       //ROS_INFO("start serial input");
