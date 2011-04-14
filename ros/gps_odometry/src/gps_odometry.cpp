@@ -36,13 +36,34 @@ double compass = 0.0;
 
 int16_t old_meridian;
 
+#define ODO_CNT 60
 char valid = 0;
+
+void publish() {
+   nav_msgs::Odometry pos;
+   pos.pose.pose.position.x = position.data[0][0];
+   pos.pose.pose.position.y = position.data[0][1];
+   pos.pose.pose.orientation.x = position.data[0][2];
+
+   pos.pose.covariance[0 + 6*0] = covariance.data[0][0]; // x x
+   pos.pose.covariance[0 + 6*1] = covariance.data[0][1]; // x y
+   pos.pose.covariance[1 + 6*0] = covariance.data[1][0]; // y x
+   pos.pose.covariance[1 + 6*1] = covariance.data[1][1]; // y y
+
+   pos.pose.covariance[0 + 6*3] = covariance.data[0][2]; //  x  rot
+   pos.pose.covariance[1 + 6*3] = covariance.data[1][2]; //  y  rot
+   pos.pose.covariance[3 + 6*0] = covariance.data[2][0]; // rot  x
+   pos.pose.covariance[3 + 6*1] = covariance.data[2][1]; // rot  y
+   pos.pose.covariance[3 + 6*3] = covariance.data[2][2]; // rot rot
+
+   pos_pub.publish(pos);
+}
 
 // receive a GPS update
 void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
    //ROS_INFO("Got gps message");
 
-   if( valid >= 0 ) {
+   if( valid >= 0 && gps->status.status == 0 ) {
 
       matrix<3, 3> gain; // kalman filter gain
       // Kalman filter update step
@@ -86,11 +107,13 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
       z.data[0][1] = offset.response.loc.row; // y; from gps
       z.data[0][2] = compass; // from compass
 
+      /*
       cout.precision(10);
       cout << "Lat: " << gps->latitude << endl;
       cout << "Lon: " << gps->longitude << endl;;
       cout << "Row: " << offset.response.loc.row << endl;
       cout << "Col: " << offset.response.loc.col << endl;
+      */
 
       /*
          cout << "Z:" << endl;
@@ -107,39 +130,24 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
       // pos = pos + gain*(z - C*pos)
       // cov = (I - gain*C)*cov
 
-      if( valid ) {
+      if( valid > ODO_CNT ) {
          gain = covariance * invert(covariance + Q);
          position = position + (z - position) * gain;
          covariance = (I<3>() - gain) * covariance;
       } else {
          position = z;
          covariance = Q;
-         valid = 1;
+         valid = ODO_CNT + 1;
       }
 
-      cout << "Position: " << endl;
-      cout << position << endl;
+      //cout << "Position: " << endl;
+      //cout << position << endl;
       /*
          cout << "Covariance: " << endl;
          cout << covariance << endl;
          */
 
-      nav_msgs::Odometry pos;
-      pos.pose.pose.position.x = position.data[0][0];
-      pos.pose.pose.position.y = position.data[0][1];
-      pos.pose.pose.orientation.x = position.data[0][2];
-      pos_pub.publish(pos);
-
-      global_map::RevOffset roffset;
-      //roffset.request.loc.col = offset.response.loc.col;
-      //roffset.request.loc.row = offset.response.loc.row;
-      roffset.request.loc.col = position.data[0][0];
-      roffset.request.loc.row = position.data[0][1];
-      if( r_client.call(roffset) ) {
-         cout << "Lat: " << roffset.response.lat << endl;
-         cout << "Lon: " << roffset.response.lon << endl;
-      }
-      cout << endl;
+      publish();
    }
 }
 
@@ -150,7 +158,7 @@ void compassCallback(const hardware_interface::Compass::ConstPtr & msg ) {
 
 // receive an odometry update
 void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
-   ROS_INFO("Got odometry message");
+   //ROS_INFO("Got odometry message");
 
    matrix<1, 3> update;
 
@@ -183,7 +191,10 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
    position = update + position;
    covariance = covariance + Rt;
 
-   if( !valid ) valid = -1;
+   if( valid < ODO_CNT ) valid += 1;
+   if( valid == ODO_CNT ) valid = -1;
+
+   publish();
 }
 
 int main(int argc, char ** argv) {
@@ -217,6 +228,8 @@ int main(int argc, char ** argv) {
    ros::Subscriber gps_sub = n.subscribe("extended_fix", 10, gpsCallback);
    ros::Subscriber odo_sub = n.subscribe("base_odometry", 50, odometryCallback);
    ros::Subscriber compass_sub = n.subscribe("compass", 10, compassCallback);
+
+   ROS_INFO("gps_odometry running");
 
    ros::spin();
 
