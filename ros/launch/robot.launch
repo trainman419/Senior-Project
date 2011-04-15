@@ -6,5 +6,6 @@
    <node pkg="hardware_interface" name="hardware" type="hardware_interface"/>
    <node pkg="gps_odometry" name="gps_odometry" type="gps_odometry"/>
    <node pkg="goal_list" name="goal_list" type="goal_list"/>
+   <node pkg="path_planner" name="path_planner" type="path_planner"/>
 
 </launch>
