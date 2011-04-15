@@ -260,7 +260,7 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
       }
       // get directions to get to the next point
       ROS_INFO("Closest point %d", close_i->idx);
-      c.speed = 15;
+      c.speed = 20;
       c.steer = close_i->path.steer;
       control_pub.publish(c);
       /*for( int i=0; i<2; i++ ) {
