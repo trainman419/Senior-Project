@@ -122,6 +122,9 @@ void controlCallback(const hardware_interface::Control::ConstPtr & msg) {
    control_packet.append(msg->steer);
    control_packet.finish();
 
+   state.steer = msg->steer;
+   state.speed = msg->speed;
+
    control_ready = 1;
 }
 
