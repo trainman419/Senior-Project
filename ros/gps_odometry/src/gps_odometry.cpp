@@ -107,6 +107,9 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
       z.data[0][1] = offset.response.loc.row; // y; from gps
       z.data[0][2] = compass; // from compass
 
+      while( z.data[0][2] - position.data[0][2] < -M_PI ) z.data[0][2] += M_PI*2;
+      while( z.data[0][2] - position.data[0][2] >  M_PI ) z.data[0][2] -= M_PI*2;
+
       /*
       cout.precision(10);
       cout << "Lat: " << gps->latitude << endl;
@@ -140,6 +143,9 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
          valid = ODO_CNT + 1;
       }
 
+      while( position.data[0][2] >  M_PI ) position.data[0][2] -= M_PI*2;
+      while( position.data[0][2] < -M_PI ) position.data[0][2] += M_PI*2;
+
       //cout << "Position: " << endl;
       //cout << position << endl;
       /*
@@ -166,6 +172,9 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
    update.data[0][1] = odo->pose.pose.position.y; // y
    update.data[0][2] = odo->pose.pose.orientation.x; // rot TODO: pick units/normalize
 
+   while( update.data[0][2] - position.data[0][2] < -M_PI ) update.data[0][2] += M_PI*2;
+   while( update.data[0][2] - position.data[0][2] >  M_PI ) update.data[0][2] -= M_PI*2;
+
    matrix<3, 3> Rt; // covariance of update noise
 
    /* odo->pose->covariance
@@ -190,6 +199,9 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
    // A and B are identity matrices
    position = update + position;
    covariance = covariance + Rt;
+
+   while( position.data[0][2] >  M_PI ) position.data[0][2] -= M_PI*2;
+   while( position.data[0][2] < -M_PI ) position.data[0][2] += M_PI*2;
 
    if( valid < ODO_CNT ) valid += 1;
    if( valid == ODO_CNT ) valid = -1;
