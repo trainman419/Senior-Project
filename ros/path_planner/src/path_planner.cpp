@@ -86,7 +86,8 @@ bool test_collision(loc here) {
 void plan_path(loc start, loc end) {
    loc here = start;
 
-   ROS_INFO("Searching for path over %f", dist(start, end));
+   ROS_INFO("Searching for path from (% 5.2lf, % 5.2lf) to (% 5.2lf, % 5.2lf)",
+         start.x, start.y, end.x, end.y);
    int iter = 0;
 
    // identify positions where we've been by an int and store them
@@ -189,7 +190,12 @@ void plan_path(loc start, loc end) {
       here = points->at(here.prev);
    }
 
-   ROS_INFO("Path with %d points", path->size());
+   ROS_INFO("Path with %d points:", path->size());
+
+   for( list<loc>::iterator itr = path->begin(); itr != path->end(); itr++ ) {
+      ROS_INFO("Point % 3d (% 4.2lf, % 4.2lf, % 4.2lf) steer %d", itr->idx, 
+            itr->x, itr->y, itr->pose, itr->path.steer);
+   }
 
    delete points;
    delete unvisited;
@@ -259,7 +265,7 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
          close_i = path->begin();
       }
       // get directions to get to the next point
-      ROS_INFO("Closest point %d", close_i->idx);
+      ROS_INFO("Closest point %d, steer %d", close_i->idx, close_i->path.steer);
       c.speed = 20;
       c.steer = close_i->path.steer;
       control_pub.publish(c);
