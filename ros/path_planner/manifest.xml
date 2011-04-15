@@ -10,6 +10,9 @@
   <url>http://ros.org/wiki/path_planner</url>
   <depend package="roscpp"/>
   <depend package="global_map"/>
+  <depend package="hardware_interface"/>
+  <depend package="goal_list"/>
+  <depend package="nav_msgs"/>
 
 </package>
 
