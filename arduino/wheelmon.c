@@ -90,12 +90,13 @@ void wheelmon() {
          if( q1 == q2 ) { // q1 == q2
             // turning backward
             qspeed = -(WHEELDIV/qcnt);
+            qcount--;
          } else {
             // turning forward
             qspeed = WHEELDIV/qcnt;
+            qcount++;
          }
          qcnt = 0;
-         qcount++;
       } else {
          qcnt++;
          if( qcnt > WHEELDIV+1 ) {
