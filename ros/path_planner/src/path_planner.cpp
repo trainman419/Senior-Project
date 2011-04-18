@@ -39,7 +39,10 @@
 using namespace std;
 
 // length for stock line segments
-#define ARC_LEN 2.0
+#define ARC_LEN 1.0
+
+// distance where we decide we're too far off-path
+#define CLOSE_LEN 4.0
 
 // minimum turning radius
 #define MIN_RADIUS 20.0
@@ -140,12 +143,12 @@ void plan_path(loc start, loc end) {
             if( steer[i] > 0 ) {
                // turning right
                dt = -dt;
-               theta_c1 = theta + M_PI;
+               theta_c1 = theta + M_PI/2;
             } else {
                // turning left
-               theta_c1 = theta - M_PI;
+               theta_c1 = theta - M_PI/2;
             }
-            theta_c2 = theta_c1 - dt;
+            theta_c2 = theta_c1 + dt;
 
             dx = r * (cos(theta_c2) - cos(theta_c1));
             dy = r * (sin(theta_c2) - sin(theta_c1));
@@ -253,7 +256,7 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
       hardware_interface::Control c;
 
       // if we're too far off the path, re-plan
-      if( close_d > ARC_LEN*2 ) {
+      if( close_d > CLOSE_LEN ) {
          ROS_INFO("Too far off path(%lf); re-planning", close_d);
          // stop the robot while we re-plan
          c.speed = 0;
