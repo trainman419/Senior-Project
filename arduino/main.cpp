@@ -25,6 +25,7 @@ extern "C" {
 #include "wheelmon.h"
 #include "speedman.h"
 #include "compass.h"
+#include "bump.h"
 }
 
 #include "protocol.h"
@@ -153,6 +154,8 @@ int main() {
    battery_init();
 
    compass_init();
+
+   bump_init();
 
    system_init();
 
