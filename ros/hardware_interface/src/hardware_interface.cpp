@@ -284,13 +284,13 @@ handler(odometry_h) {
       double theta_c2; // in radians
       if( state.steer > 0 ) {
          // turning right
-         theta_c1 = theta + M_PI;
+         theta_c1 = theta + M_PI/2;
       } else {
          // turning left
          dt = -dt;
-         theta_c1 = theta - M_PI;
+         theta_c1 = theta - M_PI/2;
       }
-      theta_c2 = theta_c1 + dt;
+      theta_c2 = theta_c1 - dt;
 
       dx = r * (cos(theta_c2) - cos(theta_c1));
       dy = r * (sin(theta_c2) - sin(theta_c1));
