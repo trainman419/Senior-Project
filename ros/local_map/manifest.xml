@@ -1,0 +1,17 @@
+<package>
+  <description brief="local_map">
+
+     local_map
+
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/local_map</url>
+  <depend package="roscpp"/>
+  <depend package="nav_msgs"/>
+  <depend package="sensor_msgs"/>
+
+</package>
+
+
