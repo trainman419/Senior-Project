@@ -13,6 +13,7 @@
   <depend package="hardware_interface"/>
   <depend package="goal_list"/>
   <depend package="nav_msgs"/>
+  <depend package="sensor_msgs"/>
 
 </package>
 
