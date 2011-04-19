@@ -105,7 +105,8 @@ void plan_path(loc start, loc end) {
 
    //double radii[] = {MIN_RADIUS, MIN_RADIUS*2, MIN_RADIUS*4, MIN_RADIUS*8, 0, 
    //   -MIN_RADIUS*8, -MIN_RADIUS*4, -MIN_RADIUS*2, -MIN_RADIUS};
-   int steer[] = {-100, -80, -60, -40, -20, 0, 20, 40, 60, 80, 100};
+   //int steer[] = {-100, -80, -60, -40, -20, 0, 20, 40, 60, 80, 100};
+   int steer[] = {-100, -64, -32, -16, -8, -4, -2, 0, 2, 4, 8, 16, 32, 64, 100};
 
    while( dist(here, end) > GOAL_ERR && iter < 100 ) {
       iter++;
@@ -120,7 +121,7 @@ void plan_path(loc start, loc end) {
       // generate points to visit
       //for( int i=0; i<(sizeof(radii)/sizeof(double)); i++ ) {
       //for( unsigned int i=0; i<(sizeof(steer)/sizeof(int)); i++ ) {
-      for( unsigned int i=0; i<11; i++ ) {
+      for( unsigned int i=0; i<15; i++ ) {
          double d = ARC_LEN;  // distance to travel
          double r = 0;
 
