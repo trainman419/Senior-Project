@@ -20,13 +20,13 @@
  */
 
 #include <math.h>
+#include <assert.h>
+#include <stdio.h>
 
 #include <set>
 #include <list>
 #include <map>
 #include <vector>
-
-#include <stdio.h>
 
 #include <ros/ros.h>
 
@@ -40,7 +40,7 @@
 using namespace std;
 
 // length for stock line segments
-#define ARC_LEN 1.0
+#define ARC_LEN 2.0
 
 // distance where we decide we're too far off-path
 #define CLOSE_LEN 4.0
@@ -50,6 +50,9 @@ using namespace std;
 
 // how close we want to get to our goal before we're "there"
 #define GOAL_ERR 3.0
+
+// maximum number of iterations to look for a path
+#define MAX_ITER 10000
 
 // types, to make life easier
 struct arc {
@@ -69,7 +72,7 @@ struct loc {
    // for path-finding: this node's index
    int idx;
    // for path-finding: whether we have visited this location or not
-   bool visited;
+   //bool visited;
    // the arc we followed to get to this point
    arc path;
 };
@@ -106,6 +109,7 @@ inline void map_set(double x, double y, int v) {
    }
 }
 
+/*
    struct corner {
       int x;
       int y;
@@ -119,11 +123,28 @@ inline void map_set(double x, double y, int v) {
       if( a->y > b->y ) return 1;
       return 0;
    }
+   */
+
+void print_map() {
+   cout << "Map: " << endl;
+   for( int i=100; i>=0; i-- ) {
+      for( int j=0; j<101; j++ ) {
+         if( i==50 && j==50 ) {
+            cout << "XX";
+         } else {
+            cout << (map_data[j][i]?"**":"__");
+         }
+      }
+      cout << endl;
+   }
+}
 
 // test if we have a collision at a particular point
 bool test_collision(loc here) {
    // robot dimensions: width: 4; length: 7
    // laser 2.5 back from front, at logical center of robot
+   
+   /*
    // Base corners
    //  3-------0
    //  |   ->  |
@@ -138,11 +159,24 @@ bool test_collision(loc here) {
       c[i].y = round(here.y + c_y[i]*cos(here.pose) + c_x[i]*sin(here.pose));
    }
 
-   qsort(c, sizeof(corner), 4, comp);
+   qsort(c, 4, sizeof(corner), comp);
+   */
 
+   /*
    cout << "Corners: " << endl;
    for( int i=0; i<4; i++ ) {
       cout << "(" << c[i].x << ", " << c[i].y << ")" << endl;
+   }
+   */
+
+   double i, j;
+
+   for( double x = -4.5; x <= 2.5; x+= 1.0 ) {
+      for( double y = -2.0; y <= 2.0; y += 1.0 ) {
+         i = here.x + x*cos(here.pose) - y*sin(here.pose);
+         j = here.y + y*cos(here.pose) + x*sin(here.pose);
+         if( map_get(i, j) ) return true;
+      }
    }
 
    // hack; for now, ignore obstacles and just plan a path
@@ -155,6 +189,8 @@ bool test_collision(loc here) {
 // implemented as A*
 void plan_path(loc start, loc end) {
    loc here = start;
+
+   print_map();
 
    ROS_INFO("Searching for path from (% 5.2lf, % 5.2lf) to (% 5.2lf, % 5.2lf)",
          start.x, start.y, end.x, end.y);
@@ -169,14 +205,26 @@ void plan_path(loc start, loc end) {
 
    here.idx = 0;
    points->push_back(here);
+   (*unvisited)[dist(here, end)] = 0;
 
    //double radii[] = {MIN_RADIUS, MIN_RADIUS*2, MIN_RADIUS*4, MIN_RADIUS*8, 0, 
    //   -MIN_RADIUS*8, -MIN_RADIUS*4, -MIN_RADIUS*2, -MIN_RADIUS};
    //int steer[] = {-100, -80, -60, -40, -20, 0, 20, 40, 60, 80, 100};
    int steer[] = {-100, -64, -32, -16, -8, -4, -2, 0, 2, 4, 8, 16, 32, 64, 100};
 
-   while( dist(here, end) > GOAL_ERR && iter < 100 ) {
+   while( dist(here, end) > GOAL_ERR && iter < MAX_ITER
+         && unvisited->size() > 0 ) {
       iter++;
+
+      // visit the point nearest the goal
+      assert(unvisited->size() > 0);
+      map<double, int>::iterator next = unvisited->begin();
+
+      assert(next->second < points->size());
+      here = points->at(next->second);
+
+      unvisited->erase(next);
+
       // FIXME: only drive forward
       /*
       printf("Here: %d (%8.2lf, %8.2lf, %6.4lf), (%4.2lf, %4.2lf) "
@@ -230,27 +278,24 @@ void plan_path(loc start, loc end) {
          n.x = here.x + dx;
          n.y = here.y + dy;
          n.pose = here.pose + dt;
-         n.visited = false;
+         //n.visited = false;
          n.prev = here.idx;
          n.path.radius = r;
          n.path.length = d;
          n.path.steer = steer[i];
-         n.idx = points->size();
+
 
          while( n.pose < -M_PI ) n.pose += M_PI*2;
          while( n.pose >  M_PI ) n.pose -= M_PI*2;
+
          if( !test_collision(n) ) {
+            n.idx = points->size();
             points->push_back(n);
 
             double len = dist(n, end);
             (*unvisited)[len] = n.idx;
          }
       }
-
-      // visit the point nearest the goal
-      map<double, int>::iterator next = unvisited->begin();
-      here = points->at(next->second);
-      unvisited->erase(next);
    }
 
    ROS_INFO("Found path in %d iterations!", iter);
@@ -374,9 +419,38 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
 
    for( unsigned int i=0; i<msg->ranges.size(); i++, 
          theta += msg->angle_increment ) {
-      x = map_center_x + msg->ranges[i]*cos(theta);
-      y = map_center_y + msg->ranges[i]*sin(theta);
-      map_set(x, y, 1);
+      // 0 means max range... I think
+      if( msg->ranges[1] != 0.0 ) {
+         x = map_center_x + msg->ranges[i]*cos(theta)*10.0; // convert to 10 x m
+         y = map_center_y + msg->ranges[i]*sin(theta)*10.0;
+         map_set(x, y, 1);
+      }
+   }
+
+   // assert that we aren't sitting on an obstacle
+   map_data[50][50] = 0;
+   assert(map_data[50][50] != 1);
+
+   // TODO: test path for collisions and re-plan if collision iminent
+   bool collide = false;
+   for( list<loc>::iterator itr = path->begin(); itr != path->end(); itr++ ) {
+      if( test_collision(*itr) ) {
+         collide = true;
+         break;
+      }
+   }
+   if( collide ) {
+      ROS_INFO("Collision iminenet, re-planning");
+      hardware_interface::Control c;
+
+      // stop the robot while we re-plan
+      c.speed = 0;
+      c.steer = 0;
+      control_pub.publish(c);
+
+      // mark path as invalid
+      path_valid = false;
+      // we'll start moving again when we get a location update
    }
 
    return;
@@ -384,6 +458,13 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
 
 int main(int argc, char ** argv) {
    path = new list<loc>();
+
+   // set map to empty
+   for( int i=0; i<101; i++ ) {
+      for( int j=0; j<101; j++ ) {
+         map_data[i][j] = 0;
+      }
+   }
 
    ros::init(argc, argv, "path_planner");
 
@@ -396,6 +477,8 @@ int main(int argc, char ** argv) {
 
    move_pub = n.advertise<path_planner::Move>("move_commands", 10);
    control_pub = n.advertise<hardware_interface::Control>("control", 10);
+
+   ROS_INFO("Path planner ready");
 
    ros::spin();
 }
