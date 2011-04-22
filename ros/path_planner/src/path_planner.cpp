@@ -51,15 +51,9 @@ using namespace std;
 #define GOAL_ERR 3.0
 
 // maximum number of iterations to look for a path
-#define MAX_ITER 10000
+#define MAX_ITER 100000
 
 // types, to make life easier
-struct arc {
-   double radius; // radius; 0: straight
-   double length; // arc length
-   int steer;
-};
-
 struct loc {
    // x, y, pose: the position and direction of the robot
    double x;
@@ -70,10 +64,10 @@ struct loc {
    int prev;
    // for path-finding: this node's index
    int idx;
-   // for path-finding: whether we have visited this location or not
-   //bool visited;
+   // for path-finding: the cost to get to this node
+   double cost;
    // the arc we followed to get to this point
-   arc path;
+   int steer;
 };
 
 // our current path
@@ -108,22 +102,6 @@ inline void map_set(double x, double y, int v) {
    }
 }
 
-/*
-   struct corner {
-      int x;
-      int y;
-   };
-   int comp(const void * c, const void * d) {
-      const corner * a = (const corner*)c;
-      const corner * b = (const corner*)d;
-      if( a->x < b->x ) return -1;
-      if( a->x > b->x ) return 1;
-      if( a->y < b->y ) return -1;
-      if( a->y > b->y ) return 1;
-      return 0;
-   }
-   */
-
 void print_map() {
    cout << "Map: " << endl;
    for( int i=100; i>=0; i-- ) {
@@ -140,49 +118,7 @@ void print_map() {
 
 // test if we have a collision at a particular point
 bool test_collision(loc here) {
-   // robot dimensions: width: 4; length: 7
-   // laser 2.5 back from front, at logical center of robot
-   
-   /*
-   // Base corners
-   //  3-------0
-   //  |   ->  |
-   //  2-------1
-   double c_x[] = {2.5, 2.5, -4.5, -4.5};
-   double c_y[] = {2.0, -2.0, 2.0, -2.0};
-
-   // translate corners onto fixed coordinate system
-   corner c[4];
-   for( int i=0; i<4; i++ ) {
-      c[i].x = round(here.x + c_x[i]*cos(here.pose) - c_y[i]*sin(here.pose));
-      c[i].y = round(here.y + c_y[i]*cos(here.pose) + c_x[i]*sin(here.pose));
-   }
-
-   qsort(c, 4, sizeof(corner), comp);
-   */
-
-   /*
-   cout << "Corners: " << endl;
-   for( int i=0; i<4; i++ ) {
-      cout << "(" << c[i].x << ", " << c[i].y << ")" << endl;
-   }
-   */
-
-   /*
-   double i, j;
-
-   for( double x = -4.5; x <= 2.5; x+= 1.0 ) {
-      for( double y = -2.0; y <= 2.0; y += 1.0 ) {
-         i = here.x + x*cos(here.pose) - y*sin(here.pose);
-         j = here.y + y*cos(here.pose) + x*sin(here.pose);
-         if( map_get(i, j) ) return true;
-      }
-   }
-   */
    return map_get(here.x, here.y) != 0;
-
-   // hack; for now, ignore obstacles and just plan a path
-   //return false;
 }
 
 #define dist(a, b) hypot(a.x - b.x, a.y - b.y)
@@ -206,12 +142,10 @@ void plan_path(loc start, loc end) {
    map<double, int> * unvisited = new map<double, int>();
 
    here.idx = 0;
+   here.cost = 0;
    points->push_back(here);
    (*unvisited)[dist(here, end)] = 0;
 
-   //double radii[] = {MIN_RADIUS, MIN_RADIUS*2, MIN_RADIUS*4, MIN_RADIUS*8, 0, 
-   //   -MIN_RADIUS*8, -MIN_RADIUS*4, -MIN_RADIUS*2, -MIN_RADIUS};
-   //int steer[] = {-100, -80, -60, -40, -20, 0, 20, 40, 60, 80, 100};
    int steer[] = {-100, -64, -32, -16, -8, -4, -2, 0, 2, 4, 8, 16, 32, 64, 100};
 
    while( dist(here, end) > GOAL_ERR && iter < MAX_ITER
@@ -237,8 +171,8 @@ void plan_path(loc start, loc end) {
 
       // generate points to visit
       //for( int i=0; i<(sizeof(radii)/sizeof(double)); i++ ) {
-      //for( unsigned int i=0; i<(sizeof(steer)/sizeof(int)); i++ ) {
-      for( unsigned int i=0; i<15; i++ ) {
+      for( unsigned int i=0; i<(sizeof(steer)/sizeof(int)); i++ ) {
+      //for( unsigned int i=0; i<15; i++ ) {
          double d = ARC_LEN;  // distance to travel
          double r = 0;
 
@@ -280,11 +214,9 @@ void plan_path(loc start, loc end) {
          n.x = here.x + dx;
          n.y = here.y + dy;
          n.pose = here.pose + dt;
-         //n.visited = false;
          n.prev = here.idx;
-         n.path.radius = r;
-         n.path.length = d;
-         n.path.steer = steer[i];
+         n.steer = steer[i];
+         n.cost = here.cost + ARC_LEN + (steer[i]/100.0);
 
 
          while( n.pose < -M_PI ) n.pose += M_PI*2;
@@ -294,7 +226,7 @@ void plan_path(loc start, loc end) {
             n.idx = points->size();
             points->push_back(n);
 
-            double len = dist(n, end);
+            double len = dist(n, end) + n.cost;
             (*unvisited)[len] = n.idx;
          }
       }
@@ -314,7 +246,7 @@ void plan_path(loc start, loc end) {
 
    for( list<loc>::iterator itr = path->begin(); itr != path->end(); itr++ ) {
       ROS_INFO("Point % 3d (% 4.2lf, % 4.2lf, % 4.2lf) steer %d", itr->idx, 
-            itr->x, itr->y, itr->pose, itr->path.steer);
+            itr->x, itr->y, itr->pose, itr->steer);
    }
 
    delete points;
@@ -385,15 +317,10 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
          close_i = path->begin();
       }
       // get directions to get to the next point
-      ROS_INFO("Closest point %d, steer %d", close_i->idx, close_i->path.steer);
+      ROS_INFO("Closest point %d, steer %d", close_i->idx, close_i->steer);
       c.speed = 20;
-      c.steer = close_i->path.steer;
+      c.steer = close_i->steer;
       control_pub.publish(c);
-      /*for( int i=0; i<2; i++ ) {
-         if( close_i != path->end() ) {
-            close_i++;
-         }
-      }*/
    } else {
       hardware_interface::Control c;
       c.steer = 0;
@@ -412,11 +339,15 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
    double x;
    double y;
 
+   /*
    for( int i=0; i<101; i++ ) {
       for( int j=0; j<101; j++ ) {
          map_data[i][j] = 0;
       }
    }
+   */
+   // memset ought to ba faster
+   memset(map_data, 0, 101*101*sizeof(int));
 
    for( unsigned int i=0; i<msg->ranges.size(); i++, 
          theta += msg->angle_increment ) {
