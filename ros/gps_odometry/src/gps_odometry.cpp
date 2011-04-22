@@ -20,8 +20,11 @@
 
 using namespace std;
 
-matrix<1, 3> position(0.0);
-matrix<3, 3> covariance(0.0);
+matrix<1, 2> position(0.0);
+matrix<2, 2> p_covariance(0.0);
+
+double heading = 0;
+double h_variance = 10;
 
 // client for retrieving offsets
 ros::ServiceClient set_meridian;
@@ -43,18 +46,20 @@ void publish() {
    nav_msgs::Odometry pos;
    pos.pose.pose.position.x = position.data[0][0];
    pos.pose.pose.position.y = position.data[0][1];
-   pos.pose.pose.orientation.x = position.data[0][2];
+   //pos.pose.pose.orientation.x = position.data[0][2];
+   pos.pose.pose.orientation.x = heading;
 
-   pos.pose.covariance[0 + 6*0] = covariance.data[0][0]; // x x
-   pos.pose.covariance[0 + 6*1] = covariance.data[0][1]; // x y
-   pos.pose.covariance[1 + 6*0] = covariance.data[1][0]; // y x
-   pos.pose.covariance[1 + 6*1] = covariance.data[1][1]; // y y
+   pos.pose.covariance[0 + 6*0] = p_covariance.data[0][0]; // x x
+   pos.pose.covariance[0 + 6*1] = p_covariance.data[0][1]; // x y
+   pos.pose.covariance[1 + 6*0] = p_covariance.data[1][0]; // y x
+   pos.pose.covariance[1 + 6*1] = p_covariance.data[1][1]; // y y
 
-   pos.pose.covariance[0 + 6*3] = covariance.data[0][2]; //  x  rot
-   pos.pose.covariance[1 + 6*3] = covariance.data[1][2]; //  y  rot
-   pos.pose.covariance[3 + 6*0] = covariance.data[2][0]; // rot  x
-   pos.pose.covariance[3 + 6*1] = covariance.data[2][1]; // rot  y
-   pos.pose.covariance[3 + 6*3] = covariance.data[2][2]; // rot rot
+   /*pos.pose.covariance[0 + 6*3] = p_covariance.data[0][2]; //  x  rot
+   pos.pose.covariance[1 + 6*3] = p_covariance.data[1][2]; //  y  rot
+   pos.pose.covariance[3 + 6*0] = p_covariance.data[2][0]; // rot  x
+   pos.pose.covariance[3 + 6*1] = p_covariance.data[2][1]; // rot  y
+   */
+   pos.pose.covariance[3 + 6*3] = h_variance; // rot rot
 
    pos_pub.publish(pos);
 }
@@ -65,25 +70,16 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
 
    if( valid >= 0 && gps->status.status == 0 ) {
 
-      matrix<3, 3> gain; // kalman filter gain
+      matrix<2, 2> gain; // kalman filter gain
       // Kalman filter update step
-      // lat: gps->latitude  (float64)
-      // lon: gps->longitude (float64)
 
       // input covariance
-      matrix<3, 3> Q;
+      matrix<2, 2> Q;
       // diagonal matrix
       Q.data[0][0] = 50.0*50.0;
-      Q.data[1][1] = 50.0*50.0;
-      Q.data[2][2] = 0.174*0.174; // about 10 degrees, in radians
-      // remainder of values 0
       Q.data[0][1] = 0;
-      Q.data[0][2] = 0;
+      Q.data[1][1] = 50.0*50.0;
       Q.data[1][0] = 0;
-      Q.data[1][2] = 0;
-      Q.data[2][0] = 0;
-      Q.data[2][1] = 0;
-
 
       int16_t meridian = round(gps->longitude);
       if( meridian != old_meridian ) {
@@ -94,7 +90,6 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
          }
       }
 
-
       global_map::Offset offset;
       offset.request.lat = gps->latitude;
       offset.request.lon = gps->longitude;
@@ -102,30 +97,12 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
          ROS_ERROR("Failed to call Offset service");
       }
       // input measurement
-      matrix<1, 3> z;
+      matrix<1, 2> z;
       z.data[0][0] = offset.response.loc.col; // x; from gps
       z.data[0][1] = offset.response.loc.row; // y; from gps
-      z.data[0][2] = compass; // from compass
 
-      while( z.data[0][2] - position.data[0][2] < -M_PI ) z.data[0][2] += M_PI*2;
-      while( z.data[0][2] - position.data[0][2] >  M_PI ) z.data[0][2] -= M_PI*2;
-
-      /*
-      cout.precision(10);
-      cout << "Lat: " << gps->latitude << endl;
-      cout << "Lon: " << gps->longitude << endl;;
-      cout << "Row: " << offset.response.loc.row << endl;
-      cout << "Col: " << offset.response.loc.col << endl;
-      */
-
-      /*
-         cout << "Z:" << endl;
-         cout << z << endl;
-         cout << "Q:" << endl;
-         cout << Q << endl;
-         */
       // measurement update step:
-      // C: 3x3 identity matrix
+      // C: 2x2 identity matrix
       // Q: measurement covariance
       // z: measurement
       // I: identity matrix
@@ -134,24 +111,17 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
       // cov = (I - gain*C)*cov
 
       if( valid > ODO_CNT ) {
-         gain = covariance * invert(covariance + Q);
+         gain = p_covariance * invert(p_covariance + Q);
          position = position + (z - position) * gain;
-         covariance = (I<3>() - gain) * covariance;
+         p_covariance = (I<2>() - gain) * p_covariance;
       } else {
          position = z;
-         covariance = Q;
+         p_covariance = Q;
          valid = ODO_CNT + 1;
       }
 
       while( position.data[0][2] >  M_PI ) position.data[0][2] -= M_PI*2;
       while( position.data[0][2] < -M_PI ) position.data[0][2] += M_PI*2;
-
-      //cout << "Position: " << endl;
-      //cout << position << endl;
-      /*
-         cout << "Covariance: " << endl;
-         cout << covariance << endl;
-         */
 
       publish();
    }
@@ -160,22 +130,41 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
 void compassCallback(const hardware_interface::Compass::ConstPtr & msg ) {
    //ROS_INFO("Got compass message");
    compass = msg->heading;
+   // TODO: update compass when we get compass readings
+
+   double z = compass;
+
+   while( z - heading < -M_PI ) z += M_PI*2;
+   while( z - heading >  M_PI ) z -= M_PI*2;
+
+   double Q = 0.174*0.174; // about 10 degrees, in radians
+
+   double gain = h_variance / ( h_variance + Q);
+   heading = heading + ((z - heading) * gain);
+   h_variance = (1 - gain) * h_variance;
+
+   while( heading >  M_PI ) heading -= M_PI*2;
+   while( heading < -M_PI ) heading += M_PI*2;
+
+   publish();
 }
 
 // receive an odometry update
 void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
    //ROS_INFO("Got odometry message");
 
-   matrix<1, 3> update;
+   matrix<1, 2> update;
+   double h_update;
 
    update.data[0][0] = odo->pose.pose.position.x; // x
    update.data[0][1] = odo->pose.pose.position.y; // y
-   update.data[0][2] = odo->pose.pose.orientation.x; // rot TODO: pick units/normalize
+   h_update = odo->pose.pose.orientation.x; // rot TODO: pick units/normalize
 
-   while( update.data[0][2] - position.data[0][2] < -M_PI ) update.data[0][2] += M_PI*2;
-   while( update.data[0][2] - position.data[0][2] >  M_PI ) update.data[0][2] -= M_PI*2;
+   while( h_update - position.data[0][2] < -M_PI ) h_update += M_PI*2;
+   while( h_update - position.data[0][2] >  M_PI ) h_update -= M_PI*2;
 
-   matrix<3, 3> Rt; // covariance of update noise
+   matrix<2, 2> Rt; // covariance of update noise
+   double h_Rt;
 
    /* odo->pose->covariance
       Row-major representation of the 6x6 covariance matrix
@@ -189,19 +178,14 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
    Rt.data[1][0] = odo->pose.covariance[1 + 6*0]; // y x
    Rt.data[1][1] = odo->pose.covariance[1 + 6*1]; // y y
 
-   Rt.data[0][2] = odo->pose.covariance[0 + 6*3]; //  x  rot
-   Rt.data[1][2] = odo->pose.covariance[1 + 6*3]; //  y  rot
-   Rt.data[2][0] = odo->pose.covariance[3 + 6*0]; // rot  x
-   Rt.data[2][1] = odo->pose.covariance[3 + 6*1]; // rot  y
-   Rt.data[2][2] = odo->pose.covariance[3 + 6*3]; // rot rot
+   h_Rt = odo->pose.covariance[3 + 6*3]; // rot rot
 
    // Kalman filter prediction step (inputs/odometry)
    // A and B are identity matrices
    position = update + position;
-   covariance = covariance + Rt;
-
-   while( position.data[0][2] >  M_PI ) position.data[0][2] -= M_PI*2;
-   while( position.data[0][2] < -M_PI ) position.data[0][2] += M_PI*2;
+   p_covariance = p_covariance + Rt;
+   heading = h_update + heading;
+   h_variance += h_Rt;
 
    if( valid < ODO_CNT ) valid += 1;
    if( valid == ODO_CNT ) valid = -1;
@@ -210,20 +194,9 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
 }
 
 int main(int argc, char ** argv) {
-   // set up kalman gains
-   /*gain.data[0][0] = 1.0;
-     gain.data[0][1] = 1.0;
-     gain.data[0][2] = 1.0;
-     gain.data[1][0] = 1.0;
-     gain.data[1][1] = 1.0;
-     gain.data[1][2] = 1.0;
-     gain.data[2][0] = 1.0;
-     gain.data[2][1] = 1.0;
-     gain.data[2][2] = 1.0;
-     */
    // initialize uncertainty matrix
-   for( int i=0; i<3; i++ ) {
-      covariance.data[i][i] = 1000.0*1000.0;
+   for( int i=0; i<2; i++ ) {
+      p_covariance.data[i][i] = 1000.0*1000.0;
    }
 
    ros::init(argc, argv, "gps_odometry");
