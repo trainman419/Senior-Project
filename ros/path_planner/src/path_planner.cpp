@@ -31,7 +31,6 @@
 #include <ros/ros.h>
 
 #include <global_map/Location.h>
-#include <path_planner/Move.h>
 #include <hardware_interface/Control.h>
 #include <goal_list/Goal.h>
 #include <nav_msgs/Odometry.h>
@@ -169,6 +168,7 @@ bool test_collision(loc here) {
    }
    */
 
+   /*
    double i, j;
 
    for( double x = -4.5; x <= 2.5; x+= 1.0 ) {
@@ -178,9 +178,11 @@ bool test_collision(loc here) {
          if( map_get(i, j) ) return true;
       }
    }
+   */
+   return map_get(here.x, here.y) != 0;
 
    // hack; for now, ignore obstacles and just plan a path
-   return false;
+   //return false;
 }
 
 #define dist(a, b) hypot(a.x - b.x, a.y - b.y)
@@ -320,7 +322,6 @@ void plan_path(loc start, loc end) {
 }
 
 // publisher for publishing movement commands
-ros::Publisher move_pub;
 ros::Publisher control_pub;
 
 bool active = false;
@@ -475,7 +476,6 @@ int main(int argc, char ** argv) {
    ros::Subscriber goal_sub = n.subscribe("current_goal", 10, goalCallback);
    ros::Subscriber laser_sub = n.subscribe("scan", 1, laserCallback);
 
-   move_pub = n.advertise<path_planner::Move>("move_commands", 10);
    control_pub = n.advertise<hardware_interface::Control>("control", 10);
 
    ROS_INFO("Path planner ready");
