@@ -254,7 +254,8 @@ handler(odometry_h) {
    int qspeed = p.reads16();
 
    // if we have a big jump in encoder count, assume something got reset
-   if( abs(last_q - qcount) > 10000 ) last_q = qcount;
+   if( abs(last_q - qcount) > 100 ) last_q = qcount;
+     // a jump of 100 corresponds to 3 meters
 
 /*
    ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
