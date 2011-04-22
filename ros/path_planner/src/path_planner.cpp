@@ -428,9 +428,25 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
       }
    }
 
-   // assert that we aren't sitting on an obstacle
+   // grow obstacles by radius of robot; makes collision-testing easier
+   // order: O(n^2 * 12)
+   for( int r=0; r<3; r++ ) {
+      for( int i=0; i<101; i++ ) {
+         for( int j=0; j<101; j++ ) {
+            if( i > 0 ) 
+               if( map_data[i-1][j] ) map_data[i][j] = 1;
+            if( j > 0 )
+               if( map_data[i][j-1] ) map_data[i][j] = 1;
+            if( i < 100 )
+               if( map_data[i+1][j] ) map_data[i][j] = 1;
+            if( j < 100 )
+               if( map_data[i][j+1] ) map_data[i][j] = 1;
+         }
+      }
+   }
+
+   // we know we aren't sitting on an obstacle
    map_data[50][50] = 0;
-   assert(map_data[50][50] != 1);
 
    // TODO: test path for collisions and re-plan if collision iminent
    bool collide = false;
