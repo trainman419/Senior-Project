@@ -39,7 +39,7 @@
 using namespace std;
 
 // length for stock line segments
-#define ARC_LEN 2.0
+#define ARC_LEN 3.0
 
 // distance where we decide we're too far off-path
 #define CLOSE_LEN 4.0
@@ -51,7 +51,7 @@ using namespace std;
 #define GOAL_ERR 3.0
 
 // maximum number of iterations to look for a path
-#define MAX_ITER 100000
+#define MAX_ITER 10000
 
 // types, to make life easier
 struct loc {
@@ -161,16 +161,12 @@ void plan_path(loc start, loc end) {
 
       unvisited->erase(next);
 
+      cout << "Here: (" << here.x << ", " << here.y << ", " << here.pose << 
+         ")" << endl;
+
       // FIXME: only drive forward
-      /*
-      printf("Here: %d (%8.2lf, %8.2lf, %6.4lf), (%4.2lf, %4.2lf) "
-            "remaining: %8.2lf\n",
-            here.idx, here.x, here.y, here.pose, here.path.radius, 
-            here.path.length, dist(here, end));
-            */
 
       // generate points to visit
-      //for( int i=0; i<(sizeof(radii)/sizeof(double)); i++ ) {
       for( unsigned int i=0; i<(sizeof(steer)/sizeof(int)); i++ ) {
       //for( unsigned int i=0; i<15; i++ ) {
          double d = ARC_LEN;  // distance to travel
@@ -178,7 +174,6 @@ void plan_path(loc start, loc end) {
 
          double dx, dy, dt;
 
-         //  convert to unit-circle angle
          double theta = here.pose;
          if( steer[i] == 0 ) {
             // if we're going straight, just generate a straight-line estimate
@@ -216,8 +211,7 @@ void plan_path(loc start, loc end) {
          n.pose = here.pose + dt;
          n.prev = here.idx;
          n.steer = steer[i];
-         n.cost = here.cost + ARC_LEN + (steer[i]/100.0);
-
+         n.cost = here.cost + ARC_LEN;
 
          while( n.pose < -M_PI ) n.pose += M_PI*2;
          while( n.pose >  M_PI ) n.pose -= M_PI*2;
@@ -284,7 +278,9 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    here.pose = (M_PI/2) - msg->pose.pose.orientation.x;
    last_loc = here;
    if( active ) {
+      hardware_interface::Control c;
       // if our path is invalid due to a new goal or such, re-plan
+      /*
       if( !path_valid ) {
          ROS_INFO("Path invalid; re-planning");
          path_valid = true;
@@ -302,7 +298,6 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
             close_i = itr;
          }
       }
-      hardware_interface::Control c;
 
       // if we're too far off the path, re-plan
       if( close_d > CLOSE_LEN ) {
@@ -318,8 +313,56 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
       }
       // get directions to get to the next point
       ROS_INFO("Closest point %d, steer %d", close_i->idx, close_i->steer);
-      c.speed = 20;
       c.steer = close_i->steer;
+      */
+
+      ROS_INFO("Current angle: %lf", here.pose);
+
+      // FIXME: complete hack to get by for the Sparkfun AVC
+      double theta = atan2(goal.y - here.y, goal.x - here.x);
+      ROS_INFO("Angle to goal: %lf", theta);
+
+      double x, y;
+
+      bool collide = true;
+      double target = theta;
+      double traverse_dist = min(dist(here, goal), 50.0);
+      //ROS_INFO("Traverse distance %lf", traverse_dist);
+
+      int i=1;
+
+      // look for a target angle that doesn't collide with anything
+      while( collide && i < 20) {
+         collide = false;
+         if( i & 1 ) {
+            target = theta + (M_PI/16)*(i/2);
+         } else {
+            target = theta - (M_PI/16)*(i/2);
+         }
+         // check across our map to see if our path is clear
+         for( double dist = 0; dist <= traverse_dist; dist += 0.5 ) {
+            x = here.x + dist*cos(target);
+            y = here.y + dist*sin(target);
+            if( map_get(x, y) ) {
+               collide = true;
+               break;
+            }
+         }
+         i++;
+      }
+
+      ROS_INFO("Target angle:  %lf", target);
+
+      double diff = target - here.pose;
+      while( diff > M_PI  ) diff -= 2*M_PI;
+      while( diff < -M_PI ) diff += 2*M_PI;
+
+      ROS_INFO("Angle difference: %lf", diff);
+
+      c.steer = (int)(-diff*30.0);
+      ROS_INFO("steer: %d", c.steer);
+
+      c.speed = 15;
       control_pub.publish(c);
    } else {
       hardware_interface::Control c;
@@ -359,46 +402,48 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
       }
    }
 
+   // we hope we aren't sitting on an obstacle
+   map_data[50][50] = 0;
+
    // grow obstacles by radius of robot; makes collision-testing easier
    // order: O(n^2 * 12)
-   for( int r=0; r<3; r++ ) {
+   for( int r=1; r<4; r++ ) {
       for( int i=0; i<101; i++ ) {
          for( int j=0; j<101; j++ ) {
-            if( i > 0 ) 
-               if( map_data[i-1][j] ) map_data[i][j] = 1;
-            if( j > 0 )
-               if( map_data[i][j-1] ) map_data[i][j] = 1;
-            if( i < 100 )
-               if( map_data[i+1][j] ) map_data[i][j] = 1;
-            if( j < 100 )
-               if( map_data[i][j+1] ) map_data[i][j] = 1;
+            if( map_data[i][j] == 0 ) {
+               if( i > 0   && map_data[i-1][j] == r ) map_data[i][j] = r+1;
+               if( j > 0   && map_data[i][j-1] == r ) map_data[i][j] = r+1;
+               if( i < 100 && map_data[i+1][j] == r ) map_data[i][j] = r+1;
+               if( j < 100 && map_data[i][j+1] == r ) map_data[i][j] = r+1;
+            }
          }
       }
    }
 
-   // we know we aren't sitting on an obstacle
-   map_data[50][50] = 0;
+   //print_map();
 
-   // TODO: test path for collisions and re-plan if collision iminent
-   bool collide = false;
-   for( list<loc>::iterator itr = path->begin(); itr != path->end(); itr++ ) {
-      if( test_collision(*itr) ) {
-         collide = true;
-         break;
+   if( active ) {
+      // test path for collisions and re-plan if collision iminent
+      bool collide = false;
+      for( list<loc>::iterator itr = path->begin(); itr != path->end(); itr++ ) {
+         if( test_collision(*itr) ) {
+            collide = true;
+            break;
+         }
       }
-   }
-   if( collide ) {
-      ROS_INFO("Collision iminenet, re-planning");
-      hardware_interface::Control c;
+      if( collide ) {
+         ROS_INFO("Collision iminenet, re-planning");
+         hardware_interface::Control c;
 
-      // stop the robot while we re-plan
-      c.speed = 0;
-      c.steer = 0;
-      control_pub.publish(c);
+         // stop the robot while we re-plan
+         c.speed = 0;
+         c.steer = 0;
+         //control_pub.publish(c);
 
-      // mark path as invalid
-      path_valid = false;
-      // we'll start moving again when we get a location update
+         // mark path as invalid
+         path_valid = false;
+         // we'll start moving again when we get a location update
+      }
    }
 
    return;
@@ -419,13 +464,21 @@ int main(int argc, char ** argv) {
    ros::NodeHandle n;
 
    // subscribe to our location and current goal
-   ros::Subscriber pos_sub = n.subscribe("position", 10, positionCallback);
-   ros::Subscriber goal_sub = n.subscribe("current_goal", 10, goalCallback);
+   ros::Subscriber pos_sub = n.subscribe("position", 1, positionCallback);
+   ros::Subscriber goal_sub = n.subscribe("current_goal", 1, goalCallback);
    ros::Subscriber laser_sub = n.subscribe("scan", 1, laserCallback);
 
    control_pub = n.advertise<hardware_interface::Control>("control", 10);
 
+   ros::Rate loop(10.0);
+
    ROS_INFO("Path planner ready");
 
    ros::spin();
+   /*
+   while( ros::ok() ) {
+      ros::spinOnce();
+      loop.sleep();
+   }
+   */
 }
