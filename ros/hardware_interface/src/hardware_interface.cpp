@@ -516,6 +516,11 @@ int main(int argc, char ** argv) {
 
       if( control_ready ) {
          cnt = write(serial, control_packet.outbuf(), control_packet.outsz());
+         //const char * data = control_packet.outbuf();
+         //ROS_ERROR("Control packet: %X %X %X %X", data[0], data[1], data[2], data[3]);
+         if( cnt != control_packet.outsz() ) {
+            ROS_ERROR("Failed to send control data");
+         }
          control_ready = 0;
       }
 
