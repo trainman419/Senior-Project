@@ -331,6 +331,8 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
 
       int i=1;
 
+      //print_map();
+
       // look for a target angle that doesn't collide with anything
       while( collide && i < 20) {
          collide = false;
@@ -359,10 +361,16 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
 
       ROS_INFO("Angle difference: %lf", diff);
 
-      c.steer = (int)(-diff*30.0);
+      if( diff > M_PI/2 ) {
+         c.steer = -100;
+      } else if( diff < -M_PI/2 ) {
+         c.steer = 100;
+      } else {
+         c.steer = (int)(-diff*60.0);
+      }
       ROS_INFO("steer: %d", c.steer);
 
-      c.speed = 15;
+      c.speed = 60;
       control_pub.publish(c);
    } else {
       hardware_interface::Control c;
@@ -395,12 +403,14 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
    for( unsigned int i=0; i<msg->ranges.size(); i++, 
          theta += msg->angle_increment ) {
       // 0 means max range... I think
-      if( msg->ranges[1] != 0.0 ) {
+      if( msg->ranges[i] != 0.0 ) {
          x = map_center_x + msg->ranges[i]*cos(theta)*10.0; // convert to 10 x m
          y = map_center_y + msg->ranges[i]*sin(theta)*10.0;
          map_set(x, y, 1);
       }
    }
+
+   //print_map();
 
    // we hope we aren't sitting on an obstacle
    map_data[50][50] = 0;
@@ -420,8 +430,9 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
       }
    }
 
-   //print_map();
+   print_map();
 
+   /*
    if( active ) {
       // test path for collisions and re-plan if collision iminent
       bool collide = false;
@@ -445,6 +456,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
          // we'll start moving again when we get a location update
       }
    }
+   */
 
    return;
 }
@@ -464,9 +476,9 @@ int main(int argc, char ** argv) {
    ros::NodeHandle n;
 
    // subscribe to our location and current goal
-   ros::Subscriber pos_sub = n.subscribe("position", 1, positionCallback);
-   ros::Subscriber goal_sub = n.subscribe("current_goal", 1, goalCallback);
-   ros::Subscriber laser_sub = n.subscribe("scan", 1, laserCallback);
+   ros::Subscriber pos_sub = n.subscribe("position", 2, positionCallback);
+   ros::Subscriber goal_sub = n.subscribe("current_goal", 2, goalCallback);
+   ros::Subscriber laser_sub = n.subscribe("scan", 2, laserCallback);
 
    control_pub = n.advertise<hardware_interface::Control>("control", 10);
 
