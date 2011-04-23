@@ -242,7 +242,7 @@ void odometry_setup(void) {
 }
 
 // squares per encoder count
-#define Q_SCALE 0.30
+#define Q_SCALE 0.29
 
 handler(odometry_h) {
    static int last_q = 0;
