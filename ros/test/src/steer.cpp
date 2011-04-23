@@ -24,7 +24,7 @@ int main(int argc, char ** argv) {
 
    ros::Publisher control_pub = n.advertise<hardware_interface::Control>("control", 10);
 
-   ros::Rate loop_rate(1);
+   ros::Rate loop_rate(100);
    ROS_INFO("Setting steering to %d", steer);
 
    while( ros::ok() ) {
