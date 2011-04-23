@@ -187,8 +187,8 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr &odo) {
    heading = h_update + heading;
    h_variance += h_Rt;
 
-   if( valid < ODO_CNT ) valid += 1;
-   if( valid == ODO_CNT ) valid = -1;
+//   if( valid < ODO_CNT ) valid += 1;
+//   if( valid == ODO_CNT ) valid = -1;
 
    publish();
 }
