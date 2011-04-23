@@ -47,6 +47,8 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 	// accelerometer-related variables
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
+    
+    private boolean halt;
 
 	// activity codes
 	public static final int CHOOSE_DEVICE=1;
@@ -123,7 +125,8 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 	private static final int SHUTDOWN_ID = Menu.FIRST + 1;
 	private static final int AUTONOMOUS_ID = Menu.FIRST + 2;
 	private static final int RC_ID = Menu.FIRST + 3;
-	private static final int STOP_ID = Menu.FIRST + 4;
+	private static final int HALT_ID = Menu.FIRST + 4;
+	private static final int STOP_ID = Menu.FIRST + 5;
 	/**
 	 * create the context menu for this Activity
 	 */
@@ -134,6 +137,7 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
     	menu.add(0, SHUTDOWN_ID, 0, R.string.shutdown);
     	menu.add(0, AUTONOMOUS_ID, 0, R.string.autonomous_mode);
     	menu.add(0, RC_ID, 0, R.string.rc_mode);
+    	menu.add(0, HALT_ID, 0, R.string.halt);
     	menu.add(0, STOP_ID, 0, R.string.bluetooth_stop);
     	return true;
     }
@@ -191,9 +195,15 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
         	return true;
         case AUTONOMOUS_ID:
         	mApp.getHwMan().setAutonomous(true);
+        	halt = false;
         	return true;
         case RC_ID:
         	mApp.getHwMan().setAutonomous(false);
+        	halt = false;
+        	return true;
+        case HALT_ID:
+        	mApp.getHwMan().setAutonomous(false);
+        	halt = true;
         	return true;
         case STOP_ID:
         	// stop the HardwareManager
@@ -299,22 +309,27 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 			break;
 		}*/
 		
-		double forward_angle = (Math.atan2(a[2], a[1]) - Math.PI/2)/(Math.PI/4)*4*20;
+		double forward_angle = (Math.atan2(a[2], a[1]) - Math.PI/2)/(Math.PI/4)*3*20;
 		double lr_angle = (Math.atan2(Math.hypot(a[2], a[1]), a[0]) - Math.PI/2)/(Math.PI/4)*4*50;
 		
 		int steer = (int)lr_angle;
 		if( steer > 100 ) steer = 100;
 		if( steer < -100 ) steer = -100;
 		
-		byte s = (byte)steer;
-		s += 120;
-		mApp.getHwMan().setDirection(s);
-
-		int speed = (int)forward_angle;
-		if( speed > 100 ) speed = 100;
-		if( speed < -100 ) speed = -100;
-		byte m = (byte)speed;
-		mApp.getHwMan().setSpeed(m);
+		if( !halt ) {
+			byte s = (byte)steer;
+			s += 120;
+			mApp.getHwMan().setDirection(s);
+	
+			int speed = (int)forward_angle;
+			if( speed > 100 ) speed = 100;
+			if( speed < -100 ) speed = -100;
+			byte m = (byte)speed;
+			mApp.getHwMan().setSpeed(m);
+		} else {
+			mApp.getHwMan().setDirection((byte)120);
+			mApp.getHwMan().setSpeed((byte)0);
+		}
 	}
 
 	@Override

@@ -9,4 +9,5 @@
     <string name="shutdown">Shut down robot</string>
     <string name="autonomous_mode">Autonomous Mode</string>
     <string name="rc_mode">RC Mode</string>
+    <string name="halt">Halt Robot</string>
 </resources>
