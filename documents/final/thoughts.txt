@@ -1,0 +1,17 @@
+Thoughts
+
+Due to tight time constraints before the competition, made worse by unforseen circumstances, I decided to drop a true path-planning algorithm and instead focus on a reactive approach to avoiding obstacles and following waypoints. The main problem with my A* algorithm was that it took too many iterations to run, and had to re-plan too often. I replaced it with an algorithm that computed the heading to the target, checked for obstacles along that path and at increasing deviations from that path until a collision-free heading was found, and then set the steering angle based on the difference between that target angle and the robot's current heading. This proved quite effective at avoiding obstacles that were directly ahead of the robot, but surprisingly less well at avoiding obstacles to the left or right of the robot.
+
+( code thoughts:
+  probably caused by partial visibility of lidar combined with a target angle near +/- pi/2; the robot thinks that things outside of the front arc are clear, and picks a target angle that points backward
+  TODO:
+   consider the true path the robot will follow rather than assuming a straight line
+   if all paths forward are blocked, consider a path backward
+   keep a local obstacle map so that the robot has some idea of what is behind it
+   )
+
+After talking with the competition winner, it's obvious that the key to his success was twofold: good software design and lots of testing; from what I heard, he spent at least as long testing and tuning his algorithm as he did designing and writing the algorithm. This definitely showed in his final product, and points out the flaws in my process: I think that if I had spent more time testing and tuning my kalman filter, I would have been able to at least make it all the way around the building.
+
+TODO: do the proper test runs and gather data that supports that a) my current turning of my kalman filter sucks and b) tune the kalman filter properly.
+
+
