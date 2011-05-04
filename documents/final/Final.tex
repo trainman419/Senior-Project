@@ -1,0 +1,44 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[pdftex]{graphicx}
+
+\begin{document}
+
+\title{Senior Project Report: Localization, Mapping and Path-Planning for Inexpensive Robots}
+\author{Austin Hendrix}
+\date{May 2011}
+\maketitle
+
+\section{TODO}
+\input{todo}
+
+For my senior project, I propose to build and program a relatively inexpensive robot to perform localization, mapping and path-planning. The purpose of this project would be to explore the capabilities of a relatively low-cost, semi-autonomous robot, to explore the capabilities of open-source robotics software, and potentially contribute back to the open-source community.
+
+\section{Current Capabilities}
+
+At the present, there is no software written for this hardware, since the hardware was completely redesigned and rebuilt over winter break. Large portions of the existing software should be portable to the new platform, and the lessons learned from the old software will apply to the new hardware as well. The hardware consists of three forward-facing and two rear-facing sonar distance sensors, a front bump sensor, wheel encoders, a GPS, a compass, a serial bluetooth module, an Arduino Mega 2560 microcontroller, a single-board computer with a 500MHz processor running Linux, and a Hokuyo URG-04LX-UG01 scanning laser range finder. The chassis is a modified Traxxas Slash, with an upgraded motor, motor controller and suspension better suited for robotics. 
+
+\section{Proposed Capabilities}
+
+I propose to write software to control this robot; by the end of the quarter I would like to be able to map and navigate indoor and outdoor spaces. In an indoor space, the robot should be able to navigate to a set of coordinates relative to its initial starting position. In an outdoor space, the robot should be able to navigate to a GPS location, within the limits of GPS accuracy. An ideal end-of-quarter demonstration would be to navigate Cal Poly's Inner Perimeter road, given a sufficient number of intermediate GPS coordinates and none or light foot traffic. Algorithms for accomplishing this will probably include Kalman filters to smooth the input data, some sort of compass calibration and offset algorithm to compensate for nearby metal objects, and a map based on a fine occupancy grid, since the robot will be expected to operate in unstructured environments. Open-source robotics software will be used where possible to speed up development. 
+
+The robot should be mostly autonomous, aside from high-level motion commands in the form of target destinations, in absolute or relative coordinates, for the robot to navigate to. Commands with either be pre-programmed, or transmitted to the robot over a wireless link.
+
+Potential avenues of investigation once navigation and planning have been achieved to a reasonable degree include mounting a Kinect to the robot to explore its capabilities, or mounting a USB nerf turret with a webcam to the robot, allowing it to find, track, follow and shoot targets of the operator's choosing.
+
+\section{Hardware}
+\input{hardware}
+
+\section{Firmware}
+\input{firmware}
+
+\section{Software}
+\input{software}
+
+\section{User Interface}
+\input{ui}
+
+\section{Final Thoughts}
+\input{thoughts}
+
+\end{document}

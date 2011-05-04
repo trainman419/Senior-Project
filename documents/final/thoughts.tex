@@ -1,4 +1,3 @@
-Thoughts
 
 Due to tight time constraints before the competition, made worse by unforseen circumstances, I decided to drop a true path-planning algorithm and instead focus on a reactive approach to avoiding obstacles and following waypoints. The main problem with my A* algorithm was that it took too many iterations to run, and had to re-plan too often. I replaced it with an algorithm that computed the heading to the target, checked for obstacles along that path and at increasing deviations from that path until a collision-free heading was found, and then set the steering angle based on the difference between that target angle and the robot's current heading. This proved quite effective at avoiding obstacles that were directly ahead of the robot, but surprisingly less well at avoiding obstacles to the left or right of the robot.
 

@@ -1,4 +1,3 @@
-Firmware
 
 The firmware on the arduino is based on a real-time OS that I wrote for the previous atmega controller that ran this robot. 
 The RTOS core provides basic preemptive multitasking and interval scheduling, and process priorities. Each process runs until it is either preempted, or it calls the yeild() function to indicate that it is done processing until its timer expires. This requires some careful process design on the part of the programmer, but makes the task switcher and the scheduler simple and fast, with an overhead of about 1-2% at an interrupt rate of 1000Hz.
