@@ -14,4 +14,4 @@ After talking with the competition winner, it's obvious that the key to his succ
 
 TODO: do the proper test runs and gather data that supports that a) my current turning of my kalman filter sucks and b) tune the kalman filter properly.
 
-
+Another problem that arose during competition was the robot's inability to detect curbs. This wasn't a huge issue, because the robot was generally able to climb any curb it couldn't see; however, the ability to detect and avoid curbs would have given the robot a better chance of successfully completing the competition.
