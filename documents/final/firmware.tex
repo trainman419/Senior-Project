@@ -1,16 +1,18 @@
 
 The firmware on the arduino is based on a real-time OS that I wrote for the previous atmega controller that ran this robot. 
-The RTOS core provides basic preemptive multitasking and interval scheduling, and process priorities. Each process runs until it is either preempted, or it calls the yeild() function to indicate that it is done processing until its timer expires. This requires some careful process design on the part of the programmer, but makes the task switcher and the scheduler simple and fast, with an overhead of about 1-2% at an interrupt rate of 1000Hz.
+The RTOS core provides basic preemptive multitasking and interval scheduling, and process priorities. Each process runs until it is either preempted, or it calls the yeild() function to indicate that it is done processing until its timer expires. This requires some careful process design on the part of the programmer, but makes the task switcher and the scheduler simple and fast, with an overhead of about 1-2\% at an interrupt rate of 1000Hz.
 A simple locking library provides semaphors for controlling access to shared resources, since the processor doesn't provide native semaphors or memory access protection.
 Driver libraries provide interrupt routines, buffers and access functions to interface with the A2D converter, hardware UARTs, compass, and motor and servo PWM.
 
 There are threads within this RTOS for:
-* Polling the wheel eoncders and computing the speed/direction
-* Controlling the motor power to achieve a constant speed
-* Reading data from the GPS and transmitting it to the primary computer
-* Reading and interpreting command data from the bluetooth interface
-* Reading and interpreting command data from the primary computer
-* Peridocally sending odometry, compass and battery data to the primary computer
-* counting idle cycles (the idle task, runs when nothing else is running)
+\begin{itemize}
+   \item Polling the wheel eoncders and computing the speed/direction
+   \item Controlling the motor power to achieve a constant speed
+   \item Reading data from the GPS and transmitting it to the primary computer
+   \item Reading and interpreting command data from the bluetooth interface
+   \item Reading and interpreting command data from the primary computer
+   \item Peridocally sending odometry, compass and battery data to the primary computer
+   \item counting idle cycles (the idle task, runs when nothing else is running)
+\end{itemize}
 
-With proper tuning, this has worked very well, but still experiences occasional lockups of unknown origin.
+With proper tuning, this worked very well, but still experienced occasional lockups of unknown origin.

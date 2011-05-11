@@ -9,36 +9,60 @@
 \date{May 2011}
 \maketitle
 
+\section{Abstract}
+Localization in mobile robots has been studied for quite some time, yet accurate localization and obstacle avoidance on small mobile robots is still prohibitively expensive. This project aims to produce a less-expensive robot that is capable of accurate localization, path-planning and obstacle avoidance. Localization, path-planning and obstacle avoidance are important for mobile robots because they allow the construction of more complex and useful behaviors.
+
+
+\section{Background}
+\subsection{Software}
+Localization, path-planning and obstacle avoidance have been studied in mobile robots since Stanford created Shakey\cite{shakey}. Most of the research and techniques for this project come from "Probabilistic Robotics,"\cite{thrun} but are focused primarily on indoor applications. Techniques used include proportional control for speed regulation and Kalman filtering to fuse GPS, odometry and compass data. Since all of the hardware was new at the start of this project, there was no initial software; all software was written during the course of the project.
+
+\subsection{Hardware}
+The platform for this project is a robot that the author has been working on for a number of years. It consists of a modified 1/8 scale RC car (Traxxas Slash\cite{traxxas}), with three forward-facing and two rear-facing sonar distance sensors, a front bump sensor, wheel encoders, a GPS, a compass, a serial Bluetooth module, an Arduino Mega 2560 microcontroller, a single-board computer with a 500MHz processor running Linux, and a Hokuyo URG-04LX-UG01 scanning laser range finder. The chassis has been modified, with an upgraded motor, motor controller and suspension better suited for robotics. This platform has proven to be reliable and robust in past projects.
+
+\section{Problem Statement}
+For my senior project, I built and programmed a relatively inexpensive robot to perform localization, mapping and path-planning. The purpose of this project was to explore the capabilities of a relatively low-cost, semi-autonomous robot, and to explore the capabilities of open-source robotics software. The robot was intended to compete in the SparkFun Autonomous Vehicle Competition\cite{avc}, and to be able to navigate around Cal Poly's Inner Perimeter Road, given a reasonable number of intermediate GPS coordinates.
+
+\section{Design}
+\subsection{Hardware Selection}
+\input{hardware-design}
+
+\subsection{Software Design}
+\input{software-design}
+
+\section{Implementation}
+\subsection{Hardware}
+\input{hardware}
+
+\subsection{Firmware}
+\input{firmware}
+
+\subsection{Software}
+\input{software}
+
+\subsection{User Interface}
+\input{ui}
+
+\section{Testing}
+
+TODO: Gather lots of data about the robot performance and makes some pretty graphs of it.
+
+\section{Conclusions}
+
+\section{Final Thoughts}
+\input{thoughts}
+
+\section{References}
+\input{bib}
+
 \section{TODO}
 \input{todo}
 
-For my senior project, I propose to build and program a relatively inexpensive robot to perform localization, mapping and path-planning. The purpose of this project would be to explore the capabilities of a relatively low-cost, semi-autonomous robot, to explore the capabilities of open-source robotics software, and potentially contribute back to the open-source community.
-
-\section{Current Capabilities}
-
-At the present, there is no software written for this hardware, since the hardware was completely redesigned and rebuilt over winter break. Large portions of the existing software should be portable to the new platform, and the lessons learned from the old software will apply to the new hardware as well. The hardware consists of three forward-facing and two rear-facing sonar distance sensors, a front bump sensor, wheel encoders, a GPS, a compass, a serial bluetooth module, an Arduino Mega 2560 microcontroller, a single-board computer with a 500MHz processor running Linux, and a Hokuyo URG-04LX-UG01 scanning laser range finder. The chassis is a modified Traxxas Slash, with an upgraded motor, motor controller and suspension better suited for robotics. 
-
-\section{Proposed Capabilities}
-
+\section{misc}
 I propose to write software to control this robot; by the end of the quarter I would like to be able to map and navigate indoor and outdoor spaces. In an indoor space, the robot should be able to navigate to a set of coordinates relative to its initial starting position. In an outdoor space, the robot should be able to navigate to a GPS location, within the limits of GPS accuracy. An ideal end-of-quarter demonstration would be to navigate Cal Poly's Inner Perimeter road, given a sufficient number of intermediate GPS coordinates and none or light foot traffic. Algorithms for accomplishing this will probably include Kalman filters to smooth the input data, some sort of compass calibration and offset algorithm to compensate for nearby metal objects, and a map based on a fine occupancy grid, since the robot will be expected to operate in unstructured environments. Open-source robotics software will be used where possible to speed up development. 
 
 The robot should be mostly autonomous, aside from high-level motion commands in the form of target destinations, in absolute or relative coordinates, for the robot to navigate to. Commands with either be pre-programmed, or transmitted to the robot over a wireless link.
 
 Potential avenues of investigation once navigation and planning have been achieved to a reasonable degree include mounting a Kinect to the robot to explore its capabilities, or mounting a USB nerf turret with a webcam to the robot, allowing it to find, track, follow and shoot targets of the operator's choosing.
-
-\section{Hardware}
-\input{hardware}
-
-\section{Firmware}
-\input{firmware}
-
-\section{Software}
-\input{software}
-
-\section{User Interface}
-\input{ui}
-
-\section{Final Thoughts}
-\input{thoughts}
 
 \end{document}
