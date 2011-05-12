@@ -19,6 +19,9 @@ import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
@@ -72,6 +75,28 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
             	
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+        
+        findViewById(R.id.autonomousButton).setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+	        	mApp.getHwMan().setAutonomous(true);
+	        	halt = false;
+			}
+        });
+        findViewById(R.id.rcButton).setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+	        	mApp.getHwMan().setAutonomous(false);
+	        	halt = false;
+			}
+        });
+        findViewById(R.id.stopButton).setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+	        	mApp.getHwMan().setAutonomous(false);
+	        	halt = true;
+			}
+        });
 
         mMapView = (MyMapView)findViewById(R.id.mapview);
 		mMapView.setBuiltInZoomControls(true);
@@ -123,10 +148,7 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 	
 	private static final int CHOOSE_ID = Menu.FIRST;
 	private static final int SHUTDOWN_ID = Menu.FIRST + 1;
-	private static final int AUTONOMOUS_ID = Menu.FIRST + 2;
-	private static final int RC_ID = Menu.FIRST + 3;
-	private static final int HALT_ID = Menu.FIRST + 4;
-	private static final int STOP_ID = Menu.FIRST + 5;
+	private static final int STOP_ID = Menu.FIRST + 2;
 	/**
 	 * create the context menu for this Activity
 	 */
@@ -135,9 +157,6 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
     	super.onCreateOptionsMenu(menu);
     	menu.add(0, CHOOSE_ID, 0, R.string.bluetooth_picker);
     	menu.add(0, SHUTDOWN_ID, 0, R.string.shutdown);
-    	menu.add(0, AUTONOMOUS_ID, 0, R.string.autonomous_mode);
-    	menu.add(0, RC_ID, 0, R.string.rc_mode);
-    	menu.add(0, HALT_ID, 0, R.string.halt);
     	menu.add(0, STOP_ID, 0, R.string.bluetooth_stop);
     	return true;
     }
@@ -192,18 +211,6 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
         case SHUTDOWN_ID:
         	// send the shutdown command
         	mApp.getHwMan().setShutdown();
-        	return true;
-        case AUTONOMOUS_ID:
-        	mApp.getHwMan().setAutonomous(true);
-        	halt = false;
-        	return true;
-        case RC_ID:
-        	mApp.getHwMan().setAutonomous(false);
-        	halt = false;
-        	return true;
-        case HALT_ID:
-        	mApp.getHwMan().setAutonomous(false);
-        	halt = true;
         	return true;
         case STOP_ID:
         	// stop the HardwareManager

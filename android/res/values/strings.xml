@@ -10,4 +10,7 @@
     <string name="autonomous_mode">Autonomous Mode</string>
     <string name="rc_mode">RC Mode</string>
     <string name="halt">Halt Robot</string>
+    <string name="autonomous">Autonomous</string>
+    <string name="rc">Remote Control</string>
+    <string name="stop">Stop</string>
 </resources>

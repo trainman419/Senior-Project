@@ -16,7 +16,7 @@
     	android:padding="10px"
     	android:orientation="horizontal">       
 		<RadioButton
-			android:id="@+id/mapbutton1"
+			android:id="@+id/rcButton"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:button="@drawable/button_l"
@@ -25,11 +25,11 @@
 			android:layout_marginRight="0px"
 			android:layout_weight="1.0"
 			android:checked="true"
-			android:text="RC"
+			android:text="@string/rc"
 			android:gravity="center"
 			/>
 		<RadioButton
-			android:id="@+id/mapbutton2"
+			android:id="@+id/autonomousButton"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:button="@drawable/button_c"
@@ -37,11 +37,11 @@
 			android:layout_marginLeft="0px"
 			android:layout_marginRight="0px"
 			android:layout_weight="1.0"
-			android:text="Autonomous"
+			android:text="@string/autonomous"
 			android:gravity="center"
 			/>
 		<RadioButton
-			android:id="@+id/mapbutton3"
+			android:id="@+id/stopButton"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:button="@drawable/button_r"
@@ -49,7 +49,7 @@
 			android:layout_marginLeft="0px"
 			android:layout_marginRight="0px"
 			android:layout_weight="1.0"
-			android:text="Stop"
+			android:text="@string/stop"
 			android:gravity="center"
 			/>
 	</RadioGroup>
