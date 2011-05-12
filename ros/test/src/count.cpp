@@ -1,7 +1,7 @@
 /*
- * drive.cpp
+ * count.cpp
  *
- * Drive the robot in a straight line
+ * Integrate odometry information to produce a position
  *
  * Author: Austin Hendrix
  */
@@ -9,7 +9,6 @@
 #include <ros/ros.h>
 
 #include <nav_msgs/Odometry.h>
-#include <hardware_interface/Control.h>
 
 double dist = 0.0;
 
