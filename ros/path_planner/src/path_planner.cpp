@@ -370,7 +370,7 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
       }
       ROS_INFO("steer: %d", c.steer);
 
-      c.speed = 60;
+      c.speed = 100;
       control_pub.publish(c);
    } else {
       hardware_interface::Control c;
@@ -417,7 +417,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
 
    // grow obstacles by radius of robot; makes collision-testing easier
    // order: O(n^2 * 12)
-   for( int r=1; r<4; r++ ) {
+   for( int r=1; r<5; r++ ) {
       for( int i=0; i<101; i++ ) {
          for( int j=0; j<101; j++ ) {
             if( map_data[i][j] == 0 ) {
