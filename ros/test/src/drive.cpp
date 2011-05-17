@@ -19,6 +19,8 @@ double x = 0.0;
 double y = 0.0;
 double theta = 0.0;
 
+int steer;
+
 void odoCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    x += msg->pose.pose.position.x;
    y += msg->pose.pose.position.y;
@@ -33,7 +35,7 @@ void odoCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    } else {
       c.speed = 0;
    }
-   c.steer = 0; // drive straight
+   c.steer = steer; // drive straight
 
    control_pub.publish(c);
 }
@@ -41,10 +43,16 @@ void odoCallback(const nav_msgs::Odometry::ConstPtr & msg) {
 int main(int argc, char ** argv) {
    ros::init(argc, argv, "drive");
 
-   if( argc >= 2 ) {
+   if( argc == 2 ) {
       sscanf(argv[1], "%lf", &dist);
+      steer = 0;
+      ROS_INFO("Driving forward %lf units", dist);
    }
-   ROS_INFO("Driving forward %lf units", dist);
+   if( argc == 3 ) {
+      sscanf(argv[1], "%lf", &dist);
+      sscanf(argv[2], "%d", &steer);
+      ROS_INFO("Driving %lf units with steer %d", dist, steer);
+   }
 
    ros::NodeHandle n;
 

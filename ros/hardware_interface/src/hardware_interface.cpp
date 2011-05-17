@@ -252,6 +252,7 @@ handler(odometry_h) {
    int rspeed = p.reads16();
    int lspeed = p.reads16();
    int qspeed = p.reads16();
+   int steer = p.reads8();
 
    // if we have a big jump in encoder count, assume something got reset
    if( abs(last_q - qcount) > 100 ) last_q = qcount;
@@ -271,19 +272,19 @@ handler(odometry_h) {
    // current heading in rad. points in same direction as forward
    //  convert to unit-circle angle
    double theta = (M_PI/2) - state.last_pos.pose.pose.orientation.x;
-   if( state.steer == 0 ) {
+   if( steer == 0 ) {
       // if we're going straight, just generate a straight-line estimate
       dx = d * cos(theta);
       dy = d * sin(theta);
       dt = 0.0;
    } else {
       // radius of turn
-      double r = (786.4 - 170.2 * log(fabs(state.steer))) / 10.0;
+      double r = (786.4 - 170.2 * log(fabs(steer))) / 10.0;
       dt = d / r; // in rads
 
       double theta_c1; // in radians
       double theta_c2; // in radians
-      if( state.steer > 0 ) {
+      if( steer > 0 ) {
          // turning right
          theta_c1 = theta + M_PI/2;
       } else {

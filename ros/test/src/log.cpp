@@ -51,7 +51,7 @@ int main(int argc, char ** argv) {
 
    timeptr = localtime(&now);
 
-   strftime(date, 256, "%F", timeptr);
+   strftime(date, 256, "%F-%T", timeptr);
    snprintf(logfile, 1024, "/home/hendrix/log/run-%s.log", date);
 
    logp = fopen(logfile, "w");
@@ -61,6 +61,8 @@ int main(int argc, char ** argv) {
    ros::NodeHandle n;
 
    ros::Subscriber s = n.subscribe("base_odometry", 10, odoCallback);
+   ros::Subscriber s2 = n.subscribe("extended_fix", 10, gpsCallback);
+   ros::Subscriber s3 = n.subscribe("compass", 10, compassCallback);
 
    ros::spin();
 

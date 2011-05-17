@@ -76,9 +76,9 @@ void gpsCallback(const gps_common::GPSFix::ConstPtr &gps) {
       // input covariance
       matrix<2, 2> Q;
       // diagonal matrix
-      Q.data[0][0] = 50.0*50.0;
+      Q.data[0][0] = 25.0*25.0;
       Q.data[0][1] = 0;
-      Q.data[1][1] = 50.0*50.0;
+      Q.data[1][1] = 25.0*25.0;
       Q.data[1][0] = 0;
 
       int16_t meridian = round(gps->longitude);
@@ -137,7 +137,8 @@ void compassCallback(const hardware_interface::Compass::ConstPtr & msg ) {
    while( z - heading < -M_PI ) z += M_PI*2;
    while( z - heading >  M_PI ) z -= M_PI*2;
 
-   double Q = 0.174*0.174; // about 10 degrees, in radians
+   //double Q = 0.174*0.174; // about 10 degrees, in radians
+   double Q = 0.100*0.100; // about 10 degrees, in radians
 
    double gain = h_variance / ( h_variance + Q);
    heading = heading + ((z - heading) * gain);
