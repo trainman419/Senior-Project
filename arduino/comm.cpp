@@ -23,7 +23,7 @@ extern "C" {
 
 //uint8_t brain_buffer[520];
 volatile int8_t steer; // steering setting
-#define STEER_OFFSET 113
+#define STEER_OFFSET 119
 
 extern "C" {
    // touch the internals of the serial library
