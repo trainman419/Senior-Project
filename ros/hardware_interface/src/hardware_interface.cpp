@@ -11,7 +11,7 @@
 #include <termios.h>
 #include <math.h>
 #include <errno.h>
-#include <stropts.h>
+//#include <stropts.h>
 
 #include <set>
 
