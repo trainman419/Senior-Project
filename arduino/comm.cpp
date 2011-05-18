@@ -22,6 +22,8 @@ extern "C" {
 #include "protocol.h"
 
 //uint8_t brain_buffer[520];
+volatile int8_t steer; // steering setting
+#define STEER_OFFSET 113
 
 extern "C" {
    // touch the internals of the serial library
@@ -113,7 +115,8 @@ void brain_rx_thread(void) {
             } while( input != '\r');
             if( !bt_control ) {
                target_speed = brain_pack.reads8();
-               input = brain_pack.readu8() + 113; // steering zero set
+               steer = brain_pack.readu8();
+               input = steer + STEER_OFFSET; // steering zero set
                servo_set(0, input);
             }
             break;
@@ -176,6 +179,7 @@ void bt_rx_thread(void) {
             input = rx_byte(BT);
             if( bt_control ) {
                servo_set(0, input);
+               steer = input - STEER_OFFSET;
             }
             finish(BT);
             break;

@@ -34,8 +34,7 @@ extern "C" {
 #define CLK 16000
 
 
-int8_t speed;
-int8_t steer;
+extern volatile int8_t steer;
 
 void tx_string(uint8_t port, char * s) {
    int i = 0;
