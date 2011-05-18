@@ -281,7 +281,7 @@ handler(odometry_h) {
    } else {
       // radius of turn
       //double r = (786.4 - 170.2 * log(fabs(steer))) / 10.0;
-      double r = 3514.42866*pow(fabs(steer), -1.12479);
+      double r = 1133.6843998428*pow(fabs(steer), -1.124788650329);
       dt = d / r; // in rads
 
       double theta_c1; // in radians
