@@ -1,15 +1,20 @@
-TRG=run-loop1.png run-loop2.png run-loop2.svg
+TRG=run-loop1.png run-loop2.png run-loop2.svg run-loop3.png run-loop4.png run-loop5.png
 all: $(TRG)
 
 clean:
 	rm $(TRG)
-	rm run-loop1.tmp run-loop2.tmp
 
 %.tmp: %.log
 	perl plot.pl $^ > $@
 
+run-loop4.tmp: run-loop4.log plot-4.pl
+	perl plot-4.pl $< > $@
+
+run-loop5.tmp: run-loop5.log plot-4.pl
+	perl plot-4.pl $< > $@
+
 %.png: %.tmp
-	gnuplot -e 'set terminal png size 1600,1200; set output "$@"; plot "$^" using 1:2:(sin($$4)):(cos($$4)) with vectors, "$^" using 1:2 with lines, "$^" using 1:2:(sin($$3)):(cos($$3)) with vectors;'
+	gnuplot -e 'set terminal png size 1600,1200; set output "$@"; plot "$^" using 1:2:(sin($$4)):(cos($$4)) with vectors, "$^" using 1:2 with lines, "$^" using 1:2:(cos($$3)):(sin($$3)) with vectors;'
 
 %.svg: %.tmp
-	gnuplot -e 'set terminal svg; set output "$@"; plot "$^" using 1:2:(sin($$4)):(cos($$4)) with vectors, "$^" using 1:2 with lines, "$^" using 1:2:(sin($$3)):(cos($$3)) with vectors;'
+	gnuplot -e 'set terminal svg; set output "$@"; plot "$^" using 1:2:(sin($$4)):(cos($$4)) with vectors, "$^" using 1:2 with lines, "$^" using 1:2:(cos($$3)):(sin($$3)) with vectors;'
