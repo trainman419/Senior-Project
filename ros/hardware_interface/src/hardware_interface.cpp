@@ -262,6 +262,7 @@ handler(odometry_h) {
    ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
             rcount, lcount, qcount, rspeed, lspeed, qspeed);
             */
+   ROS_INFO("Odo: %d, %d", qcount, steer);
    double dx = 0.0; // change in X
    double dy = 0.0; // change in Y
    double dt = 0.0; // change in theta
@@ -279,7 +280,8 @@ handler(odometry_h) {
       dt = 0.0;
    } else {
       // radius of turn
-      double r = (786.4 - 170.2 * log(fabs(steer))) / 10.0;
+      //double r = (786.4 - 170.2 * log(fabs(steer))) / 10.0;
+      double r = 3514.42866*pow(fabs(steer), -1.12479);
       dt = d / r; // in rads
 
       double theta_c1; // in radians
