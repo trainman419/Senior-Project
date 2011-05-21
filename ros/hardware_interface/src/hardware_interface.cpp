@@ -368,11 +368,41 @@ handler(gpslist_h) {
    free(lon);
 }
 
+FILE * battery_log;
+void battery_setup() {
+   char logfile[1024];
+   char date[256];
+   struct tm * timeptr;
+   time_t now = time(0);
+
+   timeptr = localtime(&now);
+   strftime(date, 256, "%F-%T", timeptr);
+   snprintf(logfile, 1024, "/home/hendrix/log/battery-%s.log", date);
+   battery_log = fopen(logfile, "w");
+   if( battery_log == NULL ) {
+      ROS_PERROR("Failed to open logfile");
+   }
+}
+
 handler(battery_h) {
+   static uint8_t cnt = 0;
    uint8_t main = p.readu8();
    uint8_t motor = p.readu8();
    uint32_t idle = p.readu32();
-   ROS_INFO("Idle count: %d", idle);
+
+   if( cnt % 5 == 0 ) {
+      char date[256];
+      struct tm * timeptr;
+      time_t now = time(0);
+
+      timeptr = localtime(&now);
+      strftime(date, 256, "%F-%T", timeptr);
+      fprintf(battery_log, "%s: %d %d\n", date, main, motor);
+      fflush(battery_log);
+   }
+   cnt++;
+
+   //ROS_INFO("Idle count: %d", idle);
 }
 
 #define IN_BUFSZ 1024
@@ -402,6 +432,7 @@ int main(int argc, char ** argv) {
    gps_setup();
    handlers['G'] = gps_h;
    handlers['L'] = gpslist_h;
+   battery_setup();
    handlers['b'] = battery_h;
 
    ros::init(argc, argv, "hardware_interface");
