@@ -161,8 +161,8 @@ void plan_path(loc start, loc end) {
 
       unvisited->erase(next);
 
-      cout << "Here: (" << here.x << ", " << here.y << ", " << here.pose << 
-         ")" << endl;
+      //cout << "Here: (" << here.x << ", " << here.y << ", " << here.pose << 
+      //   ")" << endl;
 
       // FIXME: only drive forward
 
@@ -430,7 +430,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
       }
    }
 
-   print_map();
+   //print_map();
 
    /*
    if( active ) {
