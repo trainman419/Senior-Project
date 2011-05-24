@@ -16,11 +16,12 @@ while(<>) {
    if( m/O\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)/ ) {
       $foo = $t;
 #      $foo = -$c;
-#      $foo = (-$c + $t)/2;
+      $foo = (-$c + $t)/2;
       $x += cos($foo)*$1 - sin($foo)*$2;
       $y += cos($foo)*$2 + sin($foo)*$1;
-      $t -= $3*3.1;
-      while( $t < 0 ) { $t += 2*$pi; }
+      $t -= $3*3.1001;
+      while( $t < -$pi ) { $t += 2*$pi; }
+      while( $t > $pi ) { $t -= 2*$pi; }
       print "$x $y ";
       print ($t + $pi_2);
       print " $c\n";
@@ -28,6 +29,7 @@ while(<>) {
    if( m/C\s+(\-?\d+\.\d+)/ ) {
       $c = $1;
       if( $t == 0 ) { $t = -$c; }
-      while($c > 0) { $c -= 2*$pi; }
+      while($c > $pi) { $c -= 2*$pi; }
+      while($c < -$pi) { $c += 2*$pi; }
    }
 }
