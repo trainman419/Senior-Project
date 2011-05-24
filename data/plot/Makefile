@@ -24,3 +24,7 @@ run-loop6.tmp: run-loop6.log plot-4.pl
 
 %.huge.png: %.tmp
 	gnuplot -e 'set terminal png size 3200,2400; set output "$@"; plot "$^" using 1:2:(sin($$4)):(cos($$4)) with vectors, "$^" using 1:2 with lines, "$^" using 1:2:(cos($$3)):(sin($$3)) with vectors;'
+
+%.pdf: %.tmp
+	gnuplot -e 'set terminal pdf; set output "$@"; plot "$^" using 1:2:(sin($$4)):(cos($$4)) with vectors, "$^" using 1:2 with lines, "$^" using 1:2:(cos($$3)):(sin($$3)) with vectors;'
+
