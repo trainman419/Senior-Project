@@ -41,6 +41,18 @@ void compassCallback(const hardware_interface::Compass::ConstPtr & msg) {
    fprintf(logp, "C %lf\n", msg->heading);
 }
 
+void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
+   fprintf(logp, "P %lf %lf %lf %lf %lf %lf %lf %lf\n",
+         msg->pose.pose.position.x,
+         msg->pose.pose.position.y,
+         msg->pose.covariance[6*0 + 0], //xx
+         msg->pose.covariance[6*0 + 1], //xy
+         msg->pose.covariance[6*1 + 0], //yx
+         msg->pose.covariance[6*1 + 1], //yy
+         msg->pose.pose.orientation.x,
+         msg->pose.covariance[6*0 + 0]);
+}
+
 int main(int argc, char ** argv) {
    ros::init(argc, argv, "count");
 
@@ -63,6 +75,7 @@ int main(int argc, char ** argv) {
    ros::Subscriber s = n.subscribe("base_odometry", 10, odoCallback);
    ros::Subscriber s2 = n.subscribe("extended_fix", 10, gpsCallback);
    ros::Subscriber s3 = n.subscribe("compass", 10, compassCallback);
+   ros::Subscriber s4 = n.subscribe("position", 10, positionCallback);
 
    ros::spin();
 
