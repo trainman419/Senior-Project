@@ -23,10 +23,12 @@ ros::Subscriber pos;
 void posCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    double x = msg->pose.pose.position.x;
    double y = msg->pose.pose.position.y;
-   double t = msg->pose.pose.orientation.x;
+   double t = M_PI/2.0 - msg->pose.pose.orientation.x;
    ROS_INFO("Got position: (%lf, %lf, %lf)", x, y, t);
 
    goal_list::GoalList list;
+   // publish an empty goal list
+   goalList_pub.publish(list);
 
    double x1, y1;
    global_map::Location loc;
@@ -37,14 +39,14 @@ void posCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    loc.row = y1;
    list.goals.push_back(loc);
 
-   x1 = x + dist*cos(t) + dist*sin(t);
-   y1 = y + dist*sin(t) + dist*cos(t);
+   x1 = x + dist*cos(t) + dist*cos(t + M_PI/2.0);
+   y1 = y + dist*sin(t) + dist*sin(t + M_PI/2.0);
    loc.col = x1;
    loc.row = y1;
    list.goals.push_back(loc);
 
-   x1 = x + dist*sin(t);
-   y1 = y + dist*cos(t);
+   x1 = x + dist*cos(t + M_PI/2.0);
+   y1 = y + dist*sin(t + M_PI/2.0);
    loc.col = x1;
    loc.row = y1;
    list.goals.push_back(loc);
@@ -55,6 +57,7 @@ void posCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    loc.row = y1;
    list.goals.push_back(loc);
 
+   // publish a goal list with points in a square (I hope)
    goalList_pub.publish(list);
 
    // unsubscribe from further position updates
