@@ -1,4 +1,4 @@
-TRG=run-loop1.png run-loop2.png run-loop2.svg run-loop3.png run-loop4.png run-loop5.png run-loop6.png run-loop6.svg run-loop6.pdf run-2011-05-24-1.png run-2011-05-24-2.png run-2011-05-24-3.png
+TRG=run-loop1.png run-loop2.png run-loop2.svg run-loop3.png run-loop4.png run-loop5.png run-loop6.png run-loop6.svg run-loop6.pdf run-2011-05-24-1.png run-2011-05-24-2.png run-2011-05-24-3.png run-2011-05-30-1.png run-2011-05-30-2.png run-2011-05-30-3.png run-2011-05-30-1.pdf
 all: $(TRG)
 
 clean:
@@ -19,8 +19,17 @@ run-loop6.tmp: run-loop6.log plot-4.pl
 %.cir: %.logc circles.pl
 	perl circles.pl $< > $@
 
-%.png: %.cir circles.plot
-	gnuplot -e "in='$<'; type='png'" circles.plot
+%.com: %.logc combined.pl
+	perl combined.pl $< > $@
+
+#%.png: %.cir circles.plot
+#	gnuplot -e "in='$<'; type='png'" circles.plot
+
+%.png: %.cir %.com combined.plot
+	gnuplot -e "in='$<'; type='png'" combined.plot
+
+%.pdf: %.cir %.com combined.plot
+	gnuplot -e "in='$<'; type='pdf'" combined.plot
 
 %.png: %.tmp log.plot
 	gnuplot -e "in='$<'; type='png'" log.plot
