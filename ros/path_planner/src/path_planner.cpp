@@ -53,6 +53,9 @@ using namespace std;
 // maximum number of iterations to look for a path
 #define MAX_ITER 10000
 
+// speed for path traversal
+#define SPEED 40
+
 // types, to make life easier
 struct loc {
    // x, y, pose: the position and direction of the robot
@@ -341,19 +344,30 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
          } else {
             target = theta - (M_PI/16)*(i/2);
          }
-         // check across our map to see if our path is clear
-         for( double dist = 0; dist <= traverse_dist; dist += 0.5 ) {
-            x = here.x + dist*cos(target);
-            y = here.y + dist*sin(target);
-            if( map_get(x, y) ) {
-               collide = true;
-               break;
+         double diff = target - here.pose;
+         while( diff >  M_PI ) diff -= 2*M_PI;
+         while( diff < -M_PI ) diff += 2*M_PI;
+         // don't try to turn to an angle where we can't see
+         if( fabs(diff) > M_PI/2 ) {
+            collide = true;
+         } else {
+            // check across our map to see if our path is clear
+            for( double dist = 0; dist <= traverse_dist; dist += 0.5 ) {
+               x = here.x + dist*cos(target);
+               y = here.y + dist*sin(target);
+               if( map_get(x, y) ) {
+                  collide = true;
+                  break;
+               }
             }
          }
          i++;
       }
 
       ROS_INFO("Target angle:  %lf", target);
+      if( collide ) {
+         ROS_WARN("Target angle has a collision!");
+      }
 
       double diff = target - here.pose;
       while( diff > M_PI  ) diff -= 2*M_PI;
@@ -370,7 +384,7 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
       }
       ROS_INFO("steer: %d", c.steer);
 
-      c.speed = 100;
+      c.speed = SPEED;
       control_pub.publish(c);
    } else {
       hardware_interface::Control c;
