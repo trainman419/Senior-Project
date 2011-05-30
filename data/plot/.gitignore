@@ -1,3 +1,5 @@
 *.png
 *.svg
 *.tmp
+*.cir
+*.pdf
