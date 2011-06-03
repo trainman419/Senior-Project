@@ -8,3 +8,4 @@ todo.tex: firmware.tex hardware.tex software.tex thoughts.tex ui.tex bib.tex \
 
 %.pdf: %.tex
 	pdflatex $<
+	pdflatex $<

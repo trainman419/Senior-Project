@@ -12,6 +12,11 @@
 \section{Abstract}
 This project aims to create a small mobile robot that is capable of accurate localization, path-planning and obstacle avoidance, and to compete in Sparkfun's autonomous vehicle competition\cite{avc}. Localization, path-planning and obstacle avoidance are important for mobile robots because they allow the construction of more complex and useful behaviors. I was able to achieve the goal of building a reliable robot capable of good obstacle avoidance and rudimentary navigation, but I didn't have time to achieve accurate localization or a map suitable for path-planning.
 
+\begin{figure}[h]
+\includegraphics[width=1.00\textwidth]{start}
+\caption{At Sparkfun AVC, on the starting line}
+\end{figure}
+
 \section{Background}
 \subsection{Software}
 Localization, path-planning and obstacle avoidance have been studied in mobile robots since Stanford created Shakey\cite{shakey}. Most of the research and techniques for this project come from "Probabilistic Robotics,"\cite{thrun} but are focused primarily on indoor applications. Techniques used include proportional control for speed regulation and Kalman filtering to fuse GPS, odometry and compass data. Since all of the hardware was new at the start of this project, there was no initial software; all software was written during the course of the project.
@@ -21,17 +26,6 @@ The platform for this project is a robot that the author has been working on for
 
 \section{Problem Statement}
 For my senior project, I built and programmed a relatively inexpensive robot to perform localization, mapping and path-planning. The purpose of this project was to explore the capabilities of a relatively low-cost, semi-autonomous robot, and to explore the capabilities of open-source robotics software. The robot was intended to compete in the SparkFun Autonomous Vehicle Competition\cite{avc}, and to be able to navigate around Cal Poly's Inner Perimeter Road, given a reasonable number of intermediate GPS coordinates.
-
-\section{Pictures}
-\begin{figure}
-\includegraphics[width=1.00\textwidth]{start}
-\caption{At Sparkfun AVC, on the starting line}
-\end{figure}
-
-\begin{figure}
-\includegraphics[width=1.0\textwidth]{IMG_0050}
-\caption{Internals and sensors}
-\end{figure}
 
 \section{Design}
 \subsection{Hardware Selection}
