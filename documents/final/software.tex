@@ -1,4 +1,9 @@
 
+\begin{figure}
+\includegraphics[width=1\textwidth]{software_flow}
+\caption{Software Architecture}
+\end{figure}
+
 The primary computer runs Gentoo, a Linux distribution, and runs the ROS software package to support the high-level behaviors. Each behavior or part of the system is implemented as a separate ROS node, and communicates with other nodes through messages or service calls.
 
 There wasn't enough time to implement all of the ROS nodes in the original design before the Sparkfun AVC, so a subset of these modules were implemented. In particular, there wasn't enough time to write the localization or active localization nodes, and problems with the path planner resulted in it being replaced by a reactive goal tracking and obstacle avoidance algorithm.
