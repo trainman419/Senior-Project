@@ -1,0 +1,4 @@
+code thoughts:
+  TODO: consider the true path the robot will follow rather than assuming a straight line
+  TODO: if all paths forward are blocked, consider a path backward
+  TODO: keep a local obstacle map so that the robot has some idea of what is behind it
