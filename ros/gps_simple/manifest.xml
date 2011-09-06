@@ -1,0 +1,18 @@
+<package>
+   <description brief="gps_simple">
+   Simple GPS Messages, for use in systems that don't need to pass around all
+   of the data that comes out of an standard GPS.
+
+   Since this is designed to be a simple message library, the message format is
+   limited to a minimal number of fields by design. If you want a more complete
+   GPS message, use gps_common from the gps_umd stack.
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/gps_simple</url>
+  <depend package="std_msgs"/>
+
+</package>
+
+
