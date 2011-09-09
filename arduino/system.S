@@ -126,6 +126,23 @@ __vector_23:
    inc r29
    st Z, r29
 
+   ; increment ticks
+   lds r30, ticks
+   lds r21, ticks+1
+   adiw r30, 1
+   sts ticks, r30
+   sts ticks+1, r31
+
+   clr r31
+   lds r30, ticks+2
+   adc r30, r31
+   sts ticks+2, r30
+
+   lds r30, ticks+3
+   adc r30, r31
+   sts ticks+3, r30
+   ; done incrementing ticks
+
    ; restore sreg
    out 0x3f, r28
    pop r28
@@ -525,3 +542,8 @@ current_pid:
    .size num_pids, 1
 num_pids:
    .skip 1,0
+.global ticks
+   .type ticks, @object
+   .size ticks, 4
+ticks:
+   .skip 4,0
