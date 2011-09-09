@@ -2,15 +2,21 @@
 
 use strict;
 
+# current function
 my $fun;
-my %frame;
-my %calls;
-my %depth;
-my %push;
 
+my %frame; # frame size per gcc's comments
+my %push;  # number of pushes in function
+my %depth; # stack depth
+
+my %calls; # call tree?
+
+# parse assembly for stack depth and frame size
 while(<>) {
    if( m/\.type\s+(.*?),\s+\@function/ ) {
       $fun = $1;
+      not defined $push{$fun} and $push{$fun} = 0;
+      not defined $frame{$fun} and $frame{$fun} = 0;
    }
    if( m|/\* frame size = (\d+) \*/| ) {
       $frame{$fun} = $1;
@@ -27,19 +33,24 @@ while(<>) {
    }
 }
 
+# compute stack depth for leaf functions
 for my $key (sort keys %frame) {
    if( not defined $calls{$key} ) {
       $depth{$key} = $frame{$key} + $push{$key};
    }
 }
 
+# recursively compute max depth
 sub depth($) {
    my ($key) = @_;
-   if( defined $depth{$key} ) {
+   if( defined $depth{$key} ) { # cache past results
       return $depth{$key};
    } else {
       my $max = 0;
       for my $call (keys %{$calls{$key}}) {
+         if( not defined $frame{$call} and not defined $push{$call} ) {
+            print "Unknown function call to $call\n";
+         }
          if( depth($call) > $max ) {
             $max = depth($call);
          }

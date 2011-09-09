@@ -75,6 +75,7 @@
 ;process preemption timer interrupt (TIMER0 OVF)
 .global __vector_23
 .global yeild
+   .type yeild, @function
 __vector_23: 
    push r31
    push r30
@@ -336,6 +337,7 @@ L4:
    ; measured run-time of <15 uS (about 13.5uS)
 
 .global system_init
+   .type system_init, @function
 system_init:
 
    ; for now, I think I only need to initialize the globals, and set up timer
@@ -378,6 +380,7 @@ system_init:
    ret
 
 .global system ; u08 system( void (*task)(void), u08 sched, u08 pri );
+   .type system, @function
 ; take a function pointer and run it as a new task, assuming there is a free
 ;  spot in the pid table
 ; if it returns, it should jump to a cleanup function
@@ -494,6 +497,7 @@ system_end:
 
 ; void schedule(unsigned char sched);
 .global schedule
+   .type schedule, @function
 schedule:
    lds r31, current_pid
    ldi r30, P_SZ
@@ -508,6 +512,7 @@ schedule:
 
 ; void priority(unsigned char pri)
 .global priority
+   .type priority, @function
 priority:
    lds r31, current_pid
    ldi r30, P_SZ

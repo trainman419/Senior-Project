@@ -1,5 +1,5 @@
 DEVICE=atmega2560
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -save-temps
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -save-temps
 LDFLAGS=-mmcu=$(DEVICE) -lm
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
@@ -18,3 +18,7 @@ include ../Makefile.implicit
 include ../Makefile.device
 
 all: TinyGPS.o
+	avr-size TinyGPS.o
+
+clean:
+	rm TinyGPS.o
