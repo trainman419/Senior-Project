@@ -17,6 +17,7 @@
 .text
 
 .global compass_init
+   .type compass_init, @function
 
 compass_init:
 ;  ldi r18,0b10110000  ;load r18
@@ -59,8 +60,7 @@ loop1:                ; enable low, toggle clock 4 times ; initialization pulse
    ret                ; end of function, return
 
 .global compass
-.global compass_poll
-
+   .type compass, @function
 compass:
    ;setup direction register
    sbi 0x0A,7         ; PD7 as output
@@ -122,6 +122,8 @@ debug1:
    nop                ;
    ldi r26,0          ;
    
+.global compass_poll
+   .type compass_poll, @function
 compass_poll:
 
    in r18,0x12        ; read state of input register
