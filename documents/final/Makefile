@@ -7,7 +7,8 @@ hardware_labels_small.png: hardware_labels.png
 
 todo.tex: firmware.tex hardware.tex software.tex thoughts.tex ui.tex bib.tex \
 	hardware-design.tex software-design.tex firmware-design.tex testing.tex
-	grep -h TODO $^ | perl -ne 'print "$$_\n";' > todo.tex
+	cat todo.txt > todo.tex
+	grep -h TODO $^ | perl -ne 'print "$$_\n";' >> todo.tex
 
 %.pdf: %.tex
 	pdflatex $<
