@@ -1,6 +1,5 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "system.h"
 
 /* initialize the ADC */
 void adc_init() {

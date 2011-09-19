@@ -8,7 +8,6 @@
 
 extern "C" {
 #include "serial.h"
-#include "system.h"
 #include "main.h"
 }
 #include "protocol.h"

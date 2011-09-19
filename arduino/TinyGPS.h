@@ -23,7 +23,8 @@
 #define TinyGPS_h
 
 #include <stdint.h>
-#include "system.h"
+
+extern volatile uint32_t ticks;
 
 inline uint32_t millis() {
    return ticks;

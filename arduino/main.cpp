@@ -21,7 +21,6 @@ extern "C" {
 #include "serial.h"
 #include "power.h"
 #include "servo.h"
-#include "system.h"
 #include "comm.h"
 #include "main.h"
 #include "wheelmon.h"
@@ -37,6 +36,7 @@ extern "C" {
 #define CLK 16000
 
 extern volatile int8_t steer;
+extern volatile uint32_t ticks;
 
 void tx_string(uint8_t port, char * s) {
    int i = 0;
