@@ -7,3 +7,4 @@ Makefile.device
 *.s
 arduino.hex
 rfcomm.sh
+ros_lib
