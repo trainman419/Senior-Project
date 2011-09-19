@@ -13,6 +13,8 @@
 #include <util/delay.h>
 #include <stdio.h>
 
+#include "ros.h"
+
 extern "C" {
 #include "pwm.h"
 #include "motor.h"
@@ -77,12 +79,9 @@ void shutdown(void) {
       odom.append((int16_t)qspeed);
       odom.append(steer);
       odom.finish();
-      //tx_bytes(BRAIN, (const uint8_t *)odom.outbuf(), odom.outsz());
       while( sz != 0 ) yeild();
       sz = odom.outsz();
       brain_tx_buffer((uint8_t *)odom.outbuf(), (uint16_t*)&sz);
-
-      //PORTB |= (1 << 7); // LED on
 
       i=0;
       do {
@@ -97,35 +96,23 @@ void shutdown(void) {
       c_pack.append((int16_t)(h.x - 13));
       c_pack.append((int16_t)(h.y - 48));
       c_pack.finish();
-      //tx_bytes(BRAIN, (const uint8_t *)c_pack.outbuf(), c_pack.outsz());
       while( sz != 0 ) yeild();
       sz = c_pack.outsz();
       brain_tx_buffer((uint8_t *)c_pack.outbuf(), (uint16_t*)&sz);
-
-      //yeild();
 
       battery.reset();
       battery.append(main_battery());
       battery.append(motor_battery());
       battery.append(idle_cnt);
       battery.finish();
-      //tx_bytes(BRAIN, (const uint8_t *)battery.outbuf(), battery.outsz());
       while( sz != 0 ) yeild();
       sz = battery.outsz();
       brain_tx_buffer((uint8_t *)battery.outbuf(), (uint16_t*)&sz);
-
-      //PORTB &= ~(1 << 7); // LED off
-
-      //yeild();
    }
    while( shutdown_count > 0 ) {
-      //PORTB |= (1 << 7);
       shutdown_count--;
       yeild();
       yeild();
-      /*PORTB &= ~(1 << 7);
-      shutdown_count--;
-      yeild();*/
    }
    // LED ON
    while(1) {
@@ -155,6 +142,22 @@ int main() {
    compass_init();
 
    bump_init();
+
+   // FIXME: run gps full-speed
+   /*
+   system_init();
+   schedule(0);
+   priority(200);
+   serial_init(BRAIN);
+   serial_baud(BRAIN, 115200);
+   gps_init(GPS);
+   sei();
+   //system(idle, 0, 200); // gps thread. relatively low priority, 20Hz
+   //gps_thread();
+   system(gps_thread, 1, 20);
+   idle();
+   */
+   // end FIXME
 
    system_init();
 
@@ -197,10 +200,6 @@ int main() {
    system(brain_rx_thread, 3, 20); // start brain thread
    system(bt_rx_thread, 3, 20);    // start bluetooth thread
    
-   // main loop. Manage data flow between bluetooth and computer
-   //while(1) {
-   //   brain_rx_thread();
-   //}
    idle();
 
    // if we're here, we're done. power down.

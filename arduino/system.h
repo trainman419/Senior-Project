@@ -7,6 +7,8 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
+#include <stdint.h>
+
 char system( void (*)(void), unsigned char sched, unsigned char pri);
 
 void system_init(void);
@@ -15,6 +17,7 @@ void yeild(void);
 
 extern char current_pid;
 extern char num_pids;
+extern uint32_t ticks;
 
 struct pid_entry {
    unsigned char spl;

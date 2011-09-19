@@ -72,39 +72,12 @@ uint8_t bt_control = 1;
 // Receive data from the brain
 void brain_rx_thread(void) {
    uint8_t input;
-   //uint16_t i;
 
    while(1) {
       // wait for input
       while(!rx_ready(BRAIN)) yeild();
       input = rx_byte(BRAIN);
       switch(input) {
-/*         case 'L':
-            // don't use passthrough, because laser data isn't properly escaped
-            brain_buffer[0] = 'L';
-            for( i=0; i<512; i++ ) {
-               while(!rx_ready(BRAIN)) yeild();
-               brain_buffer[i+1] = rx_byte(BRAIN);
-            }
-            brain_buffer[513] = '\r';
-            tx_bytes(BT, brain_buffer, 514);
-            while( rx_byte(BRAIN) != '\r' );
-            break;
-         case 'P':
-            input = rx_byte(BRAIN);
-            switch(input) {
-               case '0':
-                  break;
-               case '1':
-                  pwr_on();
-                  break;
-               case '2':
-                  pwr_sleep();
-                  break;
-            }
-            while( rx_byte(BRAIN) != '\r' );
-            break;
-            */
          case 'M':
             // receive motor command
             brain_pack.reset();
@@ -127,10 +100,6 @@ void brain_rx_thread(void) {
             passthrough(BRAIN, BT, input);
             break;
       }
-      /*
-      PORTB |= (1 << 7); // LED on
-      PORTB &= ~(1 << 7); // LED off
-      */
    }
 }
 

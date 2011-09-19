@@ -31,45 +31,57 @@ volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
 #define B 1
 #define C 2
 
-/* recieve interrupt 0 */
-ISR(USART0_RX_vect) /* receive complete */
-{
-   cli();
-   /* read into fifo, allow overruns for now. */
-   rx_buf[0][rx_head[0]++] = UDR0;
-   rx_head[0] %= BUF_SZ;
-   rx_size[0]++;
-   sei();
+
+#define RX(port, udr, p) ISR(port) { \
+   rx_buf[p][rx_head[p]++] = udr;\
+   rx_head[p] %= BUF_SZ;\
+   rx_size[p]++;\
 }
 
-/* recieve interrupt 1 */
-ISR(USART1_RX_vect) /* receive complete */
-{
-   /* read into fifo, allow overruns for now. */
-   rx_buf[1][rx_head[1]++] = UDR1;
-   rx_head[1] %= BUF_SZ;
-   rx_size[1]++;
-}
+RX(USART0_RX_vect, UDR0, 0);
+RX(USART1_RX_vect, UDR1, 1);
+RX(USART2_RX_vect, UDR2, 2);
+RX(USART3_RX_vect, UDR3, 3);
 
-/* recieve interrupt 2 */
-ISR(USART2_RX_vect) /* receive complete */
-{
-   /* read into fifo, allow overruns for now. */
-   rx_buf[2][rx_head[2]++] = UDR2;
-   rx_head[2] %= BUF_SZ;
-   rx_size[2]++;
-}
-
-/* recieve interrupt 3 */
-ISR(USART3_RX_vect) /* receive complete */
-{
-   cli();
-   /* read into fifo, allow overruns for now. */
-   rx_buf[3][rx_head[3]++] = UDR3;
-   rx_head[3] %= BUF_SZ;
-   rx_size[3]++;
-   sei();
-}
+///* recieve interrupt 0 */
+//ISR(USART0_RX_vect) /* receive complete */
+//{
+////   cli();
+//   /* read into fifo, allow overruns for now. */
+//   rx_buf[0][rx_head[0]++] = UDR0;
+//   rx_head[0] %= BUF_SZ;
+//   rx_size[0]++;
+//   //sei();
+//}
+//
+///* recieve interrupt 1 */
+//ISR(USART1_RX_vect) /* receive complete */
+//{
+//   /* read into fifo, allow overruns for now. */
+//   rx_buf[1][rx_head[1]++] = UDR1;
+//   rx_head[1] %= BUF_SZ;
+//   rx_size[1]++;
+//}
+//
+///* recieve interrupt 2 */
+//ISR(USART2_RX_vect) /* receive complete */
+//{
+//   /* read into fifo, allow overruns for now. */
+//   rx_buf[2][rx_head[2]++] = UDR2;
+//   rx_head[2] %= BUF_SZ;
+//   rx_size[2]++;
+//}
+//
+///* recieve interrupt 3 */
+//ISR(USART3_RX_vect) /* receive complete */
+//{
+//   //cli();
+//   /* read into fifo, allow overruns for now. */
+//   rx_buf[3][rx_head[3]++] = UDR3;
+//   rx_head[3] %= BUF_SZ;
+//   rx_size[3]++;
+//   //sei();
+//}
 
 /* determine if there is data in the rx buffer */
 uint8_t rx_ready(uint8_t port) {

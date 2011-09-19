@@ -37,7 +37,7 @@
 volatile int16_t power = 0; 
 volatile int16_t target_speed;
 
-void speedman() {
+// locals in global scope. easier to keep track of.
    int16_t speed = 0;
    int16_t mult = DIV;
 
@@ -48,6 +48,7 @@ void speedman() {
 
    const static int16_t Kp = DIV/16; // proportional constant
 
+void speedman() {
    schedule(100); // 10 times/second
    //schedule(200); // 5 times/second
 

@@ -25,7 +25,8 @@ volatile uint16_t qcount; /* quaderature encoder 1/4 turn count */
 
 /* extend the OS to run this on a strict schedule: DONE! */
 #define WHEELDIV 2000
-void wheelmon() {
+
+/* locals in global scope. easiser to keep track of */
    uint16_t lcnt = 0;
    uint16_t rcnt = 0;
    uint16_t qcnt = 0;
@@ -35,6 +36,7 @@ void wheelmon() {
    uint8_t q1;
    uint8_t q2;
 
+void wheelmon() {
    // set motor pins as input
    DDRC &= ~( L | R | Q1 | Q2);
    // set pull-ups on inputs

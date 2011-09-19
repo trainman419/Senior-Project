@@ -12,6 +12,7 @@ extern "C" {
 #include "main.h"
 }
 #include "protocol.h"
+#include "TinyGPS.h"
 
 uint8_t gps_port;
 
@@ -32,51 +33,39 @@ void gps_init(uint8_t port) {
 }
 
 // output packet for GPS
-Packet<128> gps_packet('G');
+//Packet<128> gps_packet('G');
+Packet<32> gps_packet('G');
+
 
 /* GPS listen thread */
-void gps_thread(void) {
+/* locals in global scope so they're easier to track */
    uint8_t input;
    volatile uint16_t sz;
+   int32_t lat;
+   int32_t lon;
+
+void gps_thread(void) {
+TinyGPS gps; // don't make this a global. not sure WHY :( FIXME
 
    // main loop
    while(1) {
       while(rx_ready(gps_port)) {
          input = rx_byte(gps_port);
+         
+         if(gps.encode(input)) {
+            gps.get_position(&lat, &lon);
 
-         if( input != '\n' && input != '\r' ) {
-            gps_packet.append(input);
-         }
-
-         if( input == '\n' || gps_packet.outsz() > 100 ) {
+            gps_packet.reset();
+            gps_packet.append(lat);
+            gps_packet.append(lon);
             gps_packet.finish();
-            /*
-            tx_bytes(BRAIN,
-                  (const uint8_t *)gps_packet.outbuf(), 
-                  gps_packet.outsz());
-                  */
+
             sz = gps_packet.outsz();
             brain_tx_buffer((uint8_t*)gps_packet.outbuf(), (uint16_t*)&sz);
 
             while(sz != 0) yeild();
+         } 
 
-            // reset packet for next time
-            gps_packet.reset();
-         }
-
-         // if we get a terminating character, process the data
-         /*if(input == '\n') {
-            // finish and transmit packet
-            gps_packet.finish();
-            tx_bytes(BRAIN,
-                  (const uint8_t *)gps_packet.outbuf(), 
-                  gps_packet.outsz());
-
-            // reset packet for next time
-            gps_packet.reset();
-         } else if( input != '\r' ) {
-            gps_packet.append(input);
-         }*/
       }
       yeild();
    }
