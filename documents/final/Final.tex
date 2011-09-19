@@ -1,6 +1,7 @@
 \documentclass[a4paper,12pt]{article}
 
 \usepackage[pdftex]{graphicx}
+\usepackage[normalem]{ulem}
 
 \begin{document}
 
@@ -66,24 +67,9 @@ Total: & \$2269
 \section{Testing}
 \input{testing}
 
-TODO: Gather lots of data about the robot performance and makes some pretty graphs of it.
-
-\section{Conclusions}
-
 \section{Final Thoughts}
 \input{thoughts}
 
-\section{References}
 \input{bib}
-
-\section{TODO}
-\input{todo}
-
-\section{misc}
-I propose to write software to control this robot; by the end of the quarter I would like to be able to map and navigate indoor and outdoor spaces. In an indoor space, the robot should be able to navigate to a set of coordinates relative to its initial starting position. In an outdoor space, the robot should be able to navigate to a GPS location, within the limits of GPS accuracy. An ideal end-of-quarter demonstration would be to navigate Cal Poly's Inner Perimeter road, given a sufficient number of intermediate GPS coordinates and none or light foot traffic. Algorithms for accomplishing this will probably include Kalman filters to smooth the input data, some sort of compass calibration and offset algorithm to compensate for nearby metal objects, and a map based on a fine occupancy grid, since the robot will be expected to operate in unstructured environments. Open-source robotics software will be used where possible to speed up development. 
-
-The robot should be mostly autonomous, aside from high-level motion commands in the form of target destinations, in absolute or relative coordinates, for the robot to navigate to. Commands with either be pre-programmed, or transmitted to the robot over a wireless link.
-
-Potential avenues of investigation once navigation and planning have been achieved to a reasonable degree include mounting a Kinect to the robot to explore its capabilities, or mounting a USB nerf turret with a webcam to the robot, allowing it to find, track, follow and shoot targets of the operator's choosing.
 
 \end{document}
