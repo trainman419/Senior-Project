@@ -1,0 +1,11 @@
+Creating an IO protocol with minimal jitter and latency.
+
+Goal: provide real-time feedback from encoders and allow arbitrary data flows
+to and from the device.
+
+115200bps = 11520 Bytes/sec
+
+Update rate: 10Hz
+Update window: 1152 bytes
+
+real-time update size: 13 bytes.
