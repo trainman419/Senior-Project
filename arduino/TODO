@@ -1,8 +1,6 @@
 Lots of things to do. Time to start writing it down.
 
-- Port the RTOS from the polybot board to the Arduino Mega
 - Set up serial input and control for GPS
 - Set up serial input and control for Sonar
-- Set up input for bumpers
-- Set up input for wheel encoders
-- Port the PWM controller to the Arduino
+- Move GPS parsing onboard
+- Move from custon serial protocol to rosserial
