@@ -43,6 +43,7 @@ extern "C" {
    the serial library and manually acquire the transmit lock; passing in the 
    first byte allows us to transmit the entire packet without interruption
    */
+/*
 void passthrough(uint8_t src, uint8_t dst, uint8_t first) {
    uint8_t input;
 
@@ -57,6 +58,7 @@ void passthrough(uint8_t src, uint8_t dst, uint8_t first) {
    release_lock(tx_lock + dst);
 
 }
+*/
 
 // eat the data on a uart until a carriage return is found
 void finish(int src) {

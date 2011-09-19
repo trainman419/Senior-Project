@@ -8,6 +8,7 @@
 #ifndef LOCK_H
 #define LOCK_H
 
+/*
 #include <avr/interrupt.h>
 #include "system.h"
 
@@ -28,5 +29,6 @@ static inline void acquire_lock(uint8_t * l) {
 static inline void release_lock(uint8_t * l) {
    *l = 0;
 }
+*/
 
 #endif

@@ -7,7 +7,6 @@
 */
 
 #include "serial.h"
-#include "lock.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -199,27 +198,27 @@ void tx_internal(uint8_t port, uint8_t b) {
 
 /* put a byte in the transmit buffer. block until space available */
 void tx_byte(uint8_t port, uint8_t b) {
-   acquire_lock(tx_lock + port);
+   //acquire_lock(tx_lock + port);
 
    tx_internal(port, b);
 
-   release_lock(tx_lock + port);
+   //release_lock(tx_lock + port);
 }
 
 /* transmit a series of bytes */
 void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz) {
-   acquire_lock(tx_lock + port);
+   //acquire_lock(tx_lock + port);
    uint16_t i;
    for( i=0; i<sz; i++ ) {
       tx_internal(port, buf[i]);
    }
-   release_lock(tx_lock + port);
+   //release_lock(tx_lock + port);
 }
 
 /* transmit an entire buffer
  * the bufsz will be set to 0 when transmit is complete */
 void brain_tx_buffer(uint8_t * buf, uint16_t * bufsz) {
-   acquire_lock(tx_lock + 0);
+   //acquire_lock(tx_lock + 0);
 
    while(tx_size[0] >= 4);
 
@@ -233,7 +232,7 @@ void brain_tx_buffer(uint8_t * buf, uint16_t * bufsz) {
 
    ucsr[0][B] |= (1 << 5); /* enable send interrupt */
 
-   release_lock(tx_lock + 0);
+   //release_lock(tx_lock + 0);
 }
 
 volatile uint8_t * rxtx[] = {&DDRE, &DDRD, &DDRH, &DDRJ};

@@ -22,7 +22,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o power.o adc.o system.o servo.o gps.o sonar.o comm.o wheelmon.o speedman.o protocol.o compass.o bump.o ros.o TinyGPS.o
+main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o protocol.o compass.o bump.o ros.o TinyGPS.o interrupt.o
 
 protocol.o: protocol.cpp protocol.h
 
@@ -40,3 +40,6 @@ roslib:
 	rosrun rosserial_client make_library.py . std_msgs
 	rosrun rosserial_client make_library.py . rosserial_msgs
 	rosrun rosserial_client make_library.py . gps_simple
+
+clean:
+	rm *.o *.i *.ii *.s *.hex

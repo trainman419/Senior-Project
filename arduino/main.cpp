@@ -30,11 +30,11 @@ extern "C" {
 #include "bump.h"
 }
 
+#include "interrupt.h"
 #include "protocol.h"
 #include "gps.h"
 
 #define CLK 16000
-
 
 extern volatile int8_t steer;
 
@@ -50,7 +50,6 @@ volatile uint16_t shutdown_count;
 
 volatile int32_t idle_cnt = 0;
 
-Packet<128> odom('O');
 Packet<16> c_pack('C');
 Packet<16> battery('b');
 
@@ -59,6 +58,7 @@ inline void writes16(int16_t s, uint8_t * buf) {
    buf[1] = (s >> 8) & 0xFF;
 }
 
+/*
 void shutdown(void) {
    uint8_t i;
    volatile uint16_t sz = 0;
@@ -121,6 +121,7 @@ void shutdown(void) {
       yeild();
    }
 }
+*/
 
 void idle(void) {
    while(1) {
@@ -143,28 +144,9 @@ int main() {
 
    bump_init();
 
-   // FIXME: run gps full-speed
-   /*
-   system_init();
-   schedule(0);
-   priority(200);
-   serial_init(BRAIN);
-   serial_baud(BRAIN, 115200);
-   gps_init(GPS);
-   sei();
-   //system(idle, 0, 200); // gps thread. relatively low priority, 20Hz
-   //gps_thread();
-   system(gps_thread, 1, 20);
-   idle();
-   */
-   // end FIXME
-
-   system_init();
+   interrupt_init();
 
    // this combination of settings makes this the idle process
-   schedule(0); // run all the time
-   priority(250); // run only when nothing else wants to
-
    sei(); // enable interrupts
 
    // serial port 3: bluetooth
@@ -189,19 +171,16 @@ int main() {
    // power up!
    pwr_on();
 
-   // func, schedule, priority
-   system(shutdown, 50, 3); // odometry updates and the like; 20Hz
+   while(1) {
+      // func, schedule, priority
+      //system(shutdown, 50, 3); // odometry updates and the like; 20Hz
 
-   system(wheelmon, 1, 1); // wheel monitor; frequent and high priority
-   system(speedman, 100, 2); // speed manager; frequency: 10Hz
+      //system(gps_thread, 3, 20); // gps thread. relatively low priority, 20Hz
 
-   system(gps_thread, 3, 20); // gps thread. relatively low priority, 20Hz
-
-   system(brain_rx_thread, 3, 20); // start brain thread
-   system(bt_rx_thread, 3, 20);    // start bluetooth thread
+      //system(brain_rx_thread, 3, 20); // start brain thread
+      //system(bt_rx_thread, 3, 20);    // start bluetooth thread
+   }
    
-   idle();
-
    // if we're here, we're done. power down.
    pwr_off();
    // loop forever, in case the arduino is on external power

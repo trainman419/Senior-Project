@@ -36,16 +36,13 @@ void gps_init(uint8_t port) {
 //Packet<128> gps_packet('G');
 Packet<32> gps_packet('G');
 
-
 /* GPS listen thread */
-/* locals in global scope so they're easier to track */
+void gps_thread(void) {
+   TinyGPS gps; // don't make this a global. not sure WHY :( FIXME
    uint8_t input;
    volatile uint16_t sz;
    int32_t lat;
    int32_t lon;
-
-void gps_thread(void) {
-TinyGPS gps; // don't make this a global. not sure WHY :( FIXME
 
    // main loop
    while(1) {
@@ -63,10 +60,10 @@ TinyGPS gps; // don't make this a global. not sure WHY :( FIXME
             sz = gps_packet.outsz();
             brain_tx_buffer((uint8_t*)gps_packet.outbuf(), (uint16_t*)&sz);
 
-            while(sz != 0) yeild();
+//            while(sz != 0) yeild();
          } 
 
       }
-      yeild();
+//      yeild();
    }
 }
