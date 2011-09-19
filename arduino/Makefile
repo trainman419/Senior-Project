@@ -1,5 +1,6 @@
 DEVICE=atmega2560
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -save-temps
+#CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -Iros_lib
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -Iros_lib -save-temps
 LDFLAGS=-mmcu=$(DEVICE) -lm
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
@@ -21,7 +22,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o power.o adc.o system.o servo.o gps.o sonar.o comm.o wheelmon.o speedman.o protocol.o compass.o bump.o
+main.elf: main.o pwm.o motor.o serial.o power.o adc.o system.o servo.o gps.o sonar.o comm.o wheelmon.o speedman.o protocol.o compass.o bump.o ros.o TinyGPS.o
 
 protocol.o: protocol.cpp protocol.h
 
@@ -32,3 +33,10 @@ program: $(TRG).hex
 
 size: $(TRG).elf
 	avr-size $(TRG).elf
+
+roslib:
+	rm -r ros_lib
+	cp -r $(shell rospack find rosserial_client)/src/ros_lib .
+	rosrun rosserial_client make_library.py . std_msgs
+	rosrun rosserial_client make_library.py . rosserial_msgs
+	rosrun rosserial_client make_library.py . gps_simple
