@@ -8,6 +8,7 @@ my $fun;
 my %frame; # frame size per gcc's comments
 my %push;  # number of pushes in function
 my %depth; # stack depth
+my %file;  # which file a function appears in
 
 my %calls; # call tree?
 
@@ -17,6 +18,7 @@ while(<>) {
       $fun = $1;
       not defined $push{$fun} and $push{$fun} = 0;
       not defined $frame{$fun} and $frame{$fun} = 0;
+      $file{$fun} = $ARGV;
    }
    if( m|/\* frame size = (\d+) \*/| ) {
       $frame{$fun} = $1;
@@ -73,5 +75,5 @@ for my $key (sort keys %frame) {
 #      print "$call ".$calls{$fun}->{$call}."\n";
 #   }
 #   print "Stack depth: $depth{$key}\n";
-   printf "%30s\t%d\n", $key, $depth{$key};
+   printf "%30s\t%3d (%s)\n", $key, $depth{$key}, $file{$key};
 }
