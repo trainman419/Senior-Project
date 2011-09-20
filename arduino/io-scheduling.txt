@@ -5,7 +5,40 @@ to and from the device.
 
 115200bps = 11520 Bytes/sec
 
-Update rate: 10Hz
-Update window: 1152 bytes
+Update rate: 20Hz
+Update window: 576 bytes
 
 real-time update size: 13 bytes.
+
+discretionary update size: 563 bytes
+probably limit to 512 bytes to be safe
+
+The serial library should take some part in enforcing this.
+
+Thoughts:
+ * two levels of TX call; low-priority call blocks if there isn't enough time
+   to transmit the requested data before the next time slot
+   - blocking is bad
++++- hold entire packet and re-order transmit queue until ready +++
+   - fail if packet is too big for clean window
+   - dynamically keep track of max size of priority packet?
+ * secondary call that returns the number of bytes that can be transmitted
+   safely before the next window
+ * limit packet size to 255 bytes for two reasons:
+   1) size fits in a byte
+   2) this guarantees that we'll eventually be able to transmit anything
+      passed in
+   - still leaves an issue if some process is passing in data faster than we
+     can transmit it
+
+
+Ros Serial overhead?
+analysis: publish calls directly through to a serial write
+   lots of background data going back and forth
+   put a layer under RosSerial Client that does serial reads and writes to the
+     non-realtime buffer
+   - how do we handle realtime messages?
+   lots of data copying going on during message transmit; reduce this.
+   - store messages in serialized form?
+   - copies data once, when inserting into message; instead of twice, once
+     on insertion and one on serialization
