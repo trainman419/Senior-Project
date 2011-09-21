@@ -10,6 +10,8 @@
 
 #include <avr/io.h>
 
+#define BUF_SZ 128
+
 //extern volatile uint16_t rx_size[4];
 //extern volatile uint16_t tx_size[4];
 //extern uint8_t tx_lock[4];

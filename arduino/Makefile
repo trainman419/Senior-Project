@@ -22,7 +22,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o protocol.o compass.o bump.o ros.o TinyGPS.o interrupt.o
+main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o protocol.o compass.o bump.o ros.o TinyGPS.o interrupt.o serial-interrupt.o
 
 protocol.o: protocol.cpp protocol.h
 
