@@ -19,8 +19,6 @@ uint8_t rx_buf[4][BUF_SZ];
 /* send circular fifo (10 bytes total, 20% overhead) */
 uint8_t tx_head[4]; /* next writeable byte */
 volatile uint16_t tx_size[4]; /* number of bytes in buffer */
-uint8_t tx_buf[4][BUF_SZ];
-uint8_t tx_lock[4];
 
 volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
 #define A 0
@@ -36,76 +34,57 @@ uint8_t rx_ready(uint8_t port) {
 uint8_t rx_byte(uint8_t port) {
    while(!rx_size[port]);
 
-   cli();
+   //cli();
    ucsr[port][B] &= ~(1 << 7); /* disable receive interrupt */
 
    uint8_t res = rx_buf[port][(rx_head[port] - rx_size[port]) % BUF_SZ];
    rx_size[port]--;
 
    ucsr[port][B] |= (1 << 7); /* enable receive interrupt */
-   sei();
+   //sei();
    return res;
 }
 
-uint8_t * tx_ptrs[4];
-uint16_t * tx_szs[4];
-uint16_t tx_pos = 0;
+uint8_t * tx_ptrs[4][PTR_SZ];
+uint16_t * tx_szs[4][PTR_SZ];
+uint16_t tx_pos[4] = {0, 0, 0, 0};
 
 /* determine if there is space for another byte in the transmit buffer */
 uint8_t tx_ready(uint8_t port) {
    return tx_size[port] < BUF_SZ;
 }
 
-// transmit a byte without locking, for internal use
-void tx_internal(uint8_t port, uint8_t b) {
-   while (tx_size[port] >= BUF_SZ );
+/* transmit an entire buffer
+ * the bufsz will be set to 0 when transmit is complete */
+void tx_buffer(uint8_t port, uint8_t * buf, uint16_t * bufsz) {
+   while(tx_size[port] >= PTR_SZ);
 
    ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
-   tx_buf[port][tx_head[port]++] = b;
-   tx_head[port] %= BUF_SZ;
+
+   tx_ptrs[port][tx_head[port]] = buf;
+   tx_szs[port][tx_head[port]] = bufsz;
+   tx_head[port]++;
+   tx_head[port] %= PTR_SZ;
    tx_size[port]++;
-   /* done messing with buffer pointers */
 
    ucsr[port][B] |= (1 << 5); /* enable send interrupt */
 }
 
-/* put a byte in the transmit buffer. block until space available */
-void tx_byte(uint8_t port, uint8_t b) {
-   //acquire_lock(tx_lock + port);
+/* priority tx: push to front of tx queue
+ */
+void priority_tx(uint8_t port, uint8_t * buf, uint16_t * bufsz) {
+   while(tx_size[port] >= PTR_SZ); // TODO: consider dropping this check
 
-   tx_internal(port, b);
+   ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
 
-   //release_lock(tx_lock + port);
-}
+   // TODO: push onto other end of circular fifo
+   tx_ptrs[port][tx_head[port]] = buf;
+   tx_szs[port][tx_head[port]] = bufsz;
+   tx_head[port]++;
+   tx_head[port] %= PTR_SZ;
+   tx_size[port]++;
 
-/* transmit a series of bytes */
-void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz) {
-   //acquire_lock(tx_lock + port);
-   uint16_t i;
-   for( i=0; i<sz; i++ ) {
-      tx_internal(port, buf[i]);
-   }
-   //release_lock(tx_lock + port);
-}
-
-/* transmit an entire buffer
- * the bufsz will be set to 0 when transmit is complete */
-void brain_tx_buffer(uint8_t * buf, uint16_t * bufsz) {
-   //acquire_lock(tx_lock + 0);
-
-   while(tx_size[0] >= 4);
-
-   ucsr[0][B] &= ~(1 << 5); /* diable send interrupt (locking) */
-
-   tx_ptrs[tx_head[0]] = buf;
-   tx_szs[tx_head[0]] = bufsz;
-   tx_head[0]++;
-   tx_head[0] %= 4;
-   tx_size[0]++;
-
-   ucsr[0][B] |= (1 << 5); /* enable send interrupt */
-
-   //release_lock(tx_lock + 0);
+   ucsr[port][B] |= (1 << 5); /* enable send interrupt */
 }
 
 volatile uint8_t * rxtx[] = {&DDRE, &DDRD, &DDRH, &DDRJ};
@@ -126,8 +105,8 @@ void serial_init_tx(uint8_t port) {
    tx_head[port] = 0;
    tx_size[port] = 0;
 
-   /* lock init */
-   tx_lock[port] = 0;
+   /* tx pos init */
+   tx_pos[port] = 0;
 }
 
 /* initialize serial rx */

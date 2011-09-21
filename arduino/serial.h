@@ -12,9 +12,15 @@
 
 #define BUF_SZ 128
 
+#define PTR_SZ 8
+
+#define BRAIN 0
+#define BT 3
+#define GPS 2
+#define SONAR 1
+
 //extern volatile uint16_t rx_size[4];
 //extern volatile uint16_t tx_size[4];
-//extern uint8_t tx_lock[4];
 
 /* setup and enable serial interrupts */
 void serial_init(uint8_t port);
@@ -39,7 +45,7 @@ void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz);
 
 /* transmit an entire buffer
  * the bufsz will be set to 0 when transmit is complete */
-void brain_tx_buffer(uint8_t * buf, uint16_t * bufsz);
+void tx_buffer(uint8_t port, uint8_t * buf, uint16_t * bufsz);
 
 /* determine if there is space for another byte in the transmit buffer */
 uint8_t tx_ready(uint8_t port);

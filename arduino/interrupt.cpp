@@ -187,6 +187,6 @@ ISR(TIMER0_OVF_vect) {
       odom.append(steer);
       odom.finish();
       odom_sz = odom.outsz();
-      brain_tx_buffer((uint8_t *)odom.outbuf(), (uint16_t*)&odom_sz);
+      tx_buffer(BRAIN, (uint8_t *)odom.outbuf(), (uint16_t*)&odom_sz);
    }
 }

@@ -38,14 +38,6 @@ extern "C" {
 extern volatile int8_t steer;
 extern volatile uint32_t ticks;
 
-void tx_string(uint8_t port, char * s) {
-   int i = 0;
-   while(s[i]) {
-      tx_byte(port, s[i]);
-      i++;
-   }
-}
-
 volatile uint16_t shutdown_count;
 
 volatile int32_t idle_cnt = 0;
