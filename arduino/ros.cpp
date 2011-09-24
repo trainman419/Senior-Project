@@ -5,7 +5,10 @@
  */
 
 #include "ros.h"
+extern "C" {
 #include "serial.h"
+#include "interrupt.h"
+};
 
 namespace ros {
 
@@ -15,15 +18,19 @@ namespace ros {
 
    // read a byte
    int AvrHardware::read() {
-      return 0;
+      while(!rx_ready(BRAIN));
+      return rx_byte(BRAIN);
    }
 
    // write some bytes
    void AvrHardware::write(uint8_t * data, int len) {
+      while(sz != 0);
+      sz = len;
+      tx_buffer(BRAIN, data, &sz);
    }
 
    // time?
    unsigned long AvrHardware::time() {
-      return 0;
+      return ticks;
    }
 }

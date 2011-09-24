@@ -68,6 +68,11 @@ void interrupt_init(void) {
 
    input = input_old = PINC;
 
+   // set up timer interrupts
+   TCCR0A = (1 << WGM01 | 1 << WGM00);
+   TCCR0B = (1 << WGM02 | 1 << CS01 | 1 << CS01);
+   TIMSK0 = (1 << TOIE0);
+   OCR0A  = 249;
 }
 
 /* interrupt routine */

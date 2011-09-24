@@ -35,7 +35,7 @@ size: $(TRG).elf
 	avr-size $(TRG).elf
 
 roslib:
-	rm -r ros_lib
+	rm -r ros_lib || true
 	cp -r $(shell rospack find rosserial_client)/src/ros_lib .
 	rosrun rosserial_client make_library.py . std_msgs
 	rosrun rosserial_client make_library.py . rosserial_msgs

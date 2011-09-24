@@ -41,7 +41,7 @@ void serial_stop(uint8_t port);
 void tx_byte(uint8_t port, uint8_t b);
 
 /* transmit a series of bytes */
-void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz);
+//void tx_bytes(uint8_t port, const uint8_t * buf, uint16_t sz);
 
 /* transmit an entire buffer
  * the bufsz will be set to 0 when transmit is complete */

@@ -7,11 +7,12 @@
 #ifndef ros_h
 #define ros_h
 
-#include <ros/ros_impl.h>
+#include <ros/node_handle.h>
 
 namespace ros {
    class AvrHardware {
       public:
+         AvrHardware() : sz(0) {}
          // initialize
          void init();
 
@@ -23,6 +24,8 @@ namespace ros {
 
          // time?
          unsigned long time();
+      private:
+         uint16_t sz;
    };
 
    typedef NodeHandle_<AvrHardware> NodeHandle;
