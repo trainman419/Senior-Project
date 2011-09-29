@@ -69,10 +69,13 @@ void interrupt_init(void) {
    input = input_old = PINC;
 
    // set up timer interrupts
+   // fast PWM mode; interrupt and reset when counter equals OCR0A
+   // prescalar 64
    TCCR0A = (1 << WGM01 | 1 << WGM00);
-   TCCR0B = (1 << WGM02 | 1 << CS01 | 1 << CS01);
+   TCCR0B = (1 << WGM02 | 1 << CS01 | 1 << CS00);
+   // interrupt on "overflow" (counter match)
    TIMSK0 = (1 << TOIE0);
-   OCR0A  = 249;
+   OCR0A  = 249; // 250 counts per tick
 }
 
 /* interrupt routine */

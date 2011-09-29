@@ -49,9 +49,37 @@ uint8_t * tx_ptrs[4][PTR_SZ];
 uint16_t * tx_szs[4][PTR_SZ];
 uint16_t tx_pos[4] = {0, 0, 0, 0};
 
-/* determine if there is space for another byte in the transmit buffer */
-uint8_t tx_ready(uint8_t port) {
-   return tx_size[port] < BUF_SZ;
+/* Get the number of bytes remaining in this window */
+uint16_t time_remain() {
+   // TCNT0: interrupt counter at 16MHz / 64 = 250kHz
+   // window is 1/20 sec = 12500 counts
+   // at 115200, window is 576 bytes
+   // 576 = 24 * 24 = 2^6 * 3^2
+   // 250 = 2 * 5^3
+   // bytes per timer tick: 576 / 250 = 288 / 125
+   uint16_t r = 249 - TCNT0;
+   r *= 288;
+   r /= 125;
+   return r;
+}
+
+/* get the number of bytes that are unaccounted for in this transmit window */
+uint16_t window_remain(uint8_t port) {
+   uint16_t count = 0;
+   uint8_t i = 0;
+   // disable interrupts; lock
+   cli();
+
+   // count remaining bytes
+   for( i=0; i<tx_size[port]; i++ ) {
+      // count down; the same way the serial routines do
+      count += tx_szs[port][(tx_pos[port]-i) % PTR_SZ];
+   }
+
+   // re-enable interrupts
+   sei();
+
+   return time_remain() - count;
 }
 
 /* transmit an entire buffer
@@ -77,11 +105,12 @@ void priority_tx(uint8_t port, uint8_t * buf, uint16_t * bufsz) {
 
    ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
 
+   uint8_t p = (tx_head[port] - tx_size[port] - 1) % PTR_SZ;
    // TODO: push onto other end of circular fifo
-   tx_ptrs[port][tx_head[port]] = buf;
-   tx_szs[port][tx_head[port]] = bufsz;
-   tx_head[port]++;
-   tx_head[port] %= PTR_SZ;
+   tx_ptrs[port][p] = buf;
+   tx_szs[port][p] = bufsz;
+   //tx_head[port]++;
+   //tx_head[port] %= PTR_SZ;
    tx_size[port]++;
 
    ucsr[port][B] |= (1 << 5); /* enable send interrupt */
