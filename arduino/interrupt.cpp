@@ -58,6 +58,7 @@ int16_t e = 0; // error
 Packet<128> odom('O');
 volatile uint16_t odom_sz = 0;
 volatile int8_t steer;
+char * out_buffer[128]; // output buffer
 
 /* set up interrupt handling */
 void interrupt_init(void) {
