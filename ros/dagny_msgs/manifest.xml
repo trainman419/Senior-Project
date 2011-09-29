@@ -1,0 +1,14 @@
+<package>
+  <description brief="dagny_msgs">
+
+     dagny_msgs
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/dagny_msgs</url>
+
+</package>
+
+
