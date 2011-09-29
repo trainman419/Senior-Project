@@ -1,6 +1,6 @@
 DEVICE=atmega2560
 #CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -Iros_lib
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -Iros_lib -save-temps
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib -save-temps -g
 LDFLAGS=-mmcu=$(DEVICE) -lm
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
@@ -40,6 +40,7 @@ roslib:
 	rosrun rosserial_client make_library.py . std_msgs
 	rosrun rosserial_client make_library.py . rosserial_msgs
 	rosrun rosserial_client make_library.py . gps_simple
+	rosrun rosserial_client make_library.py . dagny_msgs
 
 clean:
 	rm *.o *.i *.ii *.s *.hex

@@ -4,13 +4,16 @@
 
 #include <avr/interrupt.h>
 
-#include "protocol.h"
+//#include "protocol.h"
 
 extern "C" {
 #include "serial.h"
 #include "motor.h"
 #include "bump.h"
 }
+
+#include "ros.h"
+#include <dagny_msgs/Odometry.h>
 
 uint32_t ticks = 0;
 
@@ -44,7 +47,7 @@ volatile int16_t qcount; /* quaderature encoder 1/4 turn count */
 
 #define DIV 256
 
-#define abs(a) ((a)>0?(a):-(a))
+//#define abs(a) ((a)>0?(a):-(a))
 
 // speed management variables
 volatile int16_t power = 0; 
@@ -55,10 +58,10 @@ int16_t mult = DIV;
 int16_t e = 0; // error
 
 // odometry transmission variables
-Packet<128> odom('O');
 volatile uint16_t odom_sz = 0;
 volatile int8_t steer;
-char * out_buffer[128]; // output buffer
+unsigned char out_buffer[128]; // output buffer
+dagny_msgs::Odometry odom;
 
 /* set up interrupt handling */
 void interrupt_init(void) {
@@ -187,6 +190,7 @@ ISR(TIMER0_OVF_vect) {
    // wheel encoder and speed transmit; 20Hz
    if( ticks % 50 == 0 ) {
       // TODO: do this with rosserial instead
+      /*
       odom.reset();
       odom.append((uint16_t)rcount);
       odom.append((uint16_t)lcount);
@@ -198,5 +202,14 @@ ISR(TIMER0_OVF_vect) {
       odom.finish();
       odom_sz = odom.outsz();
       tx_buffer(BRAIN, (uint8_t *)odom.outbuf(), odom_sz);
+      */
+      odom.lspeed = lspeed;
+      odom.rspeed = rspeed;
+      odom.qspeed = qspeed;
+      odom.lcount = lcount;
+      odom.rcount = rcount;
+      odom.qcount = qcount;
+      odom.steer = steer;
+      odom_sz += odom.serialize(out_buffer);
    }
 }
