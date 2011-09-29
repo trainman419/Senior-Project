@@ -46,7 +46,7 @@ uint8_t rx_byte(uint8_t port) {
 }
 
 uint8_t * tx_ptrs[4][PTR_SZ];
-uint16_t * tx_szs[4][PTR_SZ];
+uint16_t tx_szs[4][PTR_SZ];
 uint16_t tx_pos[4] = {0, 0, 0, 0};
 
 /* Get the number of bytes remaining in this window */
@@ -84,7 +84,7 @@ uint16_t window_remain(uint8_t port) {
 
 /* transmit an entire buffer
  * the bufsz will be set to 0 when transmit is complete */
-void tx_buffer(uint8_t port, uint8_t * buf, uint16_t * bufsz) {
+void tx_buffer(uint8_t port, uint8_t * buf, uint16_t bufsz) {
    while(tx_size[port] >= PTR_SZ);
 
    ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
@@ -100,7 +100,7 @@ void tx_buffer(uint8_t port, uint8_t * buf, uint16_t * bufsz) {
 
 /* priority tx: push to front of tx queue
  */
-void priority_tx(uint8_t port, uint8_t * buf, uint16_t * bufsz) {
+void priority_tx(uint8_t port, uint8_t * buf, uint16_t bufsz) {
    while(tx_size[port] >= PTR_SZ); // TODO: consider dropping this check
 
    ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */

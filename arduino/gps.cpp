@@ -57,7 +57,7 @@ void gps_thread(void) {
             gps_packet.finish();
 
             sz = gps_packet.outsz();
-            tx_buffer(BRAIN, (uint8_t*)gps_packet.outbuf(), (uint16_t*)&sz);
+            tx_buffer(BRAIN, (uint8_t*)gps_packet.outbuf(), sz);
 
 //            while(sz != 0) yeild();
          } 

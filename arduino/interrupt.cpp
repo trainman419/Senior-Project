@@ -185,6 +185,7 @@ ISR(TIMER0_OVF_vect) {
 
    // wheel encoder and speed transmit; 20Hz
    if( ticks % 50 == 0 ) {
+      // TODO: do this with rosserial instead
       odom.reset();
       odom.append((uint16_t)rcount);
       odom.append((uint16_t)lcount);
@@ -195,6 +196,6 @@ ISR(TIMER0_OVF_vect) {
       odom.append(steer);
       odom.finish();
       odom_sz = odom.outsz();
-      tx_buffer(BRAIN, (uint8_t *)odom.outbuf(), (uint16_t*)&odom_sz);
+      tx_buffer(BRAIN, (uint8_t *)odom.outbuf(), odom_sz);
    }
 }

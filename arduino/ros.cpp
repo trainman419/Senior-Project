@@ -24,9 +24,7 @@ namespace ros {
 
    // write some bytes
    void AvrHardware::write(uint8_t * data, int len) {
-      while(sz != 0);
-      sz = len;
-      tx_buffer(BRAIN, data, &sz);
+      tx_buffer(BRAIN, data, sz);
    }
 
    // time?
