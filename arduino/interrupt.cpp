@@ -62,6 +62,7 @@ volatile uint16_t odom_sz = 0;
 volatile int8_t steer;
 unsigned char out_buffer[128]; // output buffer
 dagny_msgs::Odometry odom;
+ros::Publisher odom_pub("odometry", &odom);
 
 /* set up interrupt handling */
 void interrupt_init(void) {
@@ -210,6 +211,7 @@ ISR(TIMER0_OVF_vect) {
       odom.rcount = rcount;
       odom.qcount = qcount;
       odom.steer = steer;
-      odom_sz += odom.serialize(out_buffer);
+      //odom_sz += odom.serialize(out_buffer);
+      odom_pub.publish(&odom);
    }
 }

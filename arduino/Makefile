@@ -10,7 +10,7 @@ CPP=avr-gcc -E
 CXX=avr-g++ 
 AS=avr-as
 
-LD=avr-gcc
+LD=avr-g++
 
 # include implicit rules for arduino
 include Makefile.implicit
@@ -22,7 +22,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o protocol.o compass.o bump.o ros.o TinyGPS.o interrupt.o serial-interrupt.o
+main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o protocol.o compass.o bump.o ros.o TinyGPS.o interrupt.o serial-interrupt.o ros_lib/time.o
 
 protocol.o: protocol.cpp protocol.h
 
