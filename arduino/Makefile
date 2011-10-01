@@ -10,7 +10,7 @@ CPP=avr-gcc -E
 CXX=avr-g++ 
 AS=avr-as
 
-LD=avr-gcc
+LD=avr-c++
 
 # include implicit rules for arduino
 include Makefile.implicit
