@@ -42,6 +42,18 @@ volatile uint16_t shutdown_count;
 
 volatile int32_t idle_cnt = 0;
 
+extern "C" {
+   /* error handler for pure virutal function calls
+    *  turn on LED and loop forever */
+   void __cxa_pure_virtual() {
+      while(1) {
+         DDRB |= (1 << PB7);
+         PORTB |= (1 << PB7);
+      }
+   }
+}
+
+ros::NodeHandle nh;
 Packet<16> c_pack('C');
 Packet<16> battery('b');
 
@@ -154,6 +166,8 @@ int main() {
    UCSR0A |= (1 << U2X0);
    UBRR0 = 16;
 
+   nh.advertise(odom_pub);
+
    // GPS initialization
    gps_init(GPS);
 
@@ -171,6 +185,7 @@ int main() {
 
       //system(brain_rx_thread, 3, 20); // start brain thread
       //system(bt_rx_thread, 3, 20);    // start bluetooth thread
+      nh.spinOnce();
    }
    
    // if we're here, we're done. power down.

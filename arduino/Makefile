@@ -10,7 +10,7 @@ CPP=avr-gcc -E
 CXX=avr-g++ 
 AS=avr-as
 
-LD=avr-c++
+LD=avr-g++
 
 # include implicit rules for arduino
 include Makefile.implicit
@@ -22,13 +22,13 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o protocol.o compass.o bump.o ros.o TinyGPS.o interrupt.o serial-interrupt.o
+main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o protocol.o compass.o bump.o ros.o TinyGPS.o interrupt.o serial-interrupt.o ros_lib/time.o
 
 protocol.o: protocol.cpp protocol.h
 
 program: $(TRG).hex
-	avrdude -pm2560 -cusbtiny -u -U flash:w:$(TRG).hex
-#	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
+	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
+#	avrdude -pm2560 -cusbtiny -u -U flash:w:$(TRG).hex
 #  no need to specify baud rate with new Arduio UNO/Mega 2560 programmer
 
 size: $(TRG).elf
@@ -41,6 +41,7 @@ roslib:
 	rosrun rosserial_client make_library.py . rosserial_msgs
 	rosrun rosserial_client make_library.py . gps_simple
 	rosrun rosserial_client make_library.py . dagny_msgs
+	ln -s ../ros.h ros_lib/ros.h
 
 clean:
 	rm *.o *.i *.ii *.s *.hex
