@@ -109,6 +109,7 @@ void priority_tx(uint8_t port, uint8_t * buf, uint16_t bufsz) {
    // TODO: push onto other end of circular fifo
    tx_ptrs[port][p] = buf;
    tx_szs[port][p] = bufsz;
+   tx_pos[port] = 0;
    //tx_head[port]++;
    //tx_head[port] %= PTR_SZ;
    tx_size[port]++;

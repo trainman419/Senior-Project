@@ -18,13 +18,16 @@ namespace ros {
 
    // read a byte
    int AvrHardware::read() {
-      while(!rx_ready(BRAIN));
-      return rx_byte(BRAIN);
+      if(rx_ready(BRAIN)) {
+         return rx_byte(BRAIN);
+      } else {
+         return -1;
+      }
    }
 
    // write some bytes
-   void AvrHardware::write(uint8_t * data, int len) {
-      tx_buffer(BRAIN, data, sz);
+   void AvrHardware::write(uint8_t * data, uint16_t len) {
+      tx_buffer(BRAIN, data, len);
    }
 
    // time?

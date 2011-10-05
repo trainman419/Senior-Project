@@ -13,7 +13,7 @@ extern uint8_t tx_head[4]; /* next writeable byte */
 extern volatile uint16_t tx_size[4]; /* number of bytes in buffer */
 
 extern uint8_t * tx_ptrs[4][PTR_SZ];
-extern uint16_t * tx_szs[4][PTR_SZ];
+extern uint16_t tx_szs[4][PTR_SZ];
 extern uint16_t tx_pos[4];
 
 
@@ -50,9 +50,8 @@ RX(USART3_RX_vect, UDR3, 3);
       uint8_t b = tx_ptrs[pn][p][tx_pos[pn]]; \
       udr = b; \
       tx_pos[pn]++; \
-      if( tx_pos[pn] >= *tx_szs[pn][p] ) { \
+      if( tx_pos[pn] >= tx_szs[pn][p] ) { \
          tx_pos[pn] = 0; \
-         *tx_szs[pn][p] = 0; \
          tx_size[pn]--; \
       } \
    } else { \
@@ -76,7 +75,7 @@ TX(USART3_UDRE_vect, UCSR3B, UDR3, 3);
 //      uint8_t b = tx_ptrs[0][p][tx_pos[0]];
 //      UDR0 = b;
 //      tx_pos[0]++;
-//      if( tx_pos[0] >= *tx_szs[0][p] ) {
+//      if( tx_pos[0] >= tx_szs[0][p] ) {
 //         tx_pos[0] = 0;
 //         *tx_szs[0][p] = 0;
 //         tx_size[0]--;

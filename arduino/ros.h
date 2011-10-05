@@ -20,7 +20,7 @@ namespace ros {
          int read();
 
          // write some bytes
-         void write(uint8_t * data, int len);
+         void write(uint8_t * data, uint16_t len);
 
          // time?
          unsigned long time();
