@@ -51,6 +51,8 @@ while(<>) {
       $count++ if length;
    }
 }
+print "$file: " if $file ne "-";
+print "$count countable lines\n";
 
 $total += $count;
 

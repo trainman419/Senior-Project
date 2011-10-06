@@ -4,8 +4,6 @@
 
 #include <avr/interrupt.h>
 
-//#include "protocol.h"
-
 extern "C" {
 #include "serial.h"
 #include "motor.h"

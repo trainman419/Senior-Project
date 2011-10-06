@@ -30,7 +30,6 @@ extern "C" {
 }
 
 #include "interrupt.h"
-#include "protocol.h"
 #include "gps.h"
 
 #define CLK 16000
@@ -54,13 +53,6 @@ extern "C" {
 }
 
 ros::NodeHandle nh;
-Packet<16> c_pack('C');
-Packet<16> battery('b');
-
-inline void writes16(int16_t s, uint8_t * buf) {
-   buf[0] = s & 0xFF;
-   buf[1] = (s >> 8) & 0xFF;
-}
 
 int main() {
    DDRB |= 1 << 7;
@@ -77,7 +69,6 @@ int main() {
 
    bump_init();
 
-   interrupt_init();
 
    // serial port 3: bluetooth
    serial_init(BT);
@@ -92,18 +83,23 @@ int main() {
    UCSR0A |= (1 << U2X0);
    UBRR0 = 16;
 
+   sei(); // enable interrupts
+
    nh.initNode();
+   nh.advertise(gps_pub);
    nh.advertise(odom_pub);
 
-   sei(); // enable interrupts
 
    // GPS initialization
    gps_init(GPS);
+
+   interrupt_init();
 
    // power up!
    pwr_on();
 
    while(1) {
+      gps_spinOnce();
       nh.spinOnce();
    }
    

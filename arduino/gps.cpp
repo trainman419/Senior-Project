@@ -10,10 +10,14 @@ extern "C" {
 #include "serial.h"
 #include "main.h"
 }
-#include "protocol.h"
+
+#include "ros.h"
+#include <gps_simple/SimpleGPS.h>
 #include "TinyGPS.h"
 
 uint8_t gps_port;
+gps_simple::SimpleGPS gps_msg;
+ros::Publisher gps_pub("gps", &gps_msg);
 
 /* initialize GPS listener on serial port */
 void gps_init(uint8_t port) {
@@ -33,36 +37,23 @@ void gps_init(uint8_t port) {
 
 // output packet for GPS
 //Packet<128> gps_packet('G');
-Packet<32> gps_packet('G');
+TinyGPS gps;
+uint8_t gps_input;
+int32_t lat;
+int32_t lon;
 
 /* GPS listen thread */
-void gps_thread(void) {
-   TinyGPS gps; // don't make this a global. not sure WHY :( FIXME
-   uint8_t input;
-   volatile uint16_t sz;
-   int32_t lat;
-   int32_t lon;
+void gps_spinOnce(void) {
+   if(rx_ready(gps_port)) {
+      gps_input = rx_byte(gps_port);
 
-   // main loop
-   while(1) {
-      while(rx_ready(gps_port)) {
-         input = rx_byte(gps_port);
-         
-         if(gps.encode(input)) {
-            gps.get_position(&lat, &lon);
+      if(gps.encode(gps_input)) {
+         gps.get_position(&lat, &lon);
 
-            gps_packet.reset();
-            gps_packet.append(lat);
-            gps_packet.append(lon);
-            gps_packet.finish();
-
-            sz = gps_packet.outsz();
-            tx_buffer(BRAIN, (uint8_t*)gps_packet.outbuf(), sz);
-
-//            while(sz != 0) yeild();
-         } 
-
-      }
-//      yeild();
+         gps_msg.latitude = lat;
+         gps_msg.longitude = lon;
+         // TODO: fill in rest of GPS message
+         gps_pub.publish(&gps_msg);
+      } 
    }
 }
