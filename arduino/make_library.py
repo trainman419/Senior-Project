@@ -51,21 +51,21 @@ import os, sys, subprocess, re
 ros_types = {
     'bool'  :   ('bool',           1),
     'byte'  :   ('unsigned char',  1),
-    'char'  :   ('char',           1),
-    'int8'  :   ('int8_t',         1),
-    'uint8' :   ('uint8_t',        1),
-    'int16' :   ('int16_t',        2),
-    'uint16':   ('uint16_t',       2),
-    'int32':    ('int32_t',        4),
-    'uint32':   ('uint32_t',       4),
+    'char'  :   ('char',  1),
+    'int8'  :   ('signed char',    1),
+    'uint8' :   ('unsigned char',  1),
+    'int16' :   ('int',            2),
+    'uint16':   ('unsigned int',   2),
+    'int32':    ('long',           4),
+    'uint32':   ('unsigned long',  4),
     'float32':  ('float',          4)
 }
 
 def type_to_var(ty):
     lookup = {
-        1 : 'uint8_t',
-        2 : 'uint16_t',
-        4 : 'uint32_t'
+        1 : 'unsigned char',
+        2 : 'unsigned int',
+        4 : 'unsigned long'
     }
     return lookup[ty]
 
@@ -87,60 +87,136 @@ class EnumerationType:
 class PrimitiveDataType:
     """ Our datatype is a C/C++ primitive. """    
 
-    def __init__(self, name, ty, bytes, offset):
+    def __init__(self, name, ty, bytes):
         self.name = name
         self.type = ty
         self.bytes = bytes
-        self.offset = offset
 
     def make_declaration(self, f):
-        #f.write('      %s %s;\n' % (self.type, self.name) )
-        f.write('      class {\n')
-        f.write('        public:\n')
-        f.write('          %s operator=(const %s & other) {\n' % (self.type, self.type))
-        f.write('              for(size_t i=0; i<sizeof(%s); ++i) {\n' % self.type)
-        f.write('                  buffer[i+%d] = (other >> (i*8)) & 0xFF;\n' % self.offset)
-        f.write('              }\n')
-        f.write('              return other;\n')
-        f.write('          }\n')
-        f.write('          operator %s() {\n' % self.type)
-        f.write('              %s ret = 0;\n' % self.type)
-        f.write('              for(size_t i=0; i<sizeof(%s); ++i) {\n' % self.type)
-        f.write('                  ret |= buffer[i+%d] << (i*8); \n' % self.offset)
-        f.write('              }\n')
-        f.write('              return ret;\n')
-        f.write('          }\n')
-        f.write('      } %s;\n' % self.name)
+        f.write('      %s %s;\n' % (self.type, self.name) )
 
-    def make_constructor(self):
-        # do nothing for basic types
-        return ""
+    def serialize(self, f):
+        #create a clean name
+        cn = self.name.replace("[","").replace("]","").split(".")[-1]
+        f.write('      union {\n')
+        f.write('        %s real;\n' % self.type)
+        f.write('        %s base;\n' % type_to_var(self.bytes))
+        f.write('      } u_%s;\n' % cn)
+        f.write('      u_%s.real = this->%s;\n' % (cn,self.name))
+        for i in range(self.bytes):
+            f.write('      o->put((u_%s.base >> (8 * %d)) & 0xFF);\n' % (cn, i) )
+
+    def size(self, f):
+        f.write('      s += %d;\n' % self.bytes)
+
+    def deserialize(self, f):
+        cn = self.name.replace("[","").replace("]","").split(".")[-1]
+        f.write('      union {\n')
+        f.write('        %s real;\n' % self.type)
+        f.write('        %s base;\n' % type_to_var(self.bytes))
+        f.write('      } u_%s;\n' % cn)
+        f.write('      u_%s.base = 0;\n' % cn)
+        for i in range(self.bytes):
+            f.write('      u_%s.base |= ((typeof(u_%s.base)) (*(inbuffer + offset + %d))) << (8 * %d);\n' % (cn,cn,i,i) )
+        f.write('      this->%s = u_%s.real;\n' % (self.name, cn) )
+        f.write('      offset += sizeof(this->%s);\n' % self.name)
+
 
 class MessageDataType(PrimitiveDataType):
     """ For when our data type is another message. """
+    def serialize(self, f):
+        f.write('      this->%s.serialize(o);\n' % self.name)
+
+    def deserialize(self, f):
+        f.write('      offset += this->%s.deserialize(inbuffer + offset);\n' % self.name)
+
+    def size(self, f):
+        f.write('      s += this->%s.size();\n' % self.name)
+
+
+class Float64DataType(PrimitiveDataType):
+    """ AVR C/C++ has no native 64-bit support, we automatically convert to 32-bit float. """
+        
     def make_declaration(self, f):
-       f.write('      %s %s;\n' % (self.type, self.name))
+        f.write('      float %s;\n' % self.name )
 
-    def make_constructor(self):
-       return "%s(buffer + %d)" % (self.name, self.offset)
+    def size(self, f):
+        f.write('       s += 8;\n') # not sure if this override is necessary or not. FIXME
+    
+    def serialize(self, f):
+        cn = self.name.replace("[","").replace("]","")
+        f.write('      long * val_%s = (long *) &(this->%s);\n' % (cn,self.name))
+        f.write('      long exp_%s = (((*val_%s)>>23)&255);\n' % (cn,cn))
+        f.write('      if(exp_%s != 0)\n' % cn)
+        f.write('        exp_%s += 1023-127;\n' % cn)
+        f.write('      long sig_%s = *val_%s;\n' % (cn,cn))
+        f.write('      o->put(0);\n') # 29 blank bits
+        f.write('      o->put(0);\n')
+        f.write('      o->put(0);\n')
+        f.write('      o->put((sig_%s<<5) & 0xff);\n' % cn)
+        f.write('      o->put((sig_%s>>3) & 0xff);\n' % cn)
+        f.write('      o->put((sig_%s>>11) & 0xff);\n' % cn)
+        f.write('      o->put(((exp_%s<<4) & 0xF0) | ((sig_%s>>19)&0x0F));\n' % (cn,cn))
+        f.write('      o->put( ((exp_%s>>4) & 0x7F) | (this->%s < 0 ?0x80:0));\n' % (cn, cn))
 
-# TODO: update this
+    def deserialize(self, f):
+        cn = self.name.replace("[","").replace("]","")
+        f.write('      unsigned long * val_%s = (unsigned long*) &(this->%s);\n' % (cn,self.name))
+        f.write('      offset += 3;\n') # 29 blank bits
+        f.write('      *val_%s = ((unsigned long)(*(inbuffer + offset++))>>5 & 0x07);\n' % cn)
+        f.write('      *val_%s |= ((unsigned long)(*(inbuffer + offset++)) & 0xff)<<3;\n' % cn)
+        f.write('      *val_%s |= ((unsigned long)(*(inbuffer + offset++)) & 0xff)<<11;\n' % cn)
+        f.write('      *val_%s |= ((unsigned long)(*(inbuffer + offset)) & 0x0f)<<19;\n' % cn)
+        f.write('      unsigned long exp_%s = ((unsigned long)(*(inbuffer + offset++))&0xf0)>>4;\n' % cn)
+        f.write('      exp_%s |= ((unsigned long)(*(inbuffer + offset)) & 0x7f)<<4;\n' % cn)
+        f.write('      if(exp_%s !=0)\n' % cn)
+        f.write('        *val_%s |= ((exp_%s)-1023+127)<<23;\n' % (cn,cn))
+        f.write('      if( ((*(inbuffer+offset++)) & 0x80) > 0) this->%s = -this->%s;\n' % (self.name,self.name))
+
+
+class Int64DataType(PrimitiveDataType):
+    """ AVR C/C++ has no native 64-bit support. """
+
+    def make_declaration(self, f):
+        f.write('      long %s;\n' % self.name )
+
+    def size(self, f):
+        f.write('      s += 8;\n') # not sure if this is necessary. FIXME
+    
+    def serialize(self, f):
+        for i in range(4):
+            f.write('      o->put((%s >> (8 * %d)) & 0xFF);\n' % (self.name, i) )
+        for i in range(4):
+            f.write('      o->put((%s > 0) ? 0: 255);\n' % self.name )
+
+    def deserialize(self, f):
+        f.write('      %s = 0;\n' % self.name)
+        for i in range(4):
+            f.write('      %s += ((long)(*(inbuffer + offset++))) >> (8 * %d);\n' % (self.name, i))
+        f.write('      offset += 4;\n')
+
+    
 class StringDataType(PrimitiveDataType):
     """ Need to convert to signed char *. """
 
     def make_declaration(self, f):
         f.write('      char * %s;\n' % self.name)
 
+    def size(self, f):
+        f.write("      s += sizeof(long) + strlen( (const char*) this->%s );\n" % self.name)
+
     def serialize(self, f):
         cn = self.name.replace("[","").replace("]","")
-        f.write('      long * length_%s = (long *)(outbuffer + offset);\n' % cn)
-        f.write('      *length_%s = strlen( (const char*) this->%s);\n' % (cn,self.name))
-        f.write('      offset += 4;\n')
-        f.write('      memcpy(outbuffer + offset, this->%s, *length_%s);\n' % (self.name,cn))
-        f.write('      offset += *length_%s;\n' % cn)
+        f.write('      long length_%s = strlen( (const char*) this->%s);\n' % (cn,self.name))
+        for i in range(4):
+            f.write('      o->put((length_%s >> (8 * %d)) & 0xFF);\n' % (cn, i) )
+        f.write('      for( long i=0; i<length_%s; ++i ) {\n' % cn)
+        f.write('          o->put(this->%s[i]);\n' % self.name)
+        f.write('      }\n')
 
     def deserialize(self, f):
         cn = self.name.replace("[","").replace("]","")
+        # FIXME: this isn't endian-portable
         f.write('      uint32_t length_%s = *(uint32_t *)(inbuffer + offset);\n' % cn)
         f.write('      offset += 4;\n')
         f.write('      for(unsigned int k= offset; k< offset+length_%s; ++k){\n'%cn) #shift for null character
@@ -150,18 +226,21 @@ class StringDataType(PrimitiveDataType):
         f.write('      this->%s = (char *)(inbuffer + offset-1);\n' % self.name)
         f.write('      offset += length_%s;\n' % cn)
 
-# TODO: update this
+
 class TimeDataType(PrimitiveDataType):
 
-    def __init__(self, name, ty, bytes, offset):
+    def __init__(self, name, ty, bytes):
         self.name = name
         self.type = ty
-        self.sec = PrimitiveDataType(name+'.sec','unsigned long',4, offset)
-        self.nsec = PrimitiveDataType(name+'.nsec','unsigned long',4, offset+4)
-        self.offset = offset
+        self.sec = PrimitiveDataType(name+'.sec','unsigned long',4)
+        self.nsec = PrimitiveDataType(name+'.nsec','unsigned long',4)
 
     def make_declaration(self, f):
         f.write('      %s %s;\n' % (self.type, self.name))
+
+    def size(self, f):
+        self.sec.size(f)
+        self.nsec.size(f)
 
     def serialize(self, f):
         self.sec.serialize(f)
@@ -171,44 +250,59 @@ class TimeDataType(PrimitiveDataType):
         self.sec.deserialize(f)
         self.nsec.deserialize(f)
 
-# TODO: update this
+
 class ArrayDataType(PrimitiveDataType):
 
     def __init__(self, name, ty, bytes, cls, array_size=None):
         self.name = name
         self.type = ty  
         self.bytes = bytes
-        self.size = array_size
+        self.array_size = array_size
         self.cls = cls 
 
     def make_declaration(self, f):
-        c = self.cls("*"+self.name, self.type, self.bytes, 0) # FIXME FIXME
-        if self.size == None:
+        c = self.cls("*"+self.name, self.type, self.bytes)
+        if self.array_size == None:
             f.write('      unsigned char %s_length;\n' % self.name)
             f.write('      %s st_%s;\n' % (self.type, self.name)) # static instance for copy
             f.write('      %s * %s;\n' % (self.type, self.name))
         else:
-            f.write('      %s %s[%d];\n' % (self.type, self.name, self.size))
+            f.write('      %s %s[%d];\n' % (self.type, self.name, self.array_size))
+
+    def size(self, f): 
+        c = self.cls(self.name+"[i]", self.type, self.bytes)
+        if self.array_size == None:
+            f.write('      s += 4;\n')
+            f.write('      for( unsigned char i = 0; i < %s_length; i++){\n' % self.name)
+            c.size(f)
+            f.write('      }\n')
+        else:
+            f.write('      for( unsigned char i = 0; i < %d; i++){\n' % self.array_size)
+            c.size(f)
+            f.write('      }\n')
+
+            
     
     def serialize(self, f):
         c = self.cls(self.name+"[i]", self.type, self.bytes)
-        if self.size == None:
+        if self.array_size == None:
             # serialize length
-            f.write('      *(outbuffer + offset++) = %s_length;\n' % self.name)
-            f.write('      *(outbuffer + offset++) = 0;\n')
-            f.write('      *(outbuffer + offset++) = 0;\n')
-            f.write('      *(outbuffer + offset++) = 0;\n')
+            f.write('      o->put(%s_length);\n' % self.name)
+            f.write('      o->put(0);\n')
+            f.write('      o->put(0);\n')
+            f.write('      o->put(0);\n')
             f.write('      for( unsigned char i = 0; i < %s_length; i++){\n' % self.name)
             c.serialize(f)
             f.write('      }\n')
         else:
+            # FIXME: what does this line do?
             f.write('      unsigned char * %s_val = (unsigned char *) this->%s;\n' % (self.name, self.name))    
-            f.write('      for( unsigned char i = 0; i < %d; i++){\n' % (self.size) )
+            f.write('      for( unsigned char i = 0; i < %d; i++){\n' % (self.array_size) )
             c.serialize(f)            
             f.write('      }\n')
         
     def deserialize(self, f):
-        if self.size == None:
+        if self.array_size == None:
             c = self.cls("st_"+self.name, self.type, self.bytes)
             # deserialize length
             f.write('      unsigned char %s_lengthT = *(inbuffer + offset++);\n' % self.name)
@@ -224,7 +318,7 @@ class ArrayDataType(PrimitiveDataType):
         else:
             c = self.cls(self.name+"[i]", self.type, self.bytes)
             f.write('      unsigned char * %s_val = (unsigned char *) this->%s;\n' % (self.name, self.name))    
-            f.write('      for( unsigned char i = 0; i < %d; i++){\n' % (self.size) )
+            f.write('      for( unsigned char i = 0; i < %d; i++){\n' % (self.array_size) )
             c.deserialize(f)            
             f.write('      }\n')
 
@@ -243,8 +337,6 @@ class Message:
 
         self.data = list()          # data types for code generation
         self.enums = list()
-
-        offset = 0
 
         # parse definition
         for line in definition:
@@ -291,6 +383,9 @@ class Message:
                 size = 0
                 if type_package:
                     cls = MessageDataType                    
+                if type_name == 'float64':
+                    cls = Float64DataType   
+                    code_type = 'float'
                 elif type_name == 'time':
                     cls = TimeDataType
                     code_type = 'ros::Time'
@@ -304,17 +399,19 @@ class Message:
                 elif type_name == 'string':
                     cls = StringDataType
                     code_type = 'char*'
+                elif type_name == 'uint64' or type_name == 'int64':
+                    cls = Int64DataType
+                    code_type = 'long'
                 else:
                     code_type = ros_types[type_name][0]
                     size = ros_types[type_name][1]
                 if type_array:
                     self.data.append( ArrayDataType(name, code_type, size, cls, type_array_size ) )
                 else:
-                    self.data.append( cls(name, code_type, size, offset) )
-                offset += size
+                    self.data.append( cls(name, code_type, size) )
             except:
                 if type_name == 'Header':
-                    self.data.append( MessageDataType(name, 'std_msgs::Header', 0, offset) )
+                    self.data.append( MessageDataType(name, 'std_msgs::Header', 0) )
                     if "std_msgs/Header" not in self.includes:
                         self.includes.append("std_msgs/Header")
                 else:
@@ -328,10 +425,41 @@ class Message:
                     if type_array:
                         self.data.append( ArrayDataType(name, type_package + "::" + type_name, size, cls, type_array_size) )
                     else:
-                        self.data.append( MessageDataType(name, type_package + "::" + type_name, 0, offset) )
+                        self.data.append( MessageDataType(name, type_package + "::" + type_name, 0) )
         #print ""
 
+    def _write_size(self, f):
+        f.write('\n')
+        f.write('    virtual int size()\n')
+        f.write('    {\n')
+        f.write('      int s = 0;\n')
+        for d in self.data:
+            d.size(f)
+        f.write('      return s;\n');
+        f.write('    }\n')
+        f.write('\n')
 
+    def _write_serializer(self, f):
+                # serializer   
+        f.write('\n')
+        f.write('    virtual void serialize(ros::Out * o)\n')
+        f.write('    {\n')
+        for d in self.data:
+            d.serialize(f)
+        f.write('      return;\n');
+        f.write('    }\n')
+        f.write('\n')
+        
+    def _write_deserializer(self, f):
+        # deserializer
+        f.write('    virtual int deserialize(unsigned char *inbuffer)\n')
+        f.write('    {\n')
+        f.write('      int offset = 0;\n')
+        for d in self.data:
+            d.deserialize(f)
+        f.write('     return offset;\n');
+        f.write('    }\n')         
+        f.write('\n')
     def _write_std_includes(self, f):
         f.write('#include <stdint.h>\n')
         f.write('#include <string.h>\n')
@@ -341,18 +469,6 @@ class Message:
     def _write_msg_includes(self,f):
         for i in self.includes:
             f.write('#include "%s.h"\n' % i)
-
-    def _write_constructor(self, f):
-        inits = []
-        for d in self.data:
-            init = d.make_constructor()
-            if len(init) > 0:
-                inits.append(init)
-        f.write('      %s(char * b) : buffer(b)' % self.name) 
-        if len(inits) > 0:
-            for init in inits:
-               f.write(', %s' % init)
-        f.write(' {}\n')
             
     def _write_data(self, f):
         for d in self.data:
@@ -361,16 +477,16 @@ class Message:
             e.make_declaration(f)
             
     def _write_getType(self, f):
-        f.write('      const char * getType(){ return "%s/%s"; };\n'%(self.package, self.name))
+        f.write('    const char * getType(){ return "%s/%s"; };\n'%(self.package, self.name))
 
     def _write_impl(self, f):
         f.write('  class %s : public ros::Msg\n' % self.name)
         f.write('  {\n')
-        f.write('    protected:\n')
-        f.write('      char * buffer;\n');
         f.write('    public:\n')
-        self._write_constructor(f)
         self._write_data(f)
+        self._write_size(f)
+        self._write_serializer(f)
+        self._write_deserializer(f)
         self._write_getType(f)
         f.write('\n')
         f.write('  };\n')

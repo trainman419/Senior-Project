@@ -42,6 +42,7 @@ roslib:
 	rosrun rosserial_client make_library.py . rosserial_msgs
 	rosrun rosserial_client make_library.py . gps_simple
 	rosrun rosserial_client make_library.py . dagny_msgs
+	rosrun rosserial_client make_library.py . geometry_msgs
 	ln -s ../ros.h ros_lib/ros.h
 
 MAKE_LIBRARY=./make_library.py
@@ -54,7 +55,8 @@ roslib2:
 	${MAKE_LIBRARY} . rosserial_msgs
 	${MAKE_LIBRARY} . gps_simple
 	${MAKE_LIBRARY} . dagny_msgs
+	${MAKE_LIBRARY} . geometry_msgs
 	ln -s ../ros.h ros_lib2/ros.h
 
 clean:
-	rm *.o *.i *.ii *.s *.hex
+	rm *.o *.i *.ii *.s *.hex || true

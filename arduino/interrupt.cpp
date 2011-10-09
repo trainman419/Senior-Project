@@ -209,13 +209,7 @@ ISR(TIMER0_OVF_vect) {
       odom.rcount = rcount;
       odom.qcount = qcount;
       odom.steer = steer;
-      //odom_sz += odom.serialize(out_buffer);
       odom_pub.publish(&odom);
-/*
-      out_buffer[0] = 0xAA;
-      out_buffer[1] = 0x55;
-      tx_buffer(BRAIN, out_buffer, 2);
-*/
    }
    sei();
 }

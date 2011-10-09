@@ -8,6 +8,7 @@
 extern "C" {
 #include "serial.h"
 #include "interrupt.h"
+#include <avr/interrupt.h>
 };
 
 namespace ros {
@@ -26,12 +27,28 @@ namespace ros {
    }
 
    // write some bytes
-   void AvrHardware::write(uint8_t * data, uint16_t len) {
-      tx_buffer(BRAIN, data, len);
+   void AvrHardware::write(Out & out) {
+      if( out.pos == out.size ) 
+         tx_buffer(BRAIN, out.buffer + out.start, out.pos);
    }
 
    // time?
    unsigned long AvrHardware::time() {
       return ticks;
+   }
+
+   // get an Out object for some amount of space
+   AvrHardware::Out AvrHardware::getSpace(uint16_t size) {
+      // FIXME: check available space before start
+      cli();
+      uint16_t s = sz;
+      sz = (sz + size) % BUFSZ;
+      sei();
+      return AvrHardware::Out(buffer, s, size);
+   }
+
+   void AvrHardware::Out::write(unsigned char c) {
+      buffer[(start + pos) % AvrHardware::BUFSZ] = c;
+      ++pos;
    }
 }

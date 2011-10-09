@@ -1,6 +1,3 @@
 Lots of things to do. Time to start writing it down.
-
-- Set up serial input and control for GPS
 - Set up serial input and control for Sonar
-- Move GPS parsing onboard
-- Move from custon serial protocol to rosserial
+

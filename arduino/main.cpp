@@ -10,8 +10,8 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-//#include <util/delay.h>
 #include <stdio.h>
+#include <geometry_msgs/Twist.h>
 
 #include "ros.h"
 
@@ -34,6 +34,8 @@ extern "C" {
 
 #define CLK 16000
 
+#define STEER_OFFSET 119
+
 extern volatile int8_t steer;
 extern volatile uint32_t ticks;
 
@@ -53,6 +55,23 @@ extern "C" {
 }
 
 ros::NodeHandle nh;
+
+// callback on cmd_vel
+void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
+   // internal speed specified as 2000/(ms per count)
+   // 2 / (sec per count)
+   // 2 * counts / sec
+   // ( 1 count = 0.03 m )
+   // 2 * 0.03 m / sec
+   // 0.06 m / sec
+   // target speed in units of 0.06 m / sec
+   target_speed = cmd_vel.linear.x * 16.6667;
+   // angular z > 0 is left
+   // TODO: derive the algorithm and constraints on steering and implement
+   steer = cmd_vel.angular.z;
+   servo_set(0, steer + STEER_OFFSET);
+}
+ros::Subscriber<geometry_msgs::Twist> vel_sub("cmd_vel", & vel_cb);
 
 int main() {
    DDRB |= 1 << 7;
@@ -88,6 +107,8 @@ int main() {
    nh.initNode();
    nh.advertise(gps_pub);
    nh.advertise(odom_pub);
+
+   nh.subscribe(vel_sub);
 
 
    // GPS initialization

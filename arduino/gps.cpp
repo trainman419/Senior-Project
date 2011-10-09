@@ -18,6 +18,7 @@ extern "C" {
 uint8_t gps_port;
 gps_simple::SimpleGPS gps_msg;
 ros::Publisher gps_pub("gps", &gps_msg);
+char gps_frame[] = "";
 
 /* initialize GPS listener on serial port */
 void gps_init(uint8_t port) {
@@ -27,6 +28,8 @@ void gps_init(uint8_t port) {
    serial_baud(port, 4800);
 
    gps_port = port;
+
+   gps_msg.header.frame_id = gps_frame;
 
    // set /raw pin to output
    DDRH |= (1 << 1);
