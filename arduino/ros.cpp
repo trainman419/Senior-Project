@@ -42,13 +42,18 @@ namespace ros {
       // FIXME: check available space before start
       cli();
       uint16_t s = sz;
-      sz = (sz + size) % BUFSZ;
+      if( (sz + size) > BUFSZ ) {
+         s = 0;
+         sz = size;
+      } else {
+         sz += size;
+      }
       sei();
       return AvrHardware::Out(buffer, s, size);
    }
 
    void AvrHardware::Out::write(unsigned char c) {
-      buffer[(start + pos) % AvrHardware::BUFSZ] = c;
+      buffer[start + pos] = c;
       ++pos;
    }
 }
