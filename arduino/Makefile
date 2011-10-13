@@ -1,7 +1,7 @@
 DEVICE=atmega2560
 #CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -Iros_lib
 #CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib -save-temps -g
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib2 -save-temps -g
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib2 -save-temps -g 
 LDFLAGS=-mmcu=$(DEVICE) -lm
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
@@ -11,7 +11,7 @@ CPP=avr-gcc -E
 CXX=avr-g++ 
 AS=avr-as
 
-LD=avr-g++
+LD=avr-gcc
 
 # include implicit rules for arduino
 include Makefile.implicit

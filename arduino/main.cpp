@@ -68,7 +68,23 @@ void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
    target_speed = cmd_vel.linear.x * 66.6667;
    // angular z > 0 is left
    // TODO: derive the algorithm and constraints on steering and implement
-   steer = -cmd_vel.angular.z;
+   // vr = vl / r
+   // r = vl / vr
+   float radius;
+   if( cmd_vel.angular.z == 0.0 ) {
+      steer = 0;
+   } else {
+      radius = fabs(cmd_vel.linear.x / cmd_vel.angular.z);
+      float tmp = pow( radius / 113.36844, -0.8890556);
+      if( tmp > 120 ) tmp = 120.0;
+
+      if( cmd_vel.angular.x > 0 ) {
+         steer = -tmp;
+      } else {
+         steer = tmp;
+      }
+   }
+   //steer = -cmd_vel.angular.z;
    servo_set(0, steer + STEER_OFFSET);
 }
 ros::Subscriber<geometry_msgs::Twist> vel_sub("cmd_vel", & vel_cb);
