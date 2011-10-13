@@ -10,7 +10,8 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <stdio.h>
+//#include <stdio.h>
+#include <math.h>
 #include <geometry_msgs/Twist.h>
 
 #include "ros.h"
