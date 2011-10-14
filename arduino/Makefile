@@ -1,7 +1,7 @@
 DEVICE=atmega2560
 #CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -Iros_lib
 #CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib -save-temps -g
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib2 -save-temps -g
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib2 -save-temps -O
 LDFLAGS=-mmcu=$(DEVICE)
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)

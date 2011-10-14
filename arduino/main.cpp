@@ -10,8 +10,6 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-//#include <stdio.h>
-#include <math.h>
 #include <geometry_msgs/Twist.h>
 
 #include "ros.h"
@@ -71,6 +69,7 @@ void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
    // TODO: derive the algorithm and constraints on steering and implement
    // vr = vl / r
    // r = vl / vr
+   steer = -cmd_vel.angular.z;
    float radius;
    if( cmd_vel.angular.z == 0.0 ) {
       steer = 0;
@@ -79,13 +78,12 @@ void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
       float tmp = pow( radius / 113.36844, -0.8890556);
       if( tmp > 120 ) tmp = 120.0;
 
-      if( cmd_vel.angular.x > 0 ) {
+      if( cmd_vel.angular.z > 0 ) {
          steer = -tmp;
       } else {
          steer = tmp;
       }
    }
-   //steer = -cmd_vel.angular.z;
    servo_set(0, steer + STEER_OFFSET);
 }
 ros::Subscriber<geometry_msgs::Twist> vel_sub("cmd_vel", & vel_cb);
@@ -126,7 +124,6 @@ int main() {
    nh.advertise(odom_pub);
 
    nh.subscribe(vel_sub);
-
 
    // GPS initialization
    gps_init(GPS);
