@@ -1,0 +1,18 @@
+<package>
+  <description brief="dagny">
+
+     dagny
+
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/dagny</url>
+
+  <depend package="rosserial_python"/>
+  <depend package="hokuyo_node"/>
+  <depend package="gmapping"/>
+
+</package>
+
+

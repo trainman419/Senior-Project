@@ -1,0 +1,10 @@
+<launch>
+   <node name="gmapping" pkg="gmapping" type="slam_gmapping">
+      <param name="xmin" value="-20"/>
+      <param name="xmax" value="20"/>
+      <param name="ymin" value="-20"/>
+      <param name="ymax" value="20"/>
+
+      <param name="linearUpdate" value="0.25"/>
+   </node>
+</launch>

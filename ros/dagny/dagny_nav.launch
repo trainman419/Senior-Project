@@ -1,0 +1,10 @@
+<launch>
+
+   <!-- Run AMCL -->
+   <include file="$(find amcl)/examples/amcl_onmi.launch" />
+
+   <!-- move_base node -->
+   <node pkg="move_base" type="move_base" respawn="false" name="move_base">
+      <rosparam 
+   </node>
+</launch>
