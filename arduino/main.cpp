@@ -35,7 +35,8 @@ extern "C" {
 
 #define CLK 16000
 
-#define STEER_OFFSET 119
+// was 119
+#define STEER_OFFSET 115
 
 extern volatile int8_t steer;
 extern volatile uint32_t ticks;

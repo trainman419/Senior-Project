@@ -74,7 +74,7 @@ tf::TransformBroadcaster tf_broadcaster;
 char tf_odom[] = "odom";
 char tf_base_link[] = "base_link";
 // 0.03 meters per tick
-#define Q_SCALE 0.03
+#define Q_SCALE 0.032
 
 extern ros::NodeHandle nh;
 
@@ -215,7 +215,7 @@ ISR(TIMER0_OVF_vect) {
             dy = d * sin(yaw);
             dt = 0.0;
          } else {
-            double r = 1133.6843998428*pow(fabs(steer), -1.12478865);
+            double r = 113.36843998428*pow(fabs(steer), -1.12478865);
             dt = d / r;
             float theta_c1;
             float theta_c2;
@@ -235,7 +235,7 @@ ISR(TIMER0_OVF_vect) {
 
          x += dx;
          y += dy;
-         yaw += dt;
+         yaw -= dt; // TODO: figure out why this sign is flipped
 
          old_qcount = qcount;
 
@@ -247,6 +247,7 @@ ISR(TIMER0_OVF_vect) {
       }
 
       // odom header
+      /*
       odom.header.stamp = current_time;
       odom.header.frame_id = tf_odom;
       odom.child_frame_id = tf_base_link;
@@ -255,10 +256,11 @@ ISR(TIMER0_OVF_vect) {
       odom.pose.pose.position.x = x;
       odom.pose.pose.position.y = y;
       odom.pose.pose.position.z = 0.0;
+      */
       odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
 
       // publish odometry
-      odom_pub.publish(&odom);
+      //odom_pub.publish(&odom);
 
       // transform header
       t.header.stamp = current_time;

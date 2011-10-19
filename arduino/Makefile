@@ -1,7 +1,6 @@
 DEVICE=atmega2560
 #CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -Iros_lib
-#CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib -save-temps -g
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib2 -save-temps -O
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib -save-temps -O3
 LDFLAGS=-mmcu=$(DEVICE)
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
@@ -45,16 +44,16 @@ roslib:
 	rosrun rosserial_client make_library.py . dagny_msgs
 	ln -s ../ros.h ros_lib/ros.h
 
-MAKE_LIBRARY=./make_library.py
-
-roslib2:
-	rm -r ros_lib2 || true
-	mkdir -p ros_lib2
-	cp -r $(shell rospack find rosserial_client)/src/ros_lib/* ros_lib2/
-	${MAKE_LIBRARY} . std_msgs tf rosserial_msgs geometry_msgs nav_msgs
-	${MAKE_LIBRARY} . gps_simple
-	${MAKE_LIBRARY} . dagny_msgs
-	ln -s ../ros.h ros_lib2/ros.h
+#MAKE_LIBRARY=./make_library.py
+#
+#roslib2:
+#	rm -r ros_lib2 || true
+#	mkdir -p ros_lib2
+#	cp -r $(shell rospack find rosserial_client)/src/ros_lib/* ros_lib2/
+#	${MAKE_LIBRARY} . std_msgs tf rosserial_msgs geometry_msgs nav_msgs
+#	${MAKE_LIBRARY} . gps_simple
+#	${MAKE_LIBRARY} . dagny_msgs
+#	ln -s ../ros.h ros_lib2/ros.h
 
 clean:
 	rm *.o *.i *.ii *.s *.hex || true
