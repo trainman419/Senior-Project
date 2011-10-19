@@ -14,6 +14,7 @@ extern "C" {
 #include <dagny_msgs/Odometry.h>
 #include <tf/create_q.h>
 #include <tf/transform_broadcaster.h>
+#include <nav_msgs/Odometry.h>
 
 uint32_t ticks = 0;
 
@@ -63,7 +64,8 @@ int16_t e = 0; // error
 volatile uint16_t odom_sz = 0;
 volatile int8_t steer;
 unsigned char out_buffer[128]; // output buffer
-dagny_msgs::Odometry odom;
+//dagny_msgs::Odometry odom;
+nav_msgs::Odometry odom;
 ros::Publisher odom_pub("odometry", &odom);
 
 // TF set up
@@ -203,6 +205,7 @@ ISR(TIMER0_OVF_vect) {
 
    // wheel encoder and speed transmit; 20Hz
    if( ticks % 50 == 0 ) {
+      ros::Time current_time = nh.now();
       // if we've moved, update position
       if( old_qcount != qcount ) {
          float d = (qcount - old_qcount) * Q_SCALE;
@@ -212,9 +215,22 @@ ISR(TIMER0_OVF_vect) {
             dy = d * sin(yaw);
             dt = 0.0;
          } else {
-            dx = 0.0;
-            dy = 0.0;
-            dt = 0.0;
+            double r = 1133.6843998428*pow(fabs(steer), -1.12478865);
+            dt = d / r;
+            float theta_c1;
+            float theta_c2;
+            if( steer > 0 ) {
+               // turning right
+               theta_c1 = yaw + M_PI/2;
+            } else {
+               // turning left
+               dt = -dt;
+               theta_c1 = yaw - M_PI/2;
+            }
+            theta_c2 = theta_c1 - dt;
+
+            dx = r * (cos(theta_c2) - cos(theta_c1));
+            dy = r * (sin(theta_c2) - sin(theta_c1));
          }
 
          x += dx;
@@ -222,26 +238,39 @@ ISR(TIMER0_OVF_vect) {
          yaw += dt;
 
          old_qcount = qcount;
+
+         // odom speed in base_link frame
+         // computed by discrete derivative of position
+         odom.twist.twist.linear.x = d * 20.0; 
+         odom.twist.twist.linear.y = 0.0;
+         odom.twist.twist.angular.z = dt * 20.0;
       }
 
-      // TODO: move this to a nav odometry message
-      odom.lspeed = lspeed;
-      odom.rspeed = rspeed;
-      odom.qspeed = qspeed;
-      odom.lcount = lcount;
-      odom.rcount = rcount;
-      odom.qcount = qcount;
-      odom.steer = steer;
+      // odom header
+      odom.header.stamp = current_time;
+      odom.header.frame_id = tf_odom;
+      odom.child_frame_id = tf_base_link;
+
+      // odom position in odom frame
+      odom.pose.pose.position.x = x;
+      odom.pose.pose.position.y = y;
+      odom.pose.pose.position.z = 0.0;
+      odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
+
+      // publish odometry
       odom_pub.publish(&odom);
 
-
-      // transform
+      // transform header
+      t.header.stamp = current_time;
       t.header.frame_id = tf_odom;
       t.child_frame_id = tf_base_link;
+
+      // transform position
       t.transform.translation.x = x;
       t.transform.translation.y = y;
-      t.transform.rotation = tf::createQuaternionMsgFromYaw(yaw);
-      t.header.stamp = nh.now();
+      t.transform.rotation = odom.pose.pose.orientation;
+
+      // publish transform
       tf_broadcaster.sendTransform(t);
    }
 }
