@@ -12,6 +12,8 @@ extern "C" {
 
 #include "ros.h"
 #include <dagny_msgs/Odometry.h>
+#include <tf/create_q.h>
+#include <tf/transform_broadcaster.h>
 
 uint32_t ticks = 0;
 
@@ -42,6 +44,8 @@ volatile uint16_t rcount; /* right wheel count, revolutions */
 volatile int16_t qspeed; /* quaderature encoder speed */
 volatile int16_t qcount; /* quaderature encoder 1/4 turn count */
 
+float x, y, yaw; /* position */
+int16_t old_qcount; /* for updating odometry output */
 
 #define DIV 256
 
@@ -61,6 +65,16 @@ volatile int8_t steer;
 unsigned char out_buffer[128]; // output buffer
 dagny_msgs::Odometry odom;
 ros::Publisher odom_pub("odometry", &odom);
+
+// TF set up
+geometry_msgs::TransformStamped t;
+tf::TransformBroadcaster tf_broadcaster;
+char tf_odom[] = "odom";
+char tf_base_link[] = "base_link";
+// 0.03 meters per tick
+#define Q_SCALE 0.03
+
+extern ros::NodeHandle nh;
 
 /* set up interrupt handling */
 void interrupt_init(void) {
@@ -185,23 +199,32 @@ ISR(TIMER0_OVF_vect) {
       // output
       motor_speed(power/DIV);
    }
+   sei();
 
    // wheel encoder and speed transmit; 20Hz
    if( ticks % 50 == 0 ) {
-      // TODO: do this with rosserial instead
-      /*
-      odom.reset();
-      odom.append((uint16_t)rcount);
-      odom.append((uint16_t)lcount);
-      odom.append((uint16_t)qcount);
-      odom.append((int16_t)rspeed);
-      odom.append((int16_t)lspeed);
-      odom.append((int16_t)qspeed);
-      odom.append(steer);
-      odom.finish();
-      odom_sz = odom.outsz();
-      tx_buffer(BRAIN, (uint8_t *)odom.outbuf(), odom_sz);
-      */
+      // if we've moved, update position
+      if( old_qcount != qcount ) {
+         float d = (qcount - old_qcount) * Q_SCALE;
+         float dx, dy, dt;
+         if( steer == 0 ) {
+            dx = d * cos(yaw);
+            dy = d * sin(yaw);
+            dt = 0.0;
+         } else {
+            dx = 0.0;
+            dy = 0.0;
+            dt = 0.0;
+         }
+
+         x += dx;
+         y += dy;
+         yaw += dt;
+
+         old_qcount = qcount;
+      }
+
+      // TODO: move this to a nav odometry message
       odom.lspeed = lspeed;
       odom.rspeed = rspeed;
       odom.qspeed = qspeed;
@@ -210,6 +233,15 @@ ISR(TIMER0_OVF_vect) {
       odom.qcount = qcount;
       odom.steer = steer;
       odom_pub.publish(&odom);
+
+
+      // transform
+      t.header.frame_id = tf_odom;
+      t.child_frame_id = tf_base_link;
+      t.transform.translation.x = x;
+      t.transform.translation.y = y;
+      t.transform.rotation = tf::createQuaternionMsgFromYaw(yaw);
+      t.header.stamp = nh.now();
+      tf_broadcaster.sendTransform(t);
    }
-   sei();
 }

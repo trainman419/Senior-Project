@@ -12,7 +12,9 @@
 #include <avr/interrupt.h>
 #include <geometry_msgs/Twist.h>
 
+
 #include "ros.h"
+#include <tf/transform_broadcaster.h>
 
 extern "C" {
 #include "pwm.h"
@@ -88,6 +90,9 @@ void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
 }
 ros::Subscriber<geometry_msgs::Twist> vel_sub("cmd_vel", & vel_cb);
 
+// set up tf
+extern tf::TransformBroadcaster tf_broadcaster;
+
 int main() {
    DDRB |= 1 << 7;
    motor_init();
@@ -124,6 +129,7 @@ int main() {
    nh.advertise(odom_pub);
 
    nh.subscribe(vel_sub);
+   tf_broadcaster.init(nh);
 
    // GPS initialization
    gps_init(GPS);

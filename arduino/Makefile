@@ -40,11 +40,9 @@ MAKE_LIBRARY=rosrun rosserial_client make_library.py
 roslib:
 	rm -r ros_lib || true
 	cp -r $(shell rospack find rosserial_client)/src/ros_lib .
-	rosrun rosserial_client make_library.py . std_msgs
-	rosrun rosserial_client make_library.py . rosserial_msgs
+	rosrun rosserial_client make_library.py . std_msgs tf rosserial_msgs geometry_msgs
 	rosrun rosserial_client make_library.py . gps_simple
 	rosrun rosserial_client make_library.py . dagny_msgs
-	rosrun rosserial_client make_library.py . geometry_msgs
 	ln -s ../ros.h ros_lib/ros.h
 
 MAKE_LIBRARY=./make_library.py
@@ -53,11 +51,9 @@ roslib2:
 	rm -r ros_lib2 || true
 	mkdir -p ros_lib2
 	cp -r $(shell rospack find rosserial_client)/src/ros_lib/* ros_lib2/
-	${MAKE_LIBRARY} . std_msgs
-	${MAKE_LIBRARY} . rosserial_msgs
+	${MAKE_LIBRARY} . std_msgs tf rosserial_msgs geometry_msgs
 	${MAKE_LIBRARY} . gps_simple
 	${MAKE_LIBRARY} . dagny_msgs
-	${MAKE_LIBRARY} . geometry_msgs
 	ln -s ../ros.h ros_lib2/ros.h
 
 clean:
