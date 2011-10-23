@@ -10,8 +10,10 @@
 
 #include <stdint.h>
 
+// convert radius to positive steering setting
 int8_t radius2steer(float r);
 
+// convert steering setting (+ or -) to positive radius
 float steer2radius(int8_t s);
 
 #endif
