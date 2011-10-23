@@ -15,6 +15,7 @@
 
 #include "ros.h"
 #include <tf/transform_broadcaster.h>
+#include <std_msgs/Int8.h>
 
 extern "C" {
 #include "pwm.h"
@@ -32,6 +33,7 @@ extern "C" {
 
 #include "interrupt.h"
 #include "gps.h"
+#include "steer.h"
 
 #define CLK 16000
 
@@ -72,14 +74,16 @@ void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
    // TODO: derive the algorithm and constraints on steering and implement
    // vr = vl / r
    // r = vl / vr
-   steer = -cmd_vel.angular.z;
-   float radius;
    if( cmd_vel.angular.z == 0.0 ) {
       steer = 0;
    } else {
-      radius = fabs(cmd_vel.linear.x / cmd_vel.angular.z);
-      float tmp = pow( radius / 113.36844, -0.8890556);
-      if( tmp > 120 ) tmp = 120.0;
+      float radius = fabs(cmd_vel.linear.x / cmd_vel.angular.z);
+      int16_t tmp = radius2steer(radius);
+
+      if( tmp < -STEER_OFFSET ) 
+         tmp = -STEER_OFFSET;
+      if( tmp > (255 - STEER_OFFSET) ) 
+         tmp = 255 - STEER_OFFSET;
 
       if( cmd_vel.angular.z > 0 ) {
          steer = -tmp;
@@ -90,6 +94,12 @@ void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
    servo_set(0, steer + STEER_OFFSET);
 }
 ros::Subscriber<geometry_msgs::Twist> vel_sub("cmd_vel", & vel_cb);
+
+void steer_cb( const std_msgs::Int8 & s ) {
+   steer = s.data;
+   servo_set(0, steer + STEER_OFFSET);
+}
+ros::Subscriber<std_msgs::Int8> steer_sub("steer", &steer_cb);
 
 // set up tf
 extern tf::TransformBroadcaster tf_broadcaster;
@@ -130,6 +140,7 @@ int main() {
    nh.advertise(odom_pub);
 
    nh.subscribe(vel_sub);
+   nh.subscribe(steer_sub);
    tf_broadcaster.init(nh);
 
    // GPS initialization

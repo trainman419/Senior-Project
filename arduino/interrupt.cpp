@@ -10,6 +10,8 @@ extern "C" {
 #include "bump.h"
 }
 
+#include "steer.h"
+
 #include "ros.h"
 #include <dagny_msgs/Odometry.h>
 #include <tf/create_q.h>
@@ -215,7 +217,7 @@ ISR(TIMER0_OVF_vect) {
             dy = d * sin(yaw);
             dt = 0.0;
          } else {
-            double r = 113.36843998428*pow(fabs(steer), -1.12478865);
+            double r = steer2radius(steer);
             dt = d / r;
             float theta_c1;
             float theta_c2;

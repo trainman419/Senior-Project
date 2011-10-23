@@ -24,7 +24,7 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o compass.o bump.o ros.o TinyGPS.o interrupt.o serial-interrupt.o ros_lib/time.o
+main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o compass.o bump.o ros.o TinyGPS.o interrupt.o serial-interrupt.o ros_lib/time.o steer.o
 
 program: $(TRG).hex
 	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
