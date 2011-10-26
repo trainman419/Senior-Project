@@ -13,7 +13,7 @@
 namespace ros {
    class AvrHardware {
       public:
-         static const uint16_t BUFSZ = 512;
+         static const uint16_t BUFSZ = 2048;
 
          AvrHardware() : sz(0) {}
          // initialize
