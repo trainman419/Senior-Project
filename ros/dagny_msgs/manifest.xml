@@ -9,6 +9,8 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/dagny_msgs</url>
 
+  <depend package="geometry_msgs"/>
+
 </package>
 
 
