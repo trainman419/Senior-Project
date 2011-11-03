@@ -22,7 +22,7 @@ int main(int argc, char ** argv) {
 
    ros::Subscriber s = nh.subscribe("odometry_lite", 2, &odom_cb);
 
-   odom_pub = nh.advertise<nav_msgs::Odometry>("odometry", 2);
+   odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 2);
 
    ros::spin();
 }
