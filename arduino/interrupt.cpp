@@ -56,7 +56,7 @@ volatile int16_t power = 0;
 volatile int16_t target_speed;
 
 int16_t speed = 0;
-int16_t mult = DIV;
+int16_t mult = DIV/2;
 int16_t e = 0; // error
 
 // odometry transmission variables
@@ -188,6 +188,8 @@ ISR(TIMER0_OVF_vect) {
             if( e > DIV ) e = DIV;
             if( e < -DIV ) e = -DIV;
             mult += e;
+         } else {
+            mult = DIV/2;
          }
 
          if( mult < 1 ) mult = 1;

@@ -66,10 +66,10 @@ void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
    // 2 / (sec per count)
    // 2 * counts / sec
    // ( 1 count = 0.03 m )
-   // 1/2 * 0.03 m / sec
-   // 0.015 m / sec
-   // target speed in units of 0.015 m / sec
-   target_speed = cmd_vel.linear.x * 66.6667;
+   // 1/2 * 0.032 m / sec
+   // 0.016 m / sec
+   // target speed in units of 0.016 m / sec
+   target_speed = cmd_vel.linear.x * 62.5;
    // angular z > 0 is left
    // TODO: derive the algorithm and constraints on steering and implement
    // vr = vl / r
