@@ -7,4 +7,4 @@ local_costmap:
    rolling_window: true
    width: 4.0
    height: 4.0
-   resolution: 0.025
+   resolution: 0.10

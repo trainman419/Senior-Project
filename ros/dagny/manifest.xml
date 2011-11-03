@@ -12,6 +12,8 @@
   <depend package="rosserial_python"/>
   <depend package="hokuyo_node"/>
   <depend package="gmapping"/>
+  <depend package="dagny_odom"/>
+  <depend package="move_base"/>
 
 </package>
 
