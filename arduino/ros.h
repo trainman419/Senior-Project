@@ -8,7 +8,6 @@
 #define ros_h
 
 #include <ros/node_handle.h>
-#include <ros/node_output.h>
 
 namespace ros {
    class AvrHardware {
