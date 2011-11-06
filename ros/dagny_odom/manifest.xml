@@ -1,0 +1,17 @@
+<package>
+  <description brief="dagny_odom">
+
+     dagny_odom
+
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/dagny_odom</url>
+  <depend package="roscpp"/>
+  <depend package="dagny_msgs"/>
+  <depend package="nav_msgs"/>
+
+</package>
+
+
