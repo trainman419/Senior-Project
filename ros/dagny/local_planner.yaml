@@ -20,18 +20,16 @@ TrajectoryPlannerROS:
 AckermannPlannerROS:
    max_vel_x: 0.30
    min_vel_x: 0.10
-   max_rotational_vel: 1.0
+   min_radius: 0.7
 
-   acc_lim_th: 4.0
    acc_lim_x: 0.05
-   acc_lim_y: 0.05
 
    escape_vel: -0.10
 
-   holonomic_robot: false
+   sim_time: 0.5
+   sim_granularity: 0.05
 
-   sim_time: 0.2
-   sim_granularity: 0.10
-   vtheta_samples: 5
    vx_samples: 3
-   dwa: true
+   radius_samples: 5
+
+   penalize_negative_x: false
