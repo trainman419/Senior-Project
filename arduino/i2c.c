@@ -35,12 +35,19 @@
  *    at 400khz this will take 3360 clock cycles or 210 us (bit-shifting)
  *    under 1 ms to read all three sensors in sequence. FAST!
  *    if we write and interrupt library, we'll be exceuting an interrupt for 2
- *       of every 9 bits we send. roughly 64 cycles per interrupt.
+ *       of every 9 bits we send. roughly 64 cycles for interrupt overhead.
  *       at 16MHz, 400khz is 40 cycles per bit.
+ *       at 16MHz, 100khz is 160 cycles.
+ *    we can probably get 70% of our wait time back if we use interrupts
+ *       70% * 16000 = 11200 cycles
+ *
  *
  * Existing libraries implement master and slave functionality. we only need
  *  master functionality, and can trim a few bytes off our program size and
  *  memory footprint at the expense of more bugs and longer developent time
+ *
+ * The Wire/twi library from arduino and ARVlib both implement an interrupt
+ *  driven I2C interface for AVR
  *
  * Addresses:
  *    input addresses to function calls are 7 bits, left-aligned. the library
@@ -59,14 +66,13 @@
 
 uint8_t i2c_idle;
 
+volatile enum { IDLE, START, ADDR, REG, RSTART, DATA, STOP, RADDR, RDATA, NAK
+} i2c_state; // the last thing that the I2C stack did.
+
 void i2c_init() {
    // TODO: initialize stuff here
    i2c_idle = 0;
 }
-
-// the last thing that the I2C stack did.
-volatile enum { IDLE, START, ADDR, REG, RSTART
-} i2c_state;
 
 // function pointer to use on data read completion
 void (* i2c_w_callback)(uint8_t);
@@ -90,20 +96,82 @@ void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size,
    while(i2c_state != IDLE);
 }
 
+// state machine variables.
+//
+// state machine mode
+volatile enum { READ = 1, WRITE = 0 } i2c_mode; 
+uint8_t i2c_address;  // i2c slave address
+uint8_t i2c_register; // i2c slave register
+uint8_t * i2c_data;   // data to read/write from slave
+uint8_t i2c_data_sz;  // size of data to write
+
+
 // the magic ISR that makes all of this go round
 ISR(TWI_vect) {
    switch(i2c_state) {
       case START:
          // check TWSR to see that start was sent
-         // send address (always?)
+         if( (TWSR & 0xF8) == START ) {
+            // send address
+            // lowest bit set for read; unset for write
+            TWDR = i2c_address | (i2c_mode & 1);
+            TWCR = (1<<TWINT) | (1<<TWEN);
+            i2c_state = ADDR;
+         } else {
+            // fail; return to idle state
+            i2c_state = IDLE;
+         }
          break;
       case ADDR:
          // check that data sent and ack received
-         // send register
+         if( (TWSR & 0xF8) == MT_SLA_ACK ) {
+            // send register
+            TWDR = i2c_register;
+            TWCR = (1<<TWINT) | (1<<TWEN);
+            i2c_state = REG;
+         } else {
+            // fail; return to idle state
+            i2c_state = IDLE;
+         }
          break;
       case REG:
+         // check that register was sent
+         if( (TWSR & 0xF8) == MT_DATA_ACK ) {
+            if( i2c_mode & 1 ) {
+               // read mode
+            } else {
+               // write mode
+               if( i2c_data_sz > 0 ) {
+                  // if there's data in the buffer
+                  TWDR = *i2c_data;
+                  TWCR = (1<<TWINT) | (1<<TWEN);
+                  i2c_data++;
+                  i2c_data_sz--;
+                  i2c_state = REG;
+               } else {
+                  TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+                  i2c_state = STOP;
+               }
+            }
+         } else {
+            // fail; return to idle state
+            i2c_state = IDLE;
+         }
          break;
       case RSTART:
+         break;
+      case DATA:
+         break;
+      case STOP:
+         break;
+      case RADDR:
+         break;
+      case RDATA:
+         break;
+      case NAK:
+         break;
+      case IDLE:
+         // if we're here, something is wrong
          break;
    }
 }
