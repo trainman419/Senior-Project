@@ -1,6 +1,6 @@
 DEVICE=atmega2560
 #CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -O -Iros_lib
-CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib -save-temps -O3
+CFLAGS=-mmcu=$(DEVICE) -Wall -Werror -Iros_lib -O
 LDFLAGS=-mmcu=$(DEVICE)
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
@@ -24,10 +24,14 @@ TRG=main
 
 all: $(TRG).hex
 
-main.elf: main.o pwm.o motor.o serial.o power.o adc.o servo.o gps.o sonar.o compass.o bump.o ros.o TinyGPS.o interrupt.o serial-interrupt.o ros_lib/time.o steer.o
+main.elf: main.o serial.o ros.o ros_lib/time.o serial-interrupt.o interrupt.o power.o servo.o adc.o steer.o bump.o motor.o pwm.o TinyGPS.o
+
+foo.elf: gps.o sonar.o compass.o TinyGPS.o
 
 program: $(TRG).hex
 	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
+	touch program
+#	avrdude -pm2560 -P${COM} -b115200 -cstk500v2 -u -U flash:w:$(TRG).hex
 #	avrdude -pm2560 -cusbtiny -u -U flash:w:$(TRG).hex
 #  no need to specify baud rate with new Arduio UNO/Mega 2560 programmer
 
