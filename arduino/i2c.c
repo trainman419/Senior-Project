@@ -64,37 +64,10 @@
  *       is called
  */
 
-uint8_t i2c_idle;
+//uint8_t i2c_idle;
 
-volatile enum { IDLE, START, ADDR, REG, RSTART, DATA, STOP, RADDR, RDATA, NAK
-} i2c_state; // the last thing that the I2C stack did.
-
-void i2c_init() {
-   // TODO: initialize stuff here
-   i2c_idle = 0;
-}
-
-// function pointer to use on data read completion
-void (* i2c_w_callback)(uint8_t);
-void (* i2c_r_callback)(uint8_t*);
-
-// write a single byte to a register in an I2C device
-void i2c_write(uint8_t addr, uint8_t reg, uint8_t data) {
-   while(i2c_state != IDLE);
-}
-
-// write multiple bytes to a register in an I2C device and call a callback when
-// done
-void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size, 
-      void(*cb)(void)) {
-   while(i2c_state != IDLE);
-}
-
-// read bytes from an I2C device into a buffer and call a callback when done
-void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
-      void(*cb)(uint8_t *)) {
-   while(i2c_state != IDLE);
-}
+//volatile enum { IDLE, START, ADDR, REG, RSTART, DATA, STOP, RADDR, RDATA, NAK
+//} i2c_state; // the last thing that the I2C stack did.
 
 // state machine variables.
 //
@@ -104,74 +77,170 @@ uint8_t i2c_address;  // i2c slave address
 uint8_t i2c_register; // i2c slave register
 uint8_t * i2c_data;   // data to read/write from slave
 uint8_t i2c_data_sz;  // size of data to write
+uint8_t i2c_data_pos; // position in incoming data buffer
 
+// function pointer to use on data read completion
+void (* i2c_w_callback)(void);
+void (* i2c_r_callback)(uint8_t*);
+
+void i2c_init() {
+   // TODO: initialize stuff here
+   //i2c_idle = 0;
+   // TODO: set up clock prescaler
+}
+
+// overall bus functions should wait for TWSTO to become unset before writing
+// to TWCR
+
+// write a single byte to a register in an I2C device
+void i2c_write(uint8_t addr, uint8_t reg, uint8_t data) {
+   while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
+   i2c_mode = WRITE;
+   i2c_address = addr;
+   i2c_register = reg;
+
+   // use i2c_data_pos as temporary
+   i2c_data_pos = data;
+   i2c_data = &i2c_data_pos;
+   i2c_data_sz = 1;
+
+   // start I2C mode by sending start bit
+   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
+}
+
+// write multiple bytes to a register in an I2C device and call a callback when
+// done
+void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size, 
+      void(*cb)(void)) {
+   while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
+   i2c_mode = WRITE;
+   i2c_address = addr;
+   i2c_register = reg;
+   i2c_data = data;
+   i2c_data_sz = size;
+   i2c_w_callback = cb;
+
+   // start I2C mode by sending start bit
+   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
+}
+
+// read bytes from an I2C device into a buffer and call a callback when done
+void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
+      void(*cb)(uint8_t *)) {
+   while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
+   i2c_mode = READ;
+   i2c_address = addr;
+   i2c_register = reg;
+   i2c_data = buf;
+   i2c_data_sz = size;
+   i2c_data_pos = 0;
+
+   // start I2C mode by sending start bit
+   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
+}
+
+void (*i2c_next)(void);
 
 // the magic ISR that makes all of this go round
 ISR(TWI_vect) {
-   switch(i2c_state) {
-      case START:
-         // check TWSR to see that start was sent
-         if( (TWSR & 0xF8) == START ) {
-            // send address
-            // lowest bit set for read; unset for write
-            TWDR = i2c_address | (i2c_mode & 1);
-            TWCR = (1<<TWINT) | (1<<TWEN);
-            i2c_state = ADDR;
-         } else {
-            // fail; return to idle state
-            i2c_state = IDLE;
-         }
-         break;
-      case ADDR:
-         // check that data sent and ack received
-         if( (TWSR & 0xF8) == MT_SLA_ACK ) {
-            // send register
-            TWDR = i2c_register;
-            TWCR = (1<<TWINT) | (1<<TWEN);
-            i2c_state = REG;
-         } else {
-            // fail; return to idle state
-            i2c_state = IDLE;
-         }
-         break;
-      case REG:
-         // check that register was sent
-         if( (TWSR & 0xF8) == MT_DATA_ACK ) {
-            if( i2c_mode & 1 ) {
-               // read mode
-            } else {
-               // write mode
-               if( i2c_data_sz > 0 ) {
-                  // if there's data in the buffer
-                  TWDR = *i2c_data;
-                  TWCR = (1<<TWINT) | (1<<TWEN);
-                  i2c_data++;
-                  i2c_data_sz--;
-                  i2c_state = REG;
-               } else {
-                  TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
-                  i2c_state = STOP;
-               }
-            }
-         } else {
-            // fail; return to idle state
-            i2c_state = IDLE;
-         }
-         break;
-      case RSTART:
-         break;
-      case DATA:
-         break;
-      case STOP:
-         break;
-      case RADDR:
-         break;
-      case RDATA:
-         break;
-      case NAK:
-         break;
-      case IDLE:
-         // if we're here, something is wrong
-         break;
+   i2c_next();
+}
+
+// do nothing
+void i2c_none() {
+   i2c_next = i2c_none;
+}
+
+void i2cf_read() {
+   if( (TWSR & 0xF8) == 0x40 ) {
+      // if we sent an address, wait for data
+      --i2c_data_sz;
+      if( i2c_data_sz > 0 ) {
+         // we want more data; transmit ack
+         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
+      } else {
+         // the next byte will be the last
+         TWCR = (1<<TWINT) | (1<<TWEN);
+      }
+      i2c_next = i2cf_read;
+   } else if( (TWSR & 0xF8) == 0x50 ) {
+      // if we received data, wait for more data or nak
+      i2c_data[i2c_data_pos++] = TWDR;
+      --i2c_data_sz;
+      if( i2c_data_sz > 0 ) {
+         // we want more data; transmit ack
+         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
+      } else {
+         // the next byte will be the last
+         TWCR = (1<<TWINT) | (1<<TWEN);
+      }
+      i2c_next = i2cf_read;
+   } else if( (TWSR & 0xF8) == 0x58 ) {
+      // we got our last byte and sent nak
+      i2c_data[i2c_data_pos] = TWDR;
+      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+      if(i2c_r_callback) {
+         i2c_r_callback(i2c_data);
+      }
+   }
+}
+
+// send i2c read address
+void i2cf_raddress() {
+   if( (TWSR & 0xF8) == 0x10 ) {
+      TWDR = i2c_address | 1;
+      TWCR = (1<<TWINT) | (1<<TWEN);
+      i2c_next = i2cf_read;
+   }
+}
+
+// send repeated start condition
+void i2cf_rstart() {
+   if( (TWSR & 0xF8) == 0x28 ) {
+      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
+      i2c_next = i2cf_raddress;
+   }
+}
+
+// send stop condition
+void i2cf_wstop() {
+   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+   if(i2c_w_callback) {
+      i2c_w_callback();
+   }
+}
+
+// write i2c data
+void i2cf_wdata() {
+   if( (TWSR & 0xF8) == 0x28 ) {
+      TWDR = *i2c_data;
+      ++i2c_data;
+      --i2c_data_sz;
+      if( i2c_data_sz == 0 ) {
+         i2c_next = i2cf_wstop;
+      }
+      TWCR = (1<<TWINT) | (1<<TWEN);
+   }
+}
+
+// write i2c register
+void i2cf_register() {
+   if( (TWSR & 0xF8) == 0x18 ) {
+      TWDR = i2c_register;
+      TWDR = (1<<TWINT) | (1<TWEN);
+      if( i2c_mode == WRITE ) {
+         i2c_next = i2cf_wdata;
+      } else {
+         i2c_next = i2cf_rstart;
+      }
+   }
+}
+
+// write i2c address
+void i2cf_address() {
+   if( (TWSR & 0xF8) == 0x08 ) {
+      TWDR = i2c_address;
+      TWCR = (1<<TWINT) | (1<<TWEN);
+      i2c_next = i2cf_register;
    }
 }
