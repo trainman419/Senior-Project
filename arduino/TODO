@@ -1,4 +1,5 @@
 Lots of things to do. Time to start writing it down.
+- Fix checksum/memory corruption bug(s)
 - Set up serial input and control for Sonar
 - Set up compass polling and output
 - Set up secondary nodehandle for bluetooth/android
