@@ -9,9 +9,9 @@
 
 extern "C" {
 #include "motor.h"
-#include "servo.h"
-#include "serial.h"
-#include "power.h"
+#include "drivers/servo.h"
+#include "drivers/serial.h"
+#include "drivers/power.h"
 #include "system.h"
 #include "comm.h"
 #include "main.h"

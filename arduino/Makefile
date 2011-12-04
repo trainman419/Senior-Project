@@ -5,7 +5,9 @@ LDFLAGS=-mmcu=$(DEVICE)
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
 
-LDLIBS=-lm
+LDLIBS=-lm 
+
+VPATH=drivers:ros_lib
 
 CC=avr-gcc 
 CPP=avr-gcc -E
@@ -13,6 +15,11 @@ CXX=avr-g++
 AS=avr-as
 
 LD=avr-gcc
+
+CSRC=motor.c sonar.c
+CXXSRC=gps.cpp interrupt.cpp main.cpp ros.cpp steer.cpp TinyGPS.cpp time.cpp duration.cpp
+
+OBJS=$(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
 # include implicit rules for arduino
 include Makefile.implicit
@@ -22,11 +29,13 @@ include Makefile.device
 
 TRG=main
 
+.PHONY: all
 all: $(TRG).hex
 
-main.elf: main.o serial.o ros.o ros_lib/time.o serial-interrupt.o interrupt.o power.o servo.o adc.o steer.o bump.o motor.o pwm.o TinyGPS.o
+main.elf: $(OBJS) -ldrivers
 
-foo.elf: gps.o sonar.o compass.o TinyGPS.o
+drivers/libdrivers.a:
+	$(MAKE) -C drivers
 
 program: $(TRG).hex
 	avrdude -pm2560 -P${COM} -cstk500v2 -u -U flash:w:$(TRG).hex
@@ -35,6 +44,7 @@ program: $(TRG).hex
 #	avrdude -pm2560 -cusbtiny -u -U flash:w:$(TRG).hex
 #  no need to specify baud rate with new Arduio UNO/Mega 2560 programmer
 
+.PHONY: size
 size: $(TRG).elf
 	avr-size $(TRG).elf
 
@@ -59,5 +69,11 @@ roslib:
 #	${MAKE_LIBRARY} . dagny_msgs
 #	ln -s ../ros.h ros_lib2/ros.h
 
+.PHONY: clean
 clean:
 	rm *.o *.i *.ii *.s *.hex || true
+
+#include dependency rules
+include $(CSRC:.c=.mk)
+include $(CXXSRC:.cpp=.mk)
+

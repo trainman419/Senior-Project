@@ -17,13 +17,12 @@ DRIVERS=adc.c bump.c power.c pwm.c serial.c serial-interrupt.c servo.c
 
 all: libdrivers.a
 
-libdrivers.a: $(DRIVERS:.c=.o)
-	$(AR) rcs libdrivers.a $(DRIVERS:.c=.o)
+libdrivers.a: $(DRIVERS:.c=.o) compass.o
+	$(AR) rcs libdrivers.a $^
 
-%.mk: %.c
-	$(CXX) -MM $^ -MF $@
+include ../Makefile.implicit
 
 include $(DRIVERS:.c=.mk)
 
 clean:
-	rm $(DRIVERS:.c=.o) $(DRIVERS:.c=.mk) || true
+	rm $(DRIVERS:.c=.o) $(DRIVERS:.c=.mk) libdrivers.a compass.o || true
