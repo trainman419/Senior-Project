@@ -5,9 +5,9 @@
 %.hex: %.elf
 	avr-objcopy -O ihex $< $@
 
-%.mk: %.c
+.%.mk: %.c
 	$(CC) -MM $^ -MF $@
 
-%.mk: %.cpp
+.%.mk: %.cpp
 	$(CXX) -MM $^ -MF $@
 

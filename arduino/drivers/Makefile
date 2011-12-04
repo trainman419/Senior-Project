@@ -22,7 +22,7 @@ libdrivers.a: $(DRIVERS:.c=.o) compass.o
 
 include ../Makefile.implicit
 
-include $(DRIVERS:.c=.mk)
+include $(DRIVERS:%.c=.%.mk)
 
 clean:
-	rm $(DRIVERS:.c=.o) $(DRIVERS:.c=.mk) libdrivers.a compass.o || true
+	rm $(DRIVERS:.c=.o) $(DRIVERS:%.c=.%.mk) libdrivers.a compass.o || true

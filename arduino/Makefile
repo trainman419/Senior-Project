@@ -74,6 +74,6 @@ clean:
 	rm *.o *.i *.ii *.s *.hex || true
 
 #include dependency rules
-include $(CSRC:.c=.mk)
-include $(CXXSRC:.cpp=.mk)
+include $(CSRC:%.c=.%.mk)
+include $(CXXSRC:%.cpp=.%.mk)
 
