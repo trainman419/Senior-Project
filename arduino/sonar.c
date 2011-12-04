@@ -5,7 +5,7 @@
  */
 
 #include <avr/io.h>
-#include "serial.h"
+#include "drivers/serial.h"
 
 #define NUM_SONARS 5
 uint8_t sonar_port;

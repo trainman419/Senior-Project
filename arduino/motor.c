@@ -9,7 +9,7 @@
 #include <avr/io.h>
 #include <math.h>
 
-#include "pwm.h"
+#include "drivers/pwm.h"
 #include "motor.h"
 
 /* initialize the motor driver. */

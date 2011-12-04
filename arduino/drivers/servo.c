@@ -3,6 +3,7 @@
 
 /*
  * FIXME: support more than one servo in the interrupt.
+ * FIXME: support a servo attached to some pin other than PC1
  */
 
 /* initialize the timer that generates servo interrupts */
