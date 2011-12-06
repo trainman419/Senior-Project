@@ -7,14 +7,9 @@ CXXFLAGS=$(CFLAGS)
 
 LDLIBS=-lm 
 
+include Makefile.avr
+
 VPATH=drivers:ros_lib
-
-CC=avr-gcc 
-CPP=avr-gcc -E
-CXX=avr-g++ 
-AS=avr-as
-
-LD=avr-gcc
 
 CSRC=motor.c sonar.c i2c.c
 CXXSRC=gps.cpp interrupt.cpp main.cpp ros.cpp steer.cpp TinyGPS.cpp time.cpp duration.cpp

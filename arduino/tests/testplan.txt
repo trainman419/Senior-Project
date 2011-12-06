@@ -1,0 +1,66 @@
+Test Plans.
+
+In general, consider the questions
+- What aren't we testing?
+- What are we testing?
+- How are we testing it?
+
+1) Serial basics
+  can the serial routines send and receive a series of bytes?
+
+2) Serial stability
+  can the serial routines operate over an extended period of time?
+
+3) Serial locking
+  can the serial routines enforce packet ordering? or do we end up with one
+  packet inside another. particularly with respect to serial data queued from
+  within an interrupt
+
+4) Maximum burst size
+  what are the maximum contiguous burst sizes that can be sent and received
+  without losing bytes? (per baud rate)
+
+5) Maximum baud rate
+  what is the maximum baud rate at which the serial routines and link can
+  sustain continuous bidirectional transfer?
+
+6) ROS test
+  is rosserial_client working?
+
+7) GPS decoder test
+  is the GPS decoder working?
+  - decode GPS data, pack into ROS message, transmit
+
+8) Sonar test
+  is the sonar triggering and reception code working?
+  - gather and transmit sonar data via ROS
+
+9) I2C test
+  are the I2C routines working
+  - I don't have a good way to test this without confounding with IMU  
+
+10) Accelerometer Test
+  is the accelerometer read routine working?
+  - read accelerometer data and transmit via ROS
+
+11) Gyro test
+  is the gyroscope working?
+  - read gyroscope data and transmit via ROS
+
+12) Magnetometer test
+  is the magnetometer working?
+  - read raw magnetometer data and transmit via ROS
+
+13) IMU test
+  is the IMU fusion code working?
+  - measure mean and std dev of IMU variables
+  - transmit data via ROS and use intuition
+  - do simple rotations and observe output within a reasonable margin (1% ?)
+
+14) Compass tilt-compensation test
+  is the tilt-compensation for the compass working?
+  - using a circle with 10-degree increments, place the compass at various
+    angles and orientations and verify that the output is within a reasonable
+    margin
+
+15)

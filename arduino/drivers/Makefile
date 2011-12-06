@@ -6,12 +6,7 @@ CXXFLAGS=$(CFLAGS)
 
 LDLIBS=-lm
 
-CC=avr-gcc 
-CPP=avr-gcc -E
-CXX=avr-g++ 
-AS=avr-as
-AR=avr-ar
-LD=avr-gcc
+include ../Makefile.avr
 
 DRIVERS=adc.c bump.c power.c pwm.c serial.c serial-interrupt.c servo.c
 

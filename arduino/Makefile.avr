@@ -1,0 +1,6 @@
+CC=avr-gcc 
+CPP=avr-gcc -E
+CXX=avr-g++ 
+AS=avr-as
+AR=avr-ar
+LD=avr-gcc
