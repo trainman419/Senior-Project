@@ -7,6 +7,8 @@ In general, consider the questions
 
 1) Serial basics
   can the serial routines send and receive a series of bytes?
+  - set the arduino to echo each byte received individually.
+  - send each possible byte, and wait for it to return.
 
 2) Serial stability
   can the serial routines operate over an extended period of time?
@@ -15,25 +17,37 @@ In general, consider the questions
   can the serial routines enforce packet ordering? or do we end up with one
   packet inside another. particularly with respect to serial data queued from
   within an interrupt
+  - set up an interrupt and a main thread to transmit on beat frequencies.
+  -  each transmits a unique, reasonably-sized sequence. 
 
 4) Maximum burst size
   what are the maximum contiguous burst sizes that can be sent and received
   without losing bytes? (per baud rate)
+  - transmit one burst per second at increasing sizes until the received burst
+    is truncated
+  - two tests here; one for transmit, one for receive
 
 5) Maximum baud rate
   what is the maximum baud rate at which the serial routines and link can
   sustain continuous bidirectional transfer?
+  * save this for later unless it becomes necessary
 
 6) ROS test
   is rosserial_client working?
+  - set up rosserial client and observe that it establishes sync without any
+    publishers or subscribers
+  - set up rosserial client to publish a simple message once per second. check 
+    that it doesn't drop any packets for at least an hour. a day is better.
+  - set up a rosserial subscriber to receive simple messages once per second.
+    check that none are lost for at least an houre. a day is better.
 
 7) GPS decoder test
   is the GPS decoder working?
-  - decode GPS data, pack into ROS message, transmit
+  - decode GPS data, pack into ROS message, transmit. verify manually
 
 8) Sonar test
   is the sonar triggering and reception code working?
-  - gather and transmit sonar data via ROS
+  - gather and transmit sonar data via ROS. verify manually.
 
 9) I2C test
   are the I2C routines working
