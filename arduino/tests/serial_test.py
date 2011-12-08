@@ -3,9 +3,27 @@
 import serial
 import sys
 
-if __name__ == '__main__':
-  if len(sys.argv) != 3:
-    print 'Usage: serial.py <port> <speed>'
-    exit(1)
+# import test utilities and configuration
+import test
 
-  ser = serial.Serial(sys.argv[1], sys.argv[2], timeout=1)
+if __name__ == '__main__':
+
+  # load test program onto arduino
+  test.load('serial.hex')
+
+  # open serial port
+  ser = serial.Serial(test.port, test.speed, timeout=1)
+
+  byte output = [ 0 ]
+  for i in range(256):
+    output[0] = i
+    ser.write(output)
+    inc = ser.read()
+    if len(inc) != 1:
+      print "Receive byte timed out"
+      test.fail()
+    if inc[0] != output[0]:
+      print "Got a byte I wasn't expecting"
+      test.fail()
+
+  test.pass()
