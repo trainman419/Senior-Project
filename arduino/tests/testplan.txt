@@ -7,15 +7,15 @@ In general, consider the questions
 
 1) Serial basics
   can the serial routines send and receive a series of bytes?
-  - set the arduino to echo each byte received individually.
+  - set the Arduino to echo each byte received individually.
   - send each possible byte, and wait for it to return.
 
 2) Serial stability
   can the serial routines operate over an extended period of time?
 
 3) Serial locking
-  can the serial routines enforce packet ordering? or do we end up with one
-  packet inside another. particularly with respect to serial data queued from
+  can the serial routines enforce packet ordering? Or do we end up with one
+  packet inside another. Particularly with respect to serial data queued from
   within an interrupt
   - set up an interrupt and a main thread to transmit on beat frequencies.
   -  each transmits a unique, reasonably-sized sequence. 
