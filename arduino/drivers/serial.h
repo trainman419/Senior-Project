@@ -10,7 +10,7 @@
 
 #include <avr/io.h>
 
-#define BUF_SZ 128
+#define BUF_SZ 200
 
 #define PTR_SZ 8
 
