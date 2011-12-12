@@ -16,7 +16,6 @@ if __name__ == '__main__':
 
   output = [ 0 ]
   for i in range(256):
-    #time.sleep(0.1)
     output[0] = i
     print "Sending byte %d"%i
     ser.write(str(bytearray(output)))
