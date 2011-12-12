@@ -12,12 +12,12 @@ if __name__ == '__main__':
   test.load('serial.hex')
 
   # open serial port
-  ser = serial.Serial(test.port, test.speed, timeout=1)
+  ser = serial.Serial(test.port, test.baud, timeout=1)
 
-  byte output = [ 0 ]
+  output = [ 0 ]
   for i in range(256):
     output[0] = i
-    ser.write(output)
+    ser.write(str(bytearray(output)))
     inc = ser.read()
     if len(inc) != 1:
       print "Receive byte timed out"
@@ -26,4 +26,4 @@ if __name__ == '__main__':
       print "Got a byte I wasn't expecting"
       test.fail()
 
-  test.pass()
+#  test.pass()

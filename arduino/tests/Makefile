@@ -9,13 +9,13 @@ include ../Makefile.avr
 include ../Makefile.implicit
 
 .PHONY: all
-all: serial.hex locking.hex burst_rx.hex burst_tx.hex
+all: serial_test.hex locking.hex burst_rx.hex burst_tx.hex
 
 ../drivers/libdrivers.a:
 	$(MAKE) -C ../drivers
 
-include .serial.mk
-serial.elf: serial.o -ldrivers
+include .serial_test.mk
+serial_test.elf: serial_test.o -ldrivers
 
 include .locking.mk
 locking.elf: locking.o -ldrivers
