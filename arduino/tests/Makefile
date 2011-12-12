@@ -5,23 +5,24 @@ LDFLAGS=-mmcu=$(DEVICE)
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
 
+SER=serial.o serial-interrupt.o
 include ../Makefile.avr
 include ../Makefile.implicit
 
 .PHONY: all
 all: serial_test.hex locking.hex burst_rx.hex burst_tx.hex
 
-../drivers/libdrivers.a:
+../drivers/libdrivers.o:
 	$(MAKE) -C ../drivers
 
 include .serial_test.mk
-serial_test.elf: serial_test.o -ldrivers
+serial_test.elf: serial_test.o $(SER) servo.o
 
 include .locking.mk
-locking.elf: locking.o -ldrivers
+locking.elf: locking.o $(SER)
 
 include .burst_rx.mk
-burst_rx.elf: burst_rx.o -ldrivers
+burst_rx.elf: burst_rx.o $(SER)
 
 include .burst_tx.mk
-burst_tx.elf: burst_tx.o -ldrivers
+burst_tx.elf: burst_tx.o $(SER)
