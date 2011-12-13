@@ -12,20 +12,21 @@ In general, consider the questions
 
 2) Serial stability
   can the serial routines operate over an extended period of time?
+  - repeat (1) forever
 
-3) Serial locking
-  can the serial routines enforce packet ordering? Or do we end up with one
-  packet inside another. Particularly with respect to serial data queued from
-  within an interrupt
-  - set up an interrupt and a main thread to transmit on beat frequencies.
-  -  each transmits a unique, reasonably-sized sequence. 
-
-4) Maximum burst size
+3) Maximum burst size
   what are the maximum contiguous burst sizes that can be sent and received
   without losing bytes? (per baud rate)
   - transmit one burst per second at increasing sizes until the received burst
     is truncated
   - two tests here; one for transmit, one for receive
+
+4) Serial locking
+  can the serial routines enforce packet ordering? Or do we end up with one
+  packet inside another. Particularly with respect to serial data queued from
+  within an interrupt
+  - set up an interrupt and a main thread to transmit on beat frequencies.
+  -  each transmits a unique, reasonably-sized sequence. 
 
 5) Maximum baud rate
   what is the maximum baud rate at which the serial routines and link can

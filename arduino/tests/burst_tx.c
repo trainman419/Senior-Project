@@ -12,9 +12,11 @@ int main() {
    sei();
 
    int i;
-   uint16_t tx_size = 1;
+   uint16_t tx_size = 10;
    uint8_t * tx_buf;
    uint8_t rx_buffer[1024]; // maximum measureable burst size
+
+   _delay_ms(1500);
 
    while(1) {
       tx_buf = (uint8_t *)malloc(tx_size);
@@ -29,6 +31,6 @@ int main() {
       rx_buffer[0] = rx_byte(BRAIN);
       rx_buffer[1] = rx_byte(BRAIN);
       tx_size = rx_buffer[0] | (rx_buffer[1] << 8);
-      tx_size++;
+      tx_size += 10;
    }
 }

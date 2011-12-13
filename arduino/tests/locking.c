@@ -11,9 +11,11 @@ char * s2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 ISR(TIMER0_OVF_vect) {
    int i;
    uint8_t * b1 = (uint8_t*) malloc(26);
-   for( i=0; i<26; i++ ) b1[i] = s1[i];
+   if( b1 ) {
+     for( i=0; i<26; i++ ) b1[i] = s1[i];
 
-   tx_buffer(BRAIN, b1, 26);
+     tx_buffer(BRAIN, b1, 26);
+   }
 }
 
 int main() {
@@ -25,17 +27,23 @@ int main() {
    // fast PWM mode; interrupt and reset when counter equals OCR0A
    // prescalar 64
    TCCR0A = (1 << WGM01 | 1 << WGM00);
-   TCCR0B = (1 << WGM02 | 1 << CS01 | 1 << CS00);
+   TCCR0B = (1 << WGM02 | 1 << CS02 | 1 << CS00);
    // interrupt on "overflow" (counter match)
    TIMSK0 = (1 << TOIE0);
    OCR0A  = 249; // 250 counts per tick
 
+   _delay_ms(1000);
+
    sei();
 
    while(1) {
-      uint8_t * b2 = (uint8_t*) malloc(26);
-      for( i=0; i<26; i++ ) b2[i] = s2[i];
-      tx_buffer(BRAIN, b2, 26);
-      _delay_ms(1);
+     cli();
+     uint8_t * b2 = (uint8_t*) malloc(26);
+     sei();
+     if( b2 ) {
+       for( i=0; i<26; i++ ) b2[i] = s2[i];
+       tx_buffer(BRAIN, b2, 26);
+     }
+     _delay_ms(100);
    }
 }
