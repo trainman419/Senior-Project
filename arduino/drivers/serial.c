@@ -12,14 +12,10 @@
 #include <avr/interrupt.h>
 
 
-/* recieve circular fifo (10 bytes total 20% overhead) */
+/* recieve circular fifo */
 uint8_t rx_head[4]; /* points to next writeable byte */
 volatile uint8_t rx_size[4]; /* number of byts in buffer */
 uint8_t rx_buf[4][BUF_SZ];
-
-/* send circular fifo (10 bytes total, 20% overhead) */
-uint8_t tx_head[4]; /* next writeable byte */
-volatile uint8_t tx_size[4]; /* number of bytes in buffer */
 
 volatile uint8_t * ucsr[] = {&UCSR0A, &UCSR1A, &UCSR2A, &UCSR3A};
 #define A 0
@@ -44,15 +40,27 @@ uint8_t rx_byte(uint8_t port) {
    return res;
 }
 
+/* send circular fifo */
+uint8_t tx_head[4]; /* next writeable byte */
+volatile uint8_t tx_size[4]; /* number of bytes in buffer */
 uint8_t * tx_ptrs[4][PTR_SZ];
 uint16_t tx_szs[4][PTR_SZ];
 uint16_t tx_pos[4] = {0, 0, 0, 0};
 
 /* transmit an entire buffer */
 void tx_buffer(uint8_t port, uint8_t * buf, uint16_t bufsz) {
+wait:
    while(tx_size[port] >= PTR_SZ);
 
-   ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
+   //ucsr[port][B] &= ~(1 << 5); /* diable send interrupt (locking) */
+   cli(); /* lock everything before we modify the send queue */
+   if( tx_size[port] >= PTR_SZ ) {
+     led_on();
+     // if we didn't get a good lock, unlock and go back to waiting
+     sei(); // we MUST enable interrupts here so that the tx interrupt can
+            // empty the transmit queue 
+     goto wait;
+   }
 
    tx_ptrs[port][tx_head[port]] = buf;
    tx_szs[port][tx_head[port]] = bufsz;
@@ -60,7 +68,8 @@ void tx_buffer(uint8_t port, uint8_t * buf, uint16_t bufsz) {
    tx_head[port] %= PTR_SZ;
    tx_size[port]++;
 
-   ucsr[port][B] |= (1 << 5); /* enable send interrupt */
+   ucsr[port][B] |= (1 << 5); /* enable and trigger send interrupt */
+   sei(); /* unlock */
 }
 
 /* priority tx: push to front of tx queue
