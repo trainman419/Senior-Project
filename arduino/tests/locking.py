@@ -7,14 +7,17 @@ if __name__ == '__main__':
    test.load('locking.hex')
 
    ser = test.ser_open()
-   good = 0
+   lower = 0
+   upper = 0
 
    while True:
       input = ser.read(26)
-      if input != 'abcdefghijklmnopqrstuvwxyz' and input != 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
-        print "\nInput mismatch %s"%input
-        good = 0
+      if input == "`zyxwvutsrqponmlkjihgfedcb":
+        lower += 1
+      elif input == "@ABCDEFGHIJKLMNOPQRSTUVWXY":
+        upper += 1
       else:
-        good += 1
-        print "Good: %d\r"%good
-
+        print "\nInput mismatch %s"%input
+        lower = 0
+        upper = 0
+      print "\rUpper %d, Lower %d"%(upper, lower),

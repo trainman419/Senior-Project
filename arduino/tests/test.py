@@ -14,7 +14,7 @@ def load(fname):
 
 def ser_open(t=1):
   ser = serial.Serial(port, baud, timeout=t)
-  time.sleep(2) # wait for arduino to boot
+  time.sleep(1) # wait for arduino to boot
   ser.flushInput()
   return ser
 
