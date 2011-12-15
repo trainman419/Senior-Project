@@ -1,6 +1,6 @@
 VPATH=../drivers:../ros_lib
 DEVICE=atmega2560
-CFLAGS=-mmcu=$(DEVICE) -O -Wall -Werror -I../ros_lib -I../
+CFLAGS=-mmcu=$(DEVICE) -O -Wall -Werror -I../ros_lib -I..
 LDFLAGS=-mmcu=$(DEVICE)
 ASFLAGS=-mmcu=$(DEVICE)
 CXXFLAGS=$(CFLAGS)
@@ -26,3 +26,6 @@ burst_rx.elf: burst_rx.o $(SER)
 
 include .burst_tx.mk
 burst_tx.elf: burst_tx.o $(SER)
+
+include .ros_test.mk
+ros_test.elf: ros_test.o $(SER)

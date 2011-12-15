@@ -20,6 +20,7 @@ In general, consider the questions
   - transmit one burst per second at increasing sizes until the received burst
     is truncated
   - two tests here; one for transmit, one for receive
+  * need to figure out how to rewrite this to be useful
 
 4) Serial locking
   can the serial routines enforce packet ordering? Or do we end up with one
@@ -40,7 +41,7 @@ In general, consider the questions
   - set up rosserial client to publish a simple message once per second. check 
     that it doesn't drop any packets for at least an hour. a day is better.
   - set up a rosserial subscriber to receive simple messages once per second.
-    check that none are lost for at least an houre. a day is better.
+    check that none are lost for at least an hour. a day is better.
 
 7) GPS decoder test
   is the GPS decoder working?
