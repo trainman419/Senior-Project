@@ -1,4 +1,4 @@
-VPATH=../drivers:../ros_lib
+VPATH=../drivers:../ros_lib:..
 DEVICE=atmega2560
 CFLAGS=-mmcu=$(DEVICE) -O -Wall -Werror -I../ros_lib -I..
 LDFLAGS=-mmcu=$(DEVICE)
@@ -10,7 +10,7 @@ include ../Makefile.avr
 include ../Makefile.implicit
 
 .PHONY: all
-all: serial_test.hex locking.hex burst_rx.hex burst_tx.hex
+all: serial_test.hex locking.hex burst_rx.hex burst_tx.hex ros_test.hex
 
 ../drivers/libdrivers.o:
 	$(MAKE) -C ../drivers
@@ -28,4 +28,4 @@ include .burst_tx.mk
 burst_tx.elf: burst_tx.o $(SER)
 
 include .ros_test.mk
-ros_test.elf: ros_test.o $(SER)
+ros_test.elf: ros_test.o $(SER) ros.o time.o
