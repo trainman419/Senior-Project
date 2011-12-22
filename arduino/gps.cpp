@@ -7,7 +7,7 @@
 #include <avr/io.h>
 
 extern "C" {
-#include "serial.h"
+#include "drivers/serial.h"
 #include "main.h"
 }
 

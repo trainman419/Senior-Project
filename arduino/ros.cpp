@@ -6,8 +6,9 @@
 
 #include "ros.h"
 extern "C" {
-#include "serial.h"
+#include "drivers/serial.h"
 #include "interrupt.h"
+#include "drivers/led.h"
 #include <avr/interrupt.h>
 };
 
@@ -27,9 +28,13 @@ namespace ros {
    }
 
    // write some bytes
-   void AvrHardware::write(Out & out) {
-      if( out.pos == out.size ) 
-         tx_buffer(BRAIN, out.buffer + out.start, out.pos);
+   uint8_t AvrHardware::write(Out & out) {
+      if( out.pos == out.size && out.fail == 0 ) {
+         tx_buffer(BRAIN, out.buffer, out.pos);
+         return 0;
+      }
+      led_on();
+      return 1;
    }
 
    // time?
@@ -38,22 +43,26 @@ namespace ros {
    }
 
    // get an Out object for some amount of space
+   //  returns a zero-size object if memory allocation failed.
    AvrHardware::Out AvrHardware::getSpace(uint16_t size) {
-      // FIXME: check available space before start
+      uint8_t sreg = SREG;
       cli();
-      uint16_t s = sz;
-      if( (sz + size) > BUFSZ ) {
-         s = 0;
-         sz = size;
-      } else {
-         sz += size;
+      uint8_t * b = (uint8_t*) malloc(size);
+      uint16_t s = size;
+      if(!b) {
+        s = 0;
       }
-      sei();
-      return AvrHardware::Out(buffer, s, size);
+      SREG = sreg;
+      return AvrHardware::Out(b, s);
    }
 
    void AvrHardware::Out::write(unsigned char c) {
-      buffer[start + pos] = c;
-      ++pos;
+      if( pos < size ) {
+         buffer[pos] = c;
+         ++pos;
+      } else {
+        fail = 1;
+        led_on();
+      }
    }
 }

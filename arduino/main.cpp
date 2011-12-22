@@ -12,23 +12,24 @@
 #include <avr/interrupt.h>
 #include <geometry_msgs/Twist.h>
 
+#include <stdlib.h>
+
 
 #include "ros.h"
-#include <tf/transform_broadcaster.h>
 #include <std_msgs/Int8.h>
 
 extern "C" {
-#include "pwm.h"
+#include "drivers/pwm.h"
 #include "motor.h"
-#include "serial.h"
-#include "power.h"
-#include "servo.h"
+#include "drivers/serial.h"
+#include "drivers/power.h"
+#include "drivers/servo.h"
 #include "comm.h"
 #include "main.h"
 #include "wheelmon.h"
 #include "speedman.h"
-#include "compass.h"
-#include "bump.h"
+#include "drivers/bump.h"
+#include "drivers/led.h"
 }
 
 #include "interrupt.h"
@@ -52,8 +53,7 @@ extern "C" {
     *  turn on LED and loop forever */
    void __cxa_pure_virtual() {
       while(1) {
-         DDRB |= (1 << PB7);
-         PORTB |= (1 << PB7);
+         led_on();
       }
    }
 }
@@ -101,11 +101,23 @@ void steer_cb( const std_msgs::Int8 & s ) {
 }
 ros::Subscriber<std_msgs::Int8> steer_sub("steer", &steer_cb);
 
-// set up tf
-extern tf::TransformBroadcaster tf_broadcaster;
+// publish battery state
+std_msgs::Int8 battery;
+ros::Publisher battery_pub("battery", &battery);
+
+// statically-allocate space for malloc to work from
+char buffer[BUFSZ];
 
 int main() {
-   DDRB |= 1 << 7;
+   // nothing to see here. move along.
+   // setting up malloc to only use our internal buffer
+   __malloc_heap_start = buffer;
+   __malloc_heap_end = buffer + BUFSZ;
+   for( int i=0; i < BUFSZ; ++i ) {
+     buffer[i] = 0;
+   }
+
+   led_init();
    motor_init();
 
    servo_init();
@@ -115,33 +127,26 @@ int main() {
    servo_set(0, 127);
    battery_init();
 
-   compass_init();
-
    bump_init();
 
-
    // serial port 3: bluetooth
-   serial_init(BT);
+   //serial_init(BT);
    // set baud rate: 115.2k baud
-   serial_baud(BT,115200);
+   //serial_baud(BT,115200);
 
    // serial port 0: brain
    serial_init(BRAIN);
    serial_baud(BRAIN, 115200);
-   // do some serial init manually
-   //  double-speed for more accurate baud rate
-   UCSR0A |= (1 << U2X0);
-   UBRR0 = 16;
 
    sei(); // enable interrupts
 
    nh.initNode();
    nh.advertise(gps_pub);
    nh.advertise(odom_pub);
+   nh.advertise(battery_pub);
 
    nh.subscribe(vel_sub);
    nh.subscribe(steer_sub);
-   tf_broadcaster.init(nh);
 
    // GPS initialization
    gps_init(GPS);
