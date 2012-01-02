@@ -5,9 +5,9 @@
 #include <avr/interrupt.h>
 
 extern "C" {
-#include "serial.h"
+#include "drivers/serial.h"
 #include "motor.h"
-#include "bump.h"
+#include "drivers/bump.h"
 }
 
 #include "steer.h"

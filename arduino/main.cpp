@@ -18,17 +18,17 @@
 #include <std_msgs/Int8.h>
 
 extern "C" {
-#include "pwm.h"
+#include "drivers/pwm.h"
 #include "motor.h"
-#include "serial.h"
-#include "power.h"
-#include "servo.h"
+#include "drivers/serial.h"
+#include "drivers/power.h"
+#include "drivers/servo.h"
 #include "comm.h"
 #include "main.h"
 #include "wheelmon.h"
 #include "speedman.h"
-#include "compass.h"
-#include "bump.h"
+#include "drivers/compass.h"
+#include "drivers/bump.h"
 }
 
 #include "interrupt.h"

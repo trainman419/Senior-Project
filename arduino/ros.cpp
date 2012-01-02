@@ -6,7 +6,7 @@
 
 #include "ros.h"
 extern "C" {
-#include "serial.h"
+#include "drivers/serial.h"
 #include "interrupt.h"
 #include <avr/interrupt.h>
 };
