@@ -14,7 +14,6 @@ extern "C" {
 
 #include "ros.h"
 #include <tf/tf.h>
-#include <tf/transform_broadcaster.h>
 #include <dagny_msgs/OdometryLite.h>
 
 uint32_t ticks = 0;
@@ -67,9 +66,6 @@ unsigned char out_buffer[128]; // output buffer
 dagny_msgs::OdometryLite odom;
 ros::Publisher odom_pub("odometry_lite", &odom);
 
-// TF set up
-geometry_msgs::TransformStamped t;
-tf::TransformBroadcaster tf_broadcaster;
 char tf_odom[] = "odom";
 char tf_base_link[] = "base_link";
 // 0.03 meters per tick
@@ -94,6 +90,10 @@ void interrupt_init(void) {
    // interrupt on "overflow" (counter match)
    TIMSK0 = (1 << TOIE0);
    OCR0A  = 249; // 250 counts per tick
+   
+   // set up frames in odom message
+   odom.header.frame_id = tf_odom;
+   odom.child_frame_id = tf_base_link;
 }
 
 /* interrupt routine */
@@ -104,6 +104,10 @@ ISR(TIMER0_OVF_vect) {
    {
       /* read sensors early so we don't get jitter */
       input = PINC;
+
+      // enable nested interrupts now that we've read our input
+      sei();
+
       /* read wheel sensors and update computed wheel speed */
       if( ~(input ^ input_old) & L ) {
          lcnt++;
@@ -202,7 +206,6 @@ ISR(TIMER0_OVF_vect) {
       // output
       motor_speed(power/DIV);
    }
-   sei();
 
    // wheel encoder and speed transmit; 20Hz
    if( ticks % 50 == 0 ) {
@@ -264,18 +267,5 @@ ISR(TIMER0_OVF_vect) {
 
       // publish odometry
       odom_pub.publish(&odom);
-
-      // transform header
-      t.header.stamp = current_time;
-      t.header.frame_id = tf_odom;
-      t.child_frame_id = tf_base_link;
-
-      // transform position
-      t.transform.translation.x = x;
-      t.transform.translation.y = y;
-      t.transform.rotation = odom.pose.orientation;
-
-      // publish transform
-      tf_broadcaster.sendTransform(t);
    }
 }

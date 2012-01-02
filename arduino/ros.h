@@ -9,12 +9,13 @@
 
 #include <ros/node_handle.h>
 
+#define BUFSZ 4096
+
 namespace ros {
    class AvrHardware {
       public:
-         static const uint16_t BUFSZ = 2048;
-
-         AvrHardware() : sz(0) {}
+         AvrHardware() {
+         }
          // initialize
          void init();
 
@@ -25,11 +26,11 @@ namespace ros {
          class Out : public ros::Out {
             private:
                uint8_t * buffer;
-               uint16_t start;
                uint16_t size;
                uint16_t pos;
-               Out(uint8_t * b, uint16_t s, uint16_t sz) : buffer(b), start(s),
-                  size(sz), pos(0) {}
+               uint8_t fail;
+               Out(uint8_t * b, uint16_t sz) : buffer(b), 
+                  size(sz), pos(0), fail(0) {}
 
                friend class AvrHardware;
 
@@ -38,21 +39,17 @@ namespace ros {
          };
 
          // write an Out object
-         void write(Out & o);
+         uint8_t write(Out & o);
 
          // get an Out object for some amount of space
          Out getSpace(uint16_t size);
 
          // time?
          unsigned long time();
-      private:
-         uint16_t sz;
-
-         uint8_t buffer[BUFSZ];
    };
 
    //      maximum sizes for:      sub, pub, in, out
-   typedef NodeHandle_<AvrHardware, 25, 25, 512, 512> NodeHandle;
+   typedef NodeHandle_<AvrHardware, 25, 25, 512, BUFSZ> NodeHandle;
 }
 
 #endif

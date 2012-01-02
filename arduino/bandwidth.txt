@@ -1,0 +1,13 @@
+dagny_msgs/OdometryLite size: (topic 126)
+Header: 4 + (4+4) + frame_id(4+ 4) = 20
+child_frame: 4+ 9 = 13
+Pose: 7*8 = 56
+Twist: 6*8 = 48
+
+Total: 137
+
+115200 baud.
+both messages @ 20Hz
+Window size of 576 bytes/loop
+Size used: 137
+Size remaining: 439
