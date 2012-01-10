@@ -24,10 +24,6 @@ extern uint16_t tx_pos[4];
    rx_head[p] %= BUF_SZ;\
    rx_size[p]++;\
 }
-/*
-   led_on(); \
-   led_off(); \
-   */
 
 RX(USART0_RX_vect, UDR0, 0);
 RX(USART1_RX_vect, UDR1, 1);
