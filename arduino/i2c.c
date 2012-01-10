@@ -90,9 +90,9 @@ void (*i2c_next)(void);
 
 // the magic ISR that makes all of this go round
 ISR(TWI_vect) {
-   led_on();
+//   led_on();
    i2c_next();
-   if( ! i2c_errflag ) led_off();
+   //if( ! i2c_errflag ) led_off();
 }
 
 // do nothing
@@ -105,7 +105,7 @@ void i2c_none() {
 // error
 void i2c_err() {
    i2c_next = i2c_none;
-   led_on();
+   //led_on();
    i2c_errflag = 1;
 }
 
@@ -229,8 +229,8 @@ void i2c_init() {
    // bit rate equation:
    // rate = CPU / (16 + (2 * TWBR * prescaler))
    // 400000 = 16000000 / (16 + (2 * 3 * 4))
-   //TWBR = 3; // 400kHz
-   TWBR = 18; // 100kHz
+   TWBR = 3; // 400kHz
+   //TWBR = 18; // 100kHz
    TWSR = 1; // prescaler /4
 
    // set up I/O pins
@@ -246,6 +246,7 @@ void i2c_init() {
 
 // write a single byte to a register in an I2C device
 void i2c_write(uint8_t addr, uint8_t reg, uint8_t data) {
+   while(!i2c_ready); // wait for I2C to become ready
    while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
    i2c_mode = WRITE;
    i2c_address = addr;
@@ -256,7 +257,7 @@ void i2c_write(uint8_t addr, uint8_t reg, uint8_t data) {
    i2c_data = &i2c_data_pos;
    i2c_data_sz = 1;
 
-   led_off();
+   //led_off();
    i2c_errflag = 0;
    i2c_ready = 0;
 
@@ -269,6 +270,7 @@ void i2c_write(uint8_t addr, uint8_t reg, uint8_t data) {
 // write multiple bytes and call a callback when done
 void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size, 
       void(*cb)(void)) {
+   while(!i2c_ready); // wait for I2C to become ready
    while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
    i2c_mode = WRITE;
    i2c_address = addr;
@@ -277,7 +279,7 @@ void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size,
    i2c_data_sz = size;
    i2c_w_callback = cb;
 
-   led_off();
+   //led_off();
    i2c_errflag = 0;
    i2c_ready = 0;
 
@@ -290,6 +292,7 @@ void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size,
 // read bytes from an I2C device into a buffer and call a callback when done
 void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
       void(*cb)(uint8_t *)) {
+   while(!i2c_ready); // wait for I2C to become ready
    while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
    i2c_mode = READ;
    i2c_address = addr;
@@ -299,7 +302,7 @@ void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size,
    i2c_data_pos = 0;
    i2c_r_callback = cb;
 
-   led_off();
+   //led_off();
    i2c_errflag = 0;
    i2c_ready = 0;
 
@@ -309,8 +312,3 @@ void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size,
    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
 }
 
-
-void i2c_wait() {
-   while(!i2c_ready) {
-   }
-}

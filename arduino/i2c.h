@@ -24,7 +24,4 @@ void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size,
 void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
       void(*cb)(uint8_t *));
 
-// wait for I2C stack to be ready.
-void i2c_wait();
-
 #endif
