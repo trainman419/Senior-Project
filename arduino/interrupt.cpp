@@ -8,7 +8,6 @@ extern "C" {
 #include "drivers/serial.h"
 #include "motor.h"
 #include "drivers/bump.h"
-#include "drivers/led.h"
 }
 
 #include "steer.h"
