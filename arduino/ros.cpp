@@ -48,11 +48,11 @@ namespace ros {
       uint8_t sreg = SREG;
       cli();
       uint8_t * b = (uint8_t*) malloc(size);
+      SREG = sreg;
       uint16_t s = size;
       if(!b) {
         s = 0;
       }
-      SREG = sreg;
       return AvrHardware::Out(b, s);
    }
 

@@ -6,17 +6,17 @@
    Author: Austin Hendrix
  */
 
-#define F_CPU 16000000UL
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <geometry_msgs/Twist.h>
 
 #include <stdlib.h>
+#include <util/delay.h>
 
 
 #include "ros.h"
 #include <std_msgs/Int8.h>
+#include <std_msgs/UInt16.h>
 
 extern "C" {
 #include "drivers/pwm.h"
@@ -30,6 +30,7 @@ extern "C" {
 #include "speedman.h"
 #include "drivers/bump.h"
 #include "drivers/led.h"
+#include "sonar.h"
 }
 
 #include "interrupt.h"
@@ -105,6 +106,12 @@ ros::Subscriber<std_msgs::Int8> steer_sub("steer", &steer_cb);
 std_msgs::Int8 battery;
 ros::Publisher battery_pub("battery", &battery);
 
+// publish idle time data
+std_msgs::UInt16 idle;
+ros::Publisher idle_pub("avr_idle", &idle);
+uint32_t idle_last = 0;
+
+
 // statically-allocate space for malloc to work from
 char buffer[BUFSZ];
 
@@ -138,18 +145,22 @@ int main() {
    serial_init(BRAIN);
    serial_baud(BRAIN, 115200);
 
+   // GPS initialization
+   gps_init(GPS);
+
+   // sonar initialization
+   sonar_init(SONAR);
+
    sei(); // enable interrupts
 
    nh.initNode();
    nh.advertise(gps_pub);
    nh.advertise(odom_pub);
    nh.advertise(battery_pub);
+   nh.advertise(idle_pub);
 
    nh.subscribe(vel_sub);
    nh.subscribe(steer_sub);
-
-   // GPS initialization
-   gps_init(GPS);
 
    interrupt_init();
 
@@ -158,7 +169,16 @@ int main() {
 
    while(1) {
       gps_spinOnce();
+      sonar_spinOnce();
       nh.spinOnce();
+
+      _delay_ms(1);
+      idle.data++;
+      if( ticks - idle_last > 1000 ) {
+         idle_last += 1000;
+         idle_pub.publish(&idle);
+         idle.data = 0;
+      }
    }
    
    // if we're here, we're done. power down.
