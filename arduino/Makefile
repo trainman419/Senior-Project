@@ -11,8 +11,8 @@ include Makefile.avr
 
 VPATH=drivers:ros_lib
 
-CSRC=motor.c sonar.c i2c.c
-CXXSRC=gps.cpp interrupt.cpp main.cpp ros.cpp steer.cpp TinyGPS.cpp time.cpp duration.cpp
+CSRC=motor.c i2c.c 
+CXXSRC=gps.cpp interrupt.cpp main.cpp ros.cpp steer.cpp TinyGPS.cpp time.cpp duration.cpp sonar.cpp imu.cpp
 DRIVERS=adc.o bump.o compass.o power.o pwm.o serial.o serial-interrupt.o servo.o
 
 OBJS=$(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
