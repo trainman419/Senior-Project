@@ -22,20 +22,13 @@ char gps_frame[] = "";
 
 /* initialize GPS listener on serial port */
 void gps_init(uint8_t port) {
-   
    // initialize serial port and set baud rate
-   serial_init_rx(port);
-   serial_baud(port, 4800);
+   serial_init(port);
+   serial_baud(port, 9600);
 
    gps_port = port;
 
    gps_msg.header.frame_id = gps_frame;
-
-   // set /raw pin to output
-   DDRH |= (1 << 1);
-   // set /raw pin low for raw mode
-   PORTH &= ~(1 << 1);
-   PORTH |= (1 << 0); // pull-up on input
 }
 
 // output packet for GPS

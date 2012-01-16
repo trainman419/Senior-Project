@@ -108,8 +108,7 @@ void i2c_write(uint8_t addr, uint8_t reg, uint8_t data) {
    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
 }
 
-// write multiple bytes to a register in an I2C device and call a callback when
-// done
+// write multiple bytes and call a callback when done
 void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size, 
       void(*cb)(void)) {
    while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
