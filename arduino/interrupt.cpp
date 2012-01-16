@@ -209,6 +209,7 @@ ISR(TIMER0_OVF_vect) {
 
    // wheel encoder and speed transmit; 20Hz
    if( ticks % 50 == 0 ) {
+      // this takes about 1.6ms to run
       ros::Time current_time = nh.now();
 
       double r = steer2radius(steer);
