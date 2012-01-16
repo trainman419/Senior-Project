@@ -30,9 +30,9 @@ extern "C" {
 #include "speedman.h"
 #include "drivers/bump.h"
 #include "drivers/led.h"
-#include "sonar.h"
 }
 
+#include "sonar.h"
 #include "interrupt.h"
 #include "gps.h"
 #include "steer.h"
@@ -113,16 +113,16 @@ uint32_t idle_last = 0;
 
 
 // statically-allocate space for malloc to work from
-char buffer[BUFSZ];
+//char buffer[BUFSZ];
 
 int main() {
    // nothing to see here. move along.
    // setting up malloc to only use our internal buffer
-   __malloc_heap_start = buffer;
-   __malloc_heap_end = buffer + BUFSZ;
-   for( int i=0; i < BUFSZ; ++i ) {
-     buffer[i] = 0;
-   }
+   //__malloc_heap_start = buffer;
+   //__malloc_heap_end = buffer + BUFSZ;
+   //for( int i=0; i < BUFSZ; ++i ) {
+   //  buffer[i] = 0;
+   //}
 
    led_init();
    motor_init();
@@ -156,8 +156,9 @@ int main() {
    nh.initNode();
    nh.advertise(gps_pub);
    nh.advertise(odom_pub);
-   nh.advertise(battery_pub);
+//   nh.advertise(battery_pub);
    nh.advertise(idle_pub);
+   nh.advertise(sonar_pub);
 
    nh.subscribe(vel_sub);
    nh.subscribe(steer_sub);
@@ -179,6 +180,7 @@ int main() {
          idle_pub.publish(&idle);
          idle.data = 0;
       }
+      // currently about 740 idle ticks
    }
    
    // if we're here, we're done. power down.
