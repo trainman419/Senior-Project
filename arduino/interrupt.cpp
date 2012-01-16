@@ -268,4 +268,9 @@ ISR(TIMER0_OVF_vect) {
       // publish odometry
       odom_pub.publish(&odom);
    }
+
+   // IMU and GPS loop; run at 20Hz.
+   // run at a time when the odometry calculations aren't running
+   if( ticks % 50 == 24 ) {
+   }
 }
