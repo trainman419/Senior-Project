@@ -11,6 +11,7 @@ extern "C" {
 }
 
 #include "steer.h"
+#include "imu.h"
 
 #include "ros.h"
 #include <tf/tf.h>
@@ -273,5 +274,6 @@ ISR(TIMER0_OVF_vect) {
    // IMU and GPS loop; run at 20Hz.
    // run at a time when the odometry calculations aren't running
    if( ticks % 50 == 24 ) {
+      imu_read(); // read the IMU
    }
 }

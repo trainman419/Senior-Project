@@ -13,10 +13,24 @@
 
 #include <stdint.h>
 
+extern "C" {
 #include "i2c.h"
+}
+
+#include "ros.h"
+#include <geometry_msgs/Vector3.h>
+
 
 #define I2C_ACCEL 0x1D
 #define I2C_COMPASS 0x3C
+
+geometry_msgs::Vector3 compass_msg;
+geometry_msgs::Vector3 accel_msg;
+geometry_msgs::Vector3 gyro_msg;
+
+ros::Publisher compass_pub("compass", &compass_msg);
+ros::Publisher accel_pub("accel", &accel_msg);
+ros::Publisher gyro_pub("gyro", &gyro_msg);
 
 void imu_init() {
    i2c_init();
@@ -36,7 +50,12 @@ void imu_init() {
 uint8_t compass_buf[6];
 
 void compass_done(uint8_t * buf) {
-   // ummm... done? publish?
+   // interpret and publish data
+   int16_t * compass = (int16_t*)buf;
+   compass_msg.x = compass[0]/1300.0;
+   compass_msg.y = compass[1]/1300.0;
+   compass_msg.z = compass[2]/1300.0;
+   compass_pub.publish(&compass_msg);
 }
 
 // read the compass
@@ -47,7 +66,19 @@ void compass_read() {
 uint8_t accel_buf[6];
 
 void accel_done(uint8_t * buf) {
-   // ummm... done? publish?
+   // interpret and publish data
+   int16_t accel;
+   accel = buf[0] | (buf[1] << 8);
+   accel_msg.x = accel / 256.0;
+
+   accel = buf[2] | (buf[3] << 8);
+   accel_msg.y = accel / 256.0;
+
+   accel = buf[4] | (buf[5] << 8);
+   accel_msg.z = accel / 256.0;
+   accel_pub.publish(&accel_msg);
+
+   compass_read();
 }
 
 // read the accelerometer
@@ -57,9 +88,15 @@ void accel_read() {
 
 // read the gyro
 void gyro_read() {
+   accel_read();
+   // TODO: write this
 }
 
 /* Kalman filter notes:
  *
  * Fill this out when I actually write a kalman filter
  */ 
+
+void imu_read() {
+   gyro_read();
+}

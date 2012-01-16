@@ -36,6 +36,7 @@ extern "C" {
 #include "interrupt.h"
 #include "gps.h"
 #include "steer.h"
+#include "imu.h"
 
 #define CLK 16000
 
@@ -151,6 +152,9 @@ int main() {
    // sonar initialization
    sonar_init(SONAR);
 
+   // imu initialization
+   imu_init();
+
    sei(); // enable interrupts
 
    nh.initNode();
@@ -159,6 +163,10 @@ int main() {
 //   nh.advertise(battery_pub);
    nh.advertise(idle_pub);
    nh.advertise(sonar_pub);
+
+   // advertise individual IMU topics
+   nh.advertise(compass_pub);
+   nh.advertise(accel_pub);
 
    nh.subscribe(vel_sub);
    nh.subscribe(steer_sub);

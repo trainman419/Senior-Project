@@ -64,15 +64,11 @@
  *       is called
  */
 
-//uint8_t i2c_idle;
-
-//volatile enum { IDLE, START, ADDR, REG, RSTART, DATA, STOP, RADDR, RDATA, NAK
-//} i2c_state; // the last thing that the I2C stack did.
-
 // state machine variables.
 //
 // state machine mode
 volatile enum { READ = 1, WRITE = 0 } i2c_mode; 
+
 uint8_t i2c_address;  // i2c slave address
 uint8_t i2c_register; // i2c slave register
 uint8_t * i2c_data;   // data to read/write from slave
@@ -84,9 +80,12 @@ void (* i2c_w_callback)(void);
 void (* i2c_r_callback)(uint8_t*);
 
 void i2c_init() {
-   // TODO: initialize stuff here
-   //i2c_idle = 0;
-   // TODO: set up clock prescaler
+   // set up clock prescaler for 400kHz operation
+   TWBR = 3;
+   TWSR = 1; // prescaler /4
+   // bit rate equation:
+   // rate = CPU / (16 + (2 * TWBR * prescaler))
+   // 400000 = 16000000 / (16 + (2 * 3 * 4))
 }
 
 // overall bus functions should wait for TWSTO to become unset before writing
