@@ -21,8 +21,9 @@ extern "C" {
 #include <geometry_msgs/Vector3.h>
 
 
-#define I2C_ACCEL 0x1D
+#define I2C_ACCEL 0xA6
 #define I2C_COMPASS 0x3C
+#define I2C_GYRO 0xD0
 
 geometry_msgs::Vector3 compass_msg;
 geometry_msgs::Vector3 accel_msg;
@@ -36,34 +37,75 @@ void imu_init() {
    i2c_init();
    // set up accelerometer
    i2c_write(I2C_ACCEL, 0x2A, 0x00); // disable tap detection
+   i2c_wait();
    i2c_write(I2C_ACCEL, 0x2C, 0x09); // 50Hz data rate
+   i2c_wait();
    i2c_write(I2C_ACCEL, 0x31, 0x0B); // full res mode & +/- 16g range
+   i2c_wait();
    i2c_write(I2C_ACCEL, 0x38, 0x00); // disable FIFO; always get recent sample
-   i2c_write(I2C_ACCEL, 0x2D, 0x80); // enable measurement mode
+   i2c_wait();
+   i2c_write(I2C_ACCEL, 0x2D, 0x08); // enable measurement mode
+   i2c_wait();
 
    // set up compass
    i2c_write(I2C_COMPASS, 0x00, 0x18); // 50Hz mode
+   i2c_wait();
    i2c_write(I2C_COMPASS, 0x01, 0x20); // gain: 1300 counts/milli-gauss
+   i2c_wait();
    i2c_write(I2C_COMPASS, 0x02, 0x00); // continuous-conversion mode
+   i2c_wait();
+
+   // set up gyro
+   i2c_write(I2C_GYRO, 0x15, 19); // 50Hz sample rate
+   i2c_wait();
+   i2c_write(I2C_GYRO, 0x16, 0x1C); // 20Hz low-pass filter
+   i2c_wait();
+   i2c_write(I2C_GYRO, 0x3E, 0x01); // X gyro as clock reference
+   i2c_wait();
 }
 
-uint8_t compass_buf[6];
+uint8_t common_buf[8];
+
+
+void gyro_done(uint8_t * buf) {
+   int16_t gyro;
+   gyro = (buf[0] << 8) | buf[1];
+   gyro_msg.x = gyro;
+
+   gyro = (buf[2] << 8) | buf[3];
+   gyro_msg.y = gyro;
+
+   gyro = (buf[4] << 8) | buf[5];
+   gyro_msg.z = gyro;
+
+   gyro_pub.publish(&gyro_msg);
+
+}
+// read the gyro
+void gyro_read() {
+   // TODO: read temperature sensor
+   i2c_read(I2C_GYRO, 0x1D, common_buf, 6, &gyro_done);
+}
 
 void compass_done(uint8_t * buf) {
    // interpret and publish data
-   int16_t * compass = (int16_t*)buf;
-   compass_msg.x = compass[0]/1300.0;
-   compass_msg.y = compass[1]/1300.0;
-   compass_msg.z = compass[2]/1300.0;
+   int16_t compass = (buf[0] << 8) | buf[1];
+   compass_msg.x = compass/1300.0;
+
+   compass = (buf[2] << 8) | buf[3];
+   compass_msg.y = compass/1300.0;
+
+   compass = (buf[4] << 8) | buf[5];
+   compass_msg.z = compass/1300.0;
    compass_pub.publish(&compass_msg);
+
+   gyro_read();
 }
 
 // read the compass
 void compass_read() {
-   i2c_read(I2C_COMPASS, 0x03, compass_buf, 6, compass_done);
+   i2c_read(I2C_COMPASS, 0x03, common_buf, 6, compass_done);
 }
-
-uint8_t accel_buf[6];
 
 void accel_done(uint8_t * buf) {
    // interpret and publish data
@@ -83,13 +125,7 @@ void accel_done(uint8_t * buf) {
 
 // read the accelerometer
 void accel_read() {
-   i2c_read(I2C_ACCEL, 0x32, accel_buf, 6, accel_done);
-}
-
-// read the gyro
-void gyro_read() {
-   accel_read();
-   // TODO: write this
+   i2c_read(I2C_ACCEL, 0x32, common_buf, 6, accel_done);
 }
 
 /* Kalman filter notes:
@@ -98,5 +134,5 @@ void gyro_read() {
  */ 
 
 void imu_read() {
-   gyro_read();
+   accel_read();
 }

@@ -9,6 +9,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#include "drivers/led.h"
+
 /* design notes:
  * This library is designed to take the waiting out of dealing with I2C devices
  * In particular, it's aimed at the types of transactions that are needed to
@@ -64,6 +66,8 @@
  *       is called
  */
 
+// interface code is at the bottom of the file.
+
 // state machine variables.
 //
 // state machine mode
@@ -75,17 +79,166 @@ uint8_t * i2c_data;   // data to read/write from slave
 uint8_t i2c_data_sz;  // size of data to write
 uint8_t i2c_data_pos; // position in incoming data buffer
 
+uint8_t i2c_errflag;
+volatile uint8_t i2c_ready;
+
 // function pointer to use on data read completion
 void (* i2c_w_callback)(void);
 void (* i2c_r_callback)(uint8_t*);
 
+void (*i2c_next)(void);
+
+// the magic ISR that makes all of this go round
+ISR(TWI_vect) {
+   led_on();
+   i2c_next();
+   if( ! i2c_errflag ) led_off();
+}
+
+// do nothing
+void i2c_none() {
+   i2c_next = i2c_none;
+   TWCR = (1 << TWINT); // reset interrupt flag if set
+   i2c_ready = 1;
+}
+
+// error
+void i2c_err() {
+   i2c_next = i2c_none;
+   led_on();
+   i2c_errflag = 1;
+}
+
+void i2cf_read() {
+   if( (TWSR & 0xF8) == 0x40 ) {
+      // if we sent an address, wait for data
+      --i2c_data_sz;
+      if( i2c_data_sz > 0 ) {
+         // we want more data; transmit ack
+         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA) | (1<<TWIE);
+      } else {
+         // the next byte will be the last
+         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+      }
+      i2c_next = i2cf_read;
+   } else if( (TWSR & 0xF8) == 0x50 ) {
+      // if we received data, wait for more data or nak
+      i2c_data[i2c_data_pos++] = TWDR;
+      --i2c_data_sz;
+      if( i2c_data_sz > 0 ) {
+         // we want more data; transmit ack
+         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA) | (1<<TWIE);
+      } else {
+         // the next byte will be the last
+         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+      }
+      i2c_next = i2cf_read;
+   } else if( (TWSR & 0xF8) == 0x58 ) {
+      // we got our last byte and sent nak
+      i2c_data[i2c_data_pos] = TWDR;
+      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
+      i2c_ready = 1;
+      i2c_next = i2c_none;
+      sei();
+      if(i2c_r_callback) {
+         i2c_r_callback(i2c_data);
+      } else {
+         i2c_err();
+      }
+   } else {
+      i2c_err();
+   }
+}
+
+// send i2c read address
+void i2cf_raddress() {
+   if( (TWSR & 0xF8) == 0x10 ) {
+      TWDR = i2c_address | 1;
+      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+      i2c_next = i2cf_read;
+   } else {
+      i2c_err();
+   }
+}
+
+// send repeated start condition
+void i2cf_rstart() {
+   if( (TWSR & 0xF8) == 0x28 ) {
+      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
+      i2c_next = i2cf_raddress;
+   } else {
+      i2c_err();
+   }
+}
+
+// send stop condition
+void i2cf_wstop() {
+   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
+   i2c_ready = 1;
+   i2c_next = i2c_none;
+   sei();
+   if(i2c_w_callback) {
+      i2c_w_callback();
+   } 
+}
+
+// write i2c data
+void i2cf_wdata() {
+   if( (TWSR & 0xF8) == 0x28 ) {
+      TWDR = *i2c_data;
+      ++i2c_data;
+      --i2c_data_sz;
+      if( i2c_data_sz == 0 ) {
+         i2c_next = i2cf_wstop;
+      }
+      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+   } else {
+      i2c_err();
+   }
+}
+
+// write i2c register
+void i2cf_register() {
+   if( (TWSR & 0xF8) == 0x18 ) {
+      TWDR = i2c_register;
+      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+      if( i2c_mode == WRITE ) {
+         i2c_next = i2cf_wdata;
+      } else {
+         i2c_next = i2cf_rstart;
+      }
+   } else {
+      i2c_err();
+   }
+}
+
+// write i2c address
+void i2cf_address() {
+   if( (TWSR & 0xF8) == 0x08 ) {
+      TWDR = i2c_address;
+      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
+      i2c_next = i2cf_register;
+   } else {
+      i2c_err();
+   }
+}
+
 void i2c_init() {
    // set up clock prescaler for 400kHz operation
-   TWBR = 3;
-   TWSR = 1; // prescaler /4
+
    // bit rate equation:
    // rate = CPU / (16 + (2 * TWBR * prescaler))
    // 400000 = 16000000 / (16 + (2 * 3 * 4))
+   //TWBR = 3; // 400kHz
+   TWBR = 18; // 100kHz
+   TWSR = 1; // prescaler /4
+
+   // set up I/O pins
+   DDRD &= ~(3);
+   PORTD &= ~(3);
+
+   i2c_next = i2c_none;
+   i2c_ready = 1;
 }
 
 // overall bus functions should wait for TWSTO to become unset before writing
@@ -103,8 +256,14 @@ void i2c_write(uint8_t addr, uint8_t reg, uint8_t data) {
    i2c_data = &i2c_data_pos;
    i2c_data_sz = 1;
 
+   led_off();
+   i2c_errflag = 0;
+   i2c_ready = 0;
+
+   i2c_next = i2cf_address;
+
    // start I2C mode by sending start bit
-   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
+   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
 }
 
 // write multiple bytes and call a callback when done
@@ -118,8 +277,14 @@ void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size,
    i2c_data_sz = size;
    i2c_w_callback = cb;
 
+   led_off();
+   i2c_errflag = 0;
+   i2c_ready = 0;
+
+   i2c_next = i2cf_address;
+
    // start I2C mode by sending start bit
-   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
+   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
 }
 
 // read bytes from an I2C device into a buffer and call a callback when done
@@ -132,113 +297,20 @@ void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size,
    i2c_data = buf;
    i2c_data_sz = size;
    i2c_data_pos = 0;
+   i2c_r_callback = cb;
+
+   led_off();
+   i2c_errflag = 0;
+   i2c_ready = 0;
+
+   i2c_next = i2cf_address;
 
    // start I2C mode by sending start bit
-   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
+   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
 }
 
-void (*i2c_next)(void);
 
-// the magic ISR that makes all of this go round
-ISR(TWI_vect) {
-   i2c_next();
-}
-
-// do nothing
-void i2c_none() {
-   i2c_next = i2c_none;
-}
-
-void i2cf_read() {
-   if( (TWSR & 0xF8) == 0x40 ) {
-      // if we sent an address, wait for data
-      --i2c_data_sz;
-      if( i2c_data_sz > 0 ) {
-         // we want more data; transmit ack
-         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
-      } else {
-         // the next byte will be the last
-         TWCR = (1<<TWINT) | (1<<TWEN);
-      }
-      i2c_next = i2cf_read;
-   } else if( (TWSR & 0xF8) == 0x50 ) {
-      // if we received data, wait for more data or nak
-      i2c_data[i2c_data_pos++] = TWDR;
-      --i2c_data_sz;
-      if( i2c_data_sz > 0 ) {
-         // we want more data; transmit ack
-         TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
-      } else {
-         // the next byte will be the last
-         TWCR = (1<<TWINT) | (1<<TWEN);
-      }
-      i2c_next = i2cf_read;
-   } else if( (TWSR & 0xF8) == 0x58 ) {
-      // we got our last byte and sent nak
-      i2c_data[i2c_data_pos] = TWDR;
-      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
-      if(i2c_r_callback) {
-         i2c_r_callback(i2c_data);
-      }
-   }
-}
-
-// send i2c read address
-void i2cf_raddress() {
-   if( (TWSR & 0xF8) == 0x10 ) {
-      TWDR = i2c_address | 1;
-      TWCR = (1<<TWINT) | (1<<TWEN);
-      i2c_next = i2cf_read;
-   }
-}
-
-// send repeated start condition
-void i2cf_rstart() {
-   if( (TWSR & 0xF8) == 0x28 ) {
-      TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA);
-      i2c_next = i2cf_raddress;
-   }
-}
-
-// send stop condition
-void i2cf_wstop() {
-   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
-   if(i2c_w_callback) {
-      i2c_w_callback();
-   }
-}
-
-// write i2c data
-void i2cf_wdata() {
-   if( (TWSR & 0xF8) == 0x28 ) {
-      TWDR = *i2c_data;
-      ++i2c_data;
-      --i2c_data_sz;
-      if( i2c_data_sz == 0 ) {
-         i2c_next = i2cf_wstop;
-      }
-      TWCR = (1<<TWINT) | (1<<TWEN);
-   }
-}
-
-// write i2c register
-void i2cf_register() {
-   if( (TWSR & 0xF8) == 0x18 ) {
-      TWDR = i2c_register;
-      TWDR = (1<<TWINT) | (1<TWEN);
-      if( i2c_mode == WRITE ) {
-         i2c_next = i2cf_wdata;
-      } else {
-         i2c_next = i2cf_rstart;
-      }
-   }
-}
-
-// write i2c address
-void i2cf_address() {
-   if( (TWSR & 0xF8) == 0x08 ) {
-      TWDR = i2c_address;
-      TWCR = (1<<TWINT) | (1<<TWEN);
-      i2c_next = i2cf_register;
+void i2c_wait() {
+   while(!i2c_ready) {
    }
 }

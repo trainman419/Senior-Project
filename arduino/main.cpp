@@ -152,10 +152,10 @@ int main() {
    // sonar initialization
    sonar_init(SONAR);
 
-   // imu initialization
-   imu_init();
-
    sei(); // enable interrupts
+
+   // imu initialization requires interrupts to be enabled.
+   imu_init();
 
    nh.initNode();
    nh.advertise(gps_pub);
@@ -167,6 +167,7 @@ int main() {
    // advertise individual IMU topics
    nh.advertise(compass_pub);
    nh.advertise(accel_pub);
+   nh.advertise(gyro_pub);
 
    nh.subscribe(vel_sub);
    nh.subscribe(steer_sub);
