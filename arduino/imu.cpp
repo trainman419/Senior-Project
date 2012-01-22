@@ -25,6 +25,10 @@ extern "C" {
 #define I2C_COMPASS 0x3C
 #define I2C_GYRO 0xD0
 
+#define X 0
+#define Y 1
+#define Z 2
+
 geometry_msgs::Vector3 compass_msg;
 geometry_msgs::Vector3 accel_msg;
 geometry_msgs::Vector3 gyro_msg;
@@ -66,6 +70,9 @@ void imu_init() {
 
 uint8_t common_buf[8];
 
+// read compass, accelerometer and gyro and produce pose estimates
+void update_imu() {
+}
 
 void gyro_done(uint8_t * buf) {
    int16_t gyro;
@@ -78,8 +85,7 @@ void gyro_done(uint8_t * buf) {
    gyro = (buf[4] << 8) | buf[5];
    gyro_msg.z = gyro;
 
-   gyro_pub.publish(&gyro_msg);
-
+//   gyro_pub.publish(&gyro_msg);
 }
 // read the gyro
 void gyro_read() {
@@ -97,7 +103,7 @@ void compass_done(uint8_t * buf) {
 
    compass = (buf[4] << 8) | buf[5];
    compass_msg.z = compass/1300.0;
-   compass_pub.publish(&compass_msg);
+//   compass_pub.publish(&compass_msg);
 
    gyro_read();
 }
@@ -118,7 +124,7 @@ void accel_done(uint8_t * buf) {
 
    accel = buf[4] | (buf[5] << 8);
    accel_msg.z = accel / 256.0;
-   accel_pub.publish(&accel_msg);
+//   accel_pub.publish(&accel_msg);
 
    compass_read();
 }
