@@ -67,16 +67,44 @@ void imu_init() {
 uint8_t common_buf[8];
 
 
+int16_t gyro_zero[3];
+// number of gyro samples to take at startup
+#define GYRO_COUNT 50
+uint8_t gyro_start = GYRO_COUNT;
 void gyro_done(uint8_t * buf) {
    int16_t gyro;
    gyro = (buf[0] << 8) | buf[1];
+   if( gyro_start > 0 ) {
+      gyro_zero[X] += gyro;
+   } else {
+      gyro -= gyro_zero[X];
+   }
    gyro_msg.x = gyro;
 
    gyro = (buf[2] << 8) | buf[3];
+   if( gyro_start > 0 ) {
+      gyro_zero[Y] += gyro;
+   } else {
+      gyro -= gyro_zero[Y];
+   }
    gyro_msg.y = gyro;
 
    gyro = (buf[4] << 8) | buf[5];
+   if( gyro_start > 0 ) {
+      gyro_zero[Z] += gyro;
+   } else {
+      gyro -= gyro_zero[Z];
+   }
    gyro_msg.z = gyro;
+
+   if( gyro_start > 0 ) {
+      --gyro_start;
+      if( gyro_start == 0 ) {
+         gyro_zero[X] /= GYRO_COUNT;
+         gyro_zero[Y] /= GYRO_COUNT;
+         gyro_zero[Z] /= GYRO_COUNT;
+      }
+   }
 
    gyro_pub.publish(&gyro_msg);
 
@@ -97,7 +125,7 @@ void compass_done(uint8_t * buf) {
 
    compass = (buf[4] << 8) | buf[5];
    compass_msg.z = compass/1300.0;
-   compass_pub.publish(&compass_msg);
+//   compass_pub.publish(&compass_msg);
 
    gyro_read();
 }
@@ -118,7 +146,7 @@ void accel_done(uint8_t * buf) {
 
    accel = buf[4] | (buf[5] << 8);
    accel_msg.z = accel / 256.0;
-   accel_pub.publish(&accel_msg);
+//   accel_pub.publish(&accel_msg);
 
    compass_read();
 }
