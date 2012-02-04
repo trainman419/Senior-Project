@@ -1,3 +1,8 @@
-This is the code for my senior project; a robot implementing localization, mapping, navigation and path-planning on relatively cheap hardware. I'm using two processors; an Arduino for I/O and an AMD Geode for the main processing. More hardware description to come.
+This is the code for Dagny, my robot.
+
+Dagny is a platform for experimenting with localization, mapping, navigation and path-planning on relatively cheap hardware. I'm using two processors; an Arduino for I/O and a Pandaboard for the primary processor.
+
+More description of Dagny's history and journey can be found on my blog: http://namniart.com/
 
 NOTE: The version of avr-gcc included in MacPorts isn't new enough to compile for the Atmega2560; download CrossPack: http://www.obdev.at/products/crosspack/index-de.html and use gcc version 4 (gcc3 doesn't support the atmega2560)
+
