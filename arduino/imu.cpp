@@ -12,6 +12,7 @@
  */
 
 #include <stdint.h>
+#include <math.h>
 
 extern "C" {
 #include "i2c.h"
@@ -19,6 +20,7 @@ extern "C" {
 
 #include "ros.h"
 #include <geometry_msgs/Vector3.h>
+#include <geometry_msgs/Twist.h>
 
 
 #define I2C_ACCEL 0xA6
@@ -29,13 +31,24 @@ extern "C" {
 #define Y 1
 #define Z 2
 
+#define min(a, b) ((a)<(b))?(a):(b)
+#define max(a, b) ((a)>(b))?(a):(b)
+
 geometry_msgs::Vector3 compass_msg;
 geometry_msgs::Vector3 accel_msg;
 geometry_msgs::Vector3 gyro_msg;
 
+geometry_msgs::Vector3 compass_min;
+geometry_msgs::Vector3 compass_max;
+geometry_msgs::Vector3 gyro_offset;
+
 ros::Publisher compass_pub("compass", &compass_msg);
 ros::Publisher accel_pub("accel", &accel_msg);
 ros::Publisher gyro_pub("gyro", &gyro_msg);
+
+// IMU State
+//  angles in Yaw Pitch Roll (ZYX) order
+geometry_msgs::Twist imu_state;
 
 void imu_init() {
    i2c_init();
@@ -66,12 +79,94 @@ void imu_init() {
    i2c_wait();
    i2c_write(I2C_GYRO, 0x3E, 0x01); // X gyro as clock reference
    i2c_wait();
+
+   imu_state.linear.x = 0;
+   imu_state.linear.y = 0;
+   imu_state.linear.z = 0;
+   imu_state.angular.x = 0;
+   imu_state.angular.y = 0;
+   imu_state.angular.z = 0;
+
+   gyro_offset.x = 0;
+   gyro_offset.y = 0;
+   gyro_offset.z = 0;
+
+   compass_min.x = 0;
+   compass_min.y = 0;
+   compass_min.z = 0;
+
+   compass_max.x = 0;
+   compass_max.y = 0;
+   compass_max.z = 0;
+}
+
+geometry_msgs::Vector3 transform(geometry_msgs::Vector3 in,
+      geometry_msgs::Vector3 rpy) {
+   geometry_msgs::Vector3 out;
+   // correlate math on paper with variables
+   // theta: z
+   // phi: y
+   // psi: x
+
+   // pre-compute sines and cosines
+   float c_theta = cos(rpy.z);
+   float s_theta = sin(rpy.z);
+   float c_phi   = cos(rpy.y);
+   float s_phi   = sin(rpy.y);
+   float c_psi   = cos(rpy.x);
+   float s_psi   = sin(rpy.x);
+
+   // compute elements of rotation matrix
+   
+   // first row
+   float r11 = c_phi * c_theta;
+   float r12 = c_phi * s_theta;
+   float r13 = s_phi;
+
+   // second row
+   float r21 = s_psi * s_phi * c_theta - c_psi * s_theta;
+   float r22 = s_psi * s_phi * s_theta + c_psi * c_theta;
+   float r23 = s_psi * c_phi;
+   
+   // third row
+   float r31 = c_psi * s_phi * c_theta + s_psi * s_theta;
+   float r32 = c_psi * s_phi * s_theta - s_psi * c_theta;
+   float r33 = c_psi * c_phi;
+
+   // matrix multiply
+   out.x = in.x * r11 + in.y * r12 + in.z * r13;
+   out.y = in.x * r21 + in.y * r22 + in.z * r23;
+   out.z = in.x * r31 + in.y * r32 + in.z * r33;
+   return out;
 }
 
 uint8_t common_buf[8];
 
 // read compass, accelerometer and gyro and produce pose estimates
 void update_imu() {
+   // all estimates are absolute
+   geometry_msgs::Vector3 gyro_est;    // RPY angles
+   geometry_msgs::Vector3 compass_est; // RPY angles
+   geometry_msgs::Vector3 accel_est;   // RPY estimate from accelerometer
+
+   geometry_msgs::Vector3 odom_est;    // XYZ estimate from odometry
+
+   // RPY estimation from gyro
+   // TODO: make sure scaling on gyro is accurate
+   gyro_est.x = gyro_msg.x + imu_state.angular.x - gyro_offset.x;
+   gyro_est.y = gyro_msg.y + imu_state.angular.y - gyro_offset.y;
+   gyro_est.z = gyro_msg.z + imu_state.angular.z - gyro_offset.z;
+
+   // RPY estimation from compass
+   // project compass onto the plane using old imu state
+   compass_est = transform(compass_msg, imu_state.angular);
+   compass_est.z = atan2(compass_est.y, compass_est.x);
+   // no compass data on roll or pitch. use existing state
+   compass_est.y = imu_state.angular.y;
+   compass_est.x = imu_state.angular.x;
+
+   // RPY estimate from accelerometer
+   // TODO
 }
 
 int16_t gyro_zero[3];
@@ -117,7 +212,6 @@ void gyro_done(uint8_t * buf) {
 }
 // read the gyro
 void gyro_read() {
-   // TODO: read temperature sensor
    i2c_read(I2C_GYRO, 0x1D, common_buf, 6, &gyro_done);
 }
 
@@ -131,6 +225,20 @@ void compass_done(uint8_t * buf) {
 
    compass = (buf[4] << 8) | buf[5];
    compass_msg.z = compass/1300.0;
+
+   // compass calibration; keep track of minimum and maximum values
+   compass_max.x = max(compass_msg.x, compass_max.x);
+   compass_max.y = max(compass_msg.y, compass_max.y);
+   compass_max.z = max(compass_msg.z, compass_max.z);
+
+   compass_min.x = min(compass_msg.x, compass_min.x);
+   compass_min.y = min(compass_msg.y, compass_min.y);
+   compass_min.z = min(compass_msg.z, compass_min.z);
+
+   // subtract out zero point
+   compass_msg.x -= (compass_max.x + compass_min.x)/2.0;
+   compass_msg.y -= (compass_max.y + compass_min.y)/2.0;
+   compass_msg.z -= (compass_max.z + compass_min.z)/2.0;
 //   compass_pub.publish(&compass_msg);
 
    gyro_read();
