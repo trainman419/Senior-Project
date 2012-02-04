@@ -1,0 +1,6 @@
+TODO: Algorithm data flow diagram / loop closure
+
+TODO: actually document the design of the firmware.
+
+TODO: odometry vs estimate error over time (dexter lawn run)
+
