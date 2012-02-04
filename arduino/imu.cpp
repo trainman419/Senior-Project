@@ -167,6 +167,11 @@ void update_imu() {
 
    // RPY estimate from accelerometer
    // TODO
+   accel_est.x = (3.0 * M_PI / 2.0) - atan2(accel_msg.z, accel_msg.x);
+   accel_est.y = (3.0 * M_PI / 2.0) - atan2(hypot(accel_msg.z, accel_msg.x),
+         accel_msg.y);;
+   // no z estimate from accelerometer
+   accel_est.z = imu_state.angular.z;
 }
 
 int16_t gyro_zero[3];
