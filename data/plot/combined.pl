@@ -8,11 +8,13 @@ my $t = 0;
 my $c = 0;
 
 my $start = 0;
+my $x_start = 0;
+my $y_start = 0;
 
 while(<>) {
    if( m/O\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)/ ) {
-      $x += $1;
-      $y += $2;
+      $x += $1 / 10;
+      $y += $2 / 10;
       $t += $3;
       if( $start ) {
          print "$x $y $t $c\n";
@@ -25,8 +27,8 @@ while(<>) {
       # pull starting position out of first postion message
       if( ! $start ) {
          $start = 1;
-         $x = $1;
-         $y = $2;
+         #$x = $1 / 10;
+         #$y = $2 / 10;
          $t = $7;
       }
    }
