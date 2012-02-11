@@ -40,6 +40,7 @@ geometry_msgs::Vector3 gyro_msg;
 
 geometry_msgs::Vector3 compass_min;
 geometry_msgs::Vector3 compass_max;
+float compass_err;
 geometry_msgs::Vector3 gyro_offset;
 
 ros::Publisher compass_pub("compass", &compass_msg);
@@ -98,10 +99,12 @@ void imu_init() {
    compass_max.x = 0;
    compass_max.y = 0;
    compass_max.z = 0;
+
+   compass_err = 0;
 }
 
 geometry_msgs::Vector3 transform(geometry_msgs::Vector3 in,
-      geometry_msgs::Vector3 rpy) {
+      geometry_msgs::Vector3 rpy, bool inverse = false) {
    geometry_msgs::Vector3 out;
    // correlate math on paper with variables
    // theta: z
@@ -134,9 +137,15 @@ geometry_msgs::Vector3 transform(geometry_msgs::Vector3 in,
    float r33 = c_psi * c_phi;
 
    // matrix multiply
-   out.x = in.x * r11 + in.y * r12 + in.z * r13;
-   out.y = in.x * r21 + in.y * r22 + in.z * r23;
-   out.z = in.x * r31 + in.y * r32 + in.z * r33;
+   if( !inverse ) {
+      out.x = in.x * r11 + in.y * r12 + in.z * r13;
+      out.y = in.x * r21 + in.y * r22 + in.z * r23;
+      out.z = in.x * r31 + in.y * r32 + in.z * r33;
+   } else {
+      out.x = in.x * r11 + in.y * r21 + in.z * r31;
+      out.y = in.x * r12 + in.y * r22 + in.z * r32;
+      out.z = in.x * r13 + in.y * r23 + in.z * r33;
+   }
    return out;
 }
 
@@ -160,18 +169,54 @@ void update_imu() {
    // RPY estimation from compass
    // project compass onto the plane using old imu state
    compass_est = transform(compass_msg, imu_state.angular);
-   compass_est.z = atan2(compass_est.y, compass_est.x);
+   compass_est.z = atan2(compass_est.y, compass_est.x) - compass_err;
    // no compass data on roll or pitch. use existing state
-   compass_est.y = imu_state.angular.y;
-   compass_est.x = imu_state.angular.x;
+   //compass_est.y = imu_state.angular.y;
+   //compass_est.x = imu_state.angular.x;
 
    // RPY estimate from accelerometer
-   // TODO
-   accel_est.x = (3.0 * M_PI / 2.0) - atan2(accel_msg.z, accel_msg.x);
-   accel_est.y = (3.0 * M_PI / 2.0) - atan2(hypot(accel_msg.z, accel_msg.x),
+   accel_est.y = (3.0 * M_PI / 2.0) - atan2(accel_msg.z, accel_msg.x);
+   accel_est.x = (3.0 * M_PI / 2.0) - atan2(hypot(accel_msg.z, accel_msg.x),
          accel_msg.y);;
    // no z estimate from accelerometer
-   accel_est.z = imu_state.angular.z;
+   //accel_est.z = imu_state.angular.z;
+
+   // RPY estimate from odomery
+   // TODO: do this properly
+   odom_est.z = imu_state.angular.z;
+
+   // combine sensor data
+   //  this is entirely heuristic and based on intuition
+   float x, y, z;
+
+   // TODO: deal with angular wrap-around on all of these
+
+   // z: yaw/heading
+   //  sources: gyro, compass, odometry
+   //  start with weighted average
+   z = (1.0 * gyro_est.z + 1.0 * compass_est.z + 1.0 * odom_est.z) / 3.0;
+   // if our compass error is too big, update the error value
+   if( fabs( (compass_est.z - z) / z) > 0.1 ) {
+      z = (1.0 * gyro_est.z + 1.0 * odom_est.z) / 2.0;
+      compass_err += compass_est.z - z;
+   } else {
+      // else, try to drive the error metric back to zero
+      compass_err *= 0.99;
+   }
+
+   // y: pitch
+   //  sources: gyro and accelerometer
+   //  weighted average until something better comes along
+   y = (1.0 * gyro_est.y + 1.0 * accel_est.y) / 2.0;
+
+
+   // x: roll
+   //  sources: gyro and accelerometer
+   x = (1.0 * gyro_est.x + 1.0 * accel_est.y) / 2.0;
+
+   imu_state.angular.x = x;
+   imu_state.angular.y = y;
+   imu_state.angular.z = z;
 }
 
 int16_t gyro_zero[3];
