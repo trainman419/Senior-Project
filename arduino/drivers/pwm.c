@@ -37,8 +37,6 @@ TOP = top value, ICRn
 
 #include "pwm.h"
 
-#define F_CPU 16000000
-
 volatile uint16_t * timer_base[] = { 
    0,
    &TCNT1,

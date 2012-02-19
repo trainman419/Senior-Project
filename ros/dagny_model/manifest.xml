@@ -1,0 +1,14 @@
+<package>
+  <description brief="dagny_model">
+
+     dagny_model
+
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/dagny_model</url>
+
+</package>
+
+
