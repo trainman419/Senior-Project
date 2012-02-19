@@ -1,4 +1,2 @@
 ROS_NOBUILD
 build
-msg_gen
-src
