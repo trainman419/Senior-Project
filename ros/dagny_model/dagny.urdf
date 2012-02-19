@@ -1,7 +1,7 @@
 <robot name="dagny">
    <link name="base_link">
       <visual>
-         <origin xyz="0.38 0.152 0" rpy="1.57 0 -1.57"/>
+         <origin xyz="0.41 0.152 0.06" rpy="1.57 0 -1.57"/>
          <geometry>
             <mesh filename="package://dagny_model/body.stl" scale="1 1 1" />
          </geometry>
@@ -34,7 +34,7 @@
    <joint name="fl_wheel_joint" type="fixed">
       <parent link="base_link"/>
       <child link="fl_wheel"/>
-      <origin xyz="0.34 0.12 0" rpy="1.57 0 0"/>
+      <origin xyz="0.335 0.12 0.055" rpy="1.57 0 0"/>
    </joint>
 
    <link name="fr_wheel">
@@ -49,7 +49,7 @@
    <joint name="fr_wheel_joint" type="fixed">
       <parent link="base_link"/>
       <child link="fr_wheel"/>
-      <origin xyz="0.34 -0.12 0" rpy="1.57 0 0"/>
+      <origin xyz="0.335 -0.12 0.055" rpy="1.57 0 0"/>
    </joint>
 
    <link name="rl_wheel">
@@ -64,7 +64,7 @@
    <joint name="rl_wheel_joint" type="fixed">
       <parent link="base_link"/>
       <child link="rl_wheel"/>
-      <origin xyz="0 0.12 0" rpy="1.57 0 0"/>
+      <origin xyz="0 0.12 0.055" rpy="1.57 0 0"/>
    </joint>
 
    <link name="rr_wheel">
@@ -79,6 +79,6 @@
    <joint name="rr_wheel_joint" type="fixed">
       <parent link="base_link"/>
       <child link="rr_wheel"/>
-      <origin xyz="0 -0.12 0" rpy="1.57 0 0"/>
+      <origin xyz="0 -0.12 0.055" rpy="1.57 0 0"/>
    </joint>
 </robot>
