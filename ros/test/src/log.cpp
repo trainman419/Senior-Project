@@ -14,6 +14,7 @@
 #include <nav_msgs/Odometry.h>
 #include <gps_common/GPSFix.h>
 #include <hardware_interface/Compass.h>
+#include <goal_list/GoalList.h>
 
 double dist = 0.0;
 
@@ -51,6 +52,13 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
          msg->pose.covariance[6*1 + 1], //yy
          msg->pose.pose.orientation.x,
          msg->pose.covariance[6*0 + 0]);
+}
+
+void goalsCallback(const goal_list::GoalList::ConstPtr & msg) {
+   std::vector<global_map::Location>::const_iterator itr;
+   for( itr = msg->goals.begin(); itr != msg->goals.end(); itr++ ) {
+      fprintf(logp, "g %d %d\n", itr->col, itr->row);
+   }
 }
 
 int main(int argc, char ** argv) {

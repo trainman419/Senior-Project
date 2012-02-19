@@ -19,15 +19,27 @@ my $r = 0;
 my $pi = 3.141592653;
 my $pi2 = $pi / 2;
 
+my $start = 0;
+my $x_start = 0;
+my $y_start = 0;
+
 while(<>) {
    if( m/P\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)\s+(\-?\d+\.\d+)/ ) {
-      $x = $1;
-      $y = $2;
+      $x = $1 / 10;
+      $y = $2 / 10;
 
-      $xx = $3;
-      $xy = $4;
-      $yx = $5;
-      $yy = $6;
+      if( not $start ) {
+         $start = 1;
+         $x_start = $x;
+         $y_start = $y;
+      }
+      $x -= $x_start;
+      $y -= $y_start;
+
+      $xx = $3 / 10;
+      $xy = $4 / 10;
+      $yx = $5 / 10;
+      $yy = $6 / 10;
 
       $r = $xx + $xy + $yx + $yy  / 4;
 

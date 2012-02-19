@@ -22,7 +22,11 @@ while(<>) {
       $t -= $3*3.1001;
       while( $t < -$pi ) { $t += 2*$pi; }
       while( $t > $pi ) { $t -= 2*$pi; }
-      print "$x $y ";
+
+      print ($x / 10);
+      print " ";
+      print ($y / 10);
+      print " ";
       print ($t + $pi_2);
       print " $c\n";
    }
