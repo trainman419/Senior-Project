@@ -33,7 +33,7 @@ namespace ros {
          tx_buffer(BRAIN, out.buffer, out.pos);
          return 0;
       }
-      led_on();
+      //led_on(); // serialization failed
       return 1;
    }
 
@@ -52,6 +52,7 @@ namespace ros {
       uint16_t s = size;
       if(!b) {
         s = 0;
+        led_on(); // malloc failed
       }
       return AvrHardware::Out(b, s);
    }
@@ -62,7 +63,7 @@ namespace ros {
          ++pos;
       } else {
         fail = 1;
-        led_on();
+//        led_on(); // buffer overrun
       }
    }
 }

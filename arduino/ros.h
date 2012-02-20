@@ -9,7 +9,7 @@
 
 #include <ros/node_handle.h>
 
-#define BUFSZ 4096
+#define BUFSZ 2048
 
 namespace ros {
    class AvrHardware {
