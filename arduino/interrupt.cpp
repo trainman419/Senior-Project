@@ -13,6 +13,7 @@ extern "C" {
 
 #include "steer.h"
 #include "imu.h"
+#include "publish.h"
 
 #define abs(x) ((x)>0?(x):-(x))
 
@@ -61,8 +62,7 @@ int16_t e = 0; // error
 // odometry transmission variables
 volatile uint16_t odom_sz = 0;
 volatile int8_t steer;
-//dagny_msgs::OdometryLite odom;
-//ros::Publisher odom_pub("odometry_lite", &odom);
+Packet<32> odom('O');
 
 // 0.03 meters per tick
 #define Q_SCALE 0.032
@@ -201,12 +201,13 @@ ISR(TIMER0_OVF_vect) {
    if( ticks % 50 == 0 ) {
       double r = steer2radius(steer);
 
-      //odom.twist.linear.x = qspeed  * (Q_SCALE * 0.5); 
-      //odom.twist.linear.y = 0.0;
+      float speed = qspeed * (Q_SCALE * 0.5);
+      odom.reset();
+      odom.append(speed); // linear speed
       if( steer == 0 ) {
-         //odom.twist.angular.z = 0.0;
+         odom.append(0.0f);
       } else {
-         //odom.twist.angular.z = odom.twist.linear.x / r;
+         odom.append(speed / r); // angular speed
       }
 
       // if we've moved, update position
@@ -243,13 +244,12 @@ ISR(TIMER0_OVF_vect) {
       }
 
       // odom position in odom frame
-      //odom.pose.position.x = x;
-      //odom.pose.position.y = y;
-      //odom.pose.position.z = 0.0; // we can't fly
-      //odom.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
-
-      //// publish odometry
-      //odom_pub.publish(&odom);
+      odom.append(x);
+      odom.append(y);
+      odom.append(yaw);
+      // odom: total of 5 floats; 4*5 = 20 bytes
+      odom.finish();
+      publish(odom);
    }
 
    // IMU and GPS loop; run at 20Hz.

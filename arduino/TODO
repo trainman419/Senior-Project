@@ -1,9 +1,12 @@
 Lots of things to do. Time to start writing it down.
-- Fix checksum/memory corruption bug(s)
 - Set up serial input and control for Sonar
 - Set up compass polling and output
-- Set up secondary nodehandle for bluetooth/android
-  - teleop and lockout from android
-  - generic subscription from android
 - Set up bump sensor polling and output
 
+Throw away rosserial:
+- Move back to old protocol.h method
+- Files to convert:
+ - gps.cpp
+ - imu.cpp
+ - main.cpp
+ - sonar.cpp
