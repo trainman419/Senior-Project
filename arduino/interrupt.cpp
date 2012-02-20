@@ -3,6 +3,7 @@
  */
 
 #include <avr/interrupt.h>
+#include <math.h>
 
 extern "C" {
 #include "drivers/serial.h"
@@ -13,9 +14,7 @@ extern "C" {
 #include "steer.h"
 #include "imu.h"
 
-#include "ros.h"
-#include <tf/tf.h>
-#include <dagny_msgs/OdometryLite.h>
+#define abs(x) ((x)>0?(x):-(x))
 
 uint32_t ticks = 0;
 
@@ -62,17 +61,11 @@ int16_t e = 0; // error
 // odometry transmission variables
 volatile uint16_t odom_sz = 0;
 volatile int8_t steer;
-unsigned char out_buffer[128]; // output buffer
-//dagny_msgs::Odometry odom;
-dagny_msgs::OdometryLite odom;
-ros::Publisher odom_pub("odometry_lite", &odom);
+//dagny_msgs::OdometryLite odom;
+//ros::Publisher odom_pub("odometry_lite", &odom);
 
-char tf_odom[] = "odom";
-char tf_base_link[] = "base_link";
 // 0.03 meters per tick
 #define Q_SCALE 0.032
-
-extern ros::NodeHandle nh;
 
 /* set up interrupt handling */
 void interrupt_init(void) {
@@ -91,10 +84,6 @@ void interrupt_init(void) {
    // interrupt on "overflow" (counter match)
    TIMSK0 = (1 << TOIE0);
    OCR0A  = 249; // 250 counts per tick
-   
-   // set up frames in odom message
-   odom.header.frame_id = tf_odom;
-   odom.child_frame_id = tf_base_link;
 }
 
 /* interrupt routine */
@@ -210,17 +199,14 @@ ISR(TIMER0_OVF_vect) {
 
    // wheel encoder and speed transmit; 20Hz
    if( ticks % 50 == 0 ) {
-      // this takes about 1.6ms to run
-      ros::Time current_time = nh.now();
-
       double r = steer2radius(steer);
 
-      odom.twist.linear.x = qspeed  * (Q_SCALE * 0.5); 
-      odom.twist.linear.y = 0.0;
+      //odom.twist.linear.x = qspeed  * (Q_SCALE * 0.5); 
+      //odom.twist.linear.y = 0.0;
       if( steer == 0 ) {
-         odom.twist.angular.z = 0.0;
+         //odom.twist.angular.z = 0.0;
       } else {
-         odom.twist.angular.z = odom.twist.linear.x / r;
+         //odom.twist.angular.z = odom.twist.linear.x / r;
       }
 
       // if we've moved, update position
@@ -256,19 +242,14 @@ ISR(TIMER0_OVF_vect) {
          old_qcount = qcount;
       }
 
-      // odom header
-      odom.header.stamp = current_time;
-      odom.header.frame_id = tf_odom;
-      odom.child_frame_id = tf_base_link;
-
       // odom position in odom frame
-      odom.pose.position.x = x;
-      odom.pose.position.y = y;
-      odom.pose.position.z = 0.0; // we can't fly
-      odom.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
+      //odom.pose.position.x = x;
+      //odom.pose.position.y = y;
+      //odom.pose.position.z = 0.0; // we can't fly
+      //odom.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
 
-      // publish odometry
-      odom_pub.publish(&odom);
+      //// publish odometry
+      //odom_pub.publish(&odom);
    }
 
    // IMU and GPS loop; run at 20Hz.

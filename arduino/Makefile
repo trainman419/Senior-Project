@@ -12,7 +12,7 @@ include Makefile.avr
 VPATH=drivers:ros_lib
 
 CSRC=motor.c i2c.c 
-CXXSRC=gps.cpp interrupt.cpp main.cpp ros.cpp steer.cpp TinyGPS.cpp time.cpp duration.cpp sonar.cpp imu.cpp
+CXXSRC=gps.cpp interrupt.cpp main.cpp steer.cpp TinyGPS.cpp sonar.cpp imu.cpp
 DRIVERS=adc.o bump.o compass.o power.o pwm.o serial.o serial-interrupt.o servo.o
 
 OBJS=$(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
@@ -44,15 +44,15 @@ program: $(TRG).hex
 size: $(TRG).elf
 	avr-size $(TRG).elf
 
-MAKE_LIBRARY=rosrun rosserial_client make_library.py
+#MAKE_LIBRARY=rosrun rosserial_client make_library.py
 
-roslib:
-	rm -r ros_lib || true
-	cp -r $(shell rospack find rosserial_client)/src/ros_lib .
-	rosrun rosserial_client make_library.py . std_msgs tf rosserial_msgs geometry_msgs nav_msgs
-	rosrun rosserial_client make_library.py . gps_simple
-	rosrun rosserial_client make_library.py . dagny_msgs
-	ln -s ../ros.h ros_lib/ros.h
+#roslib:
+#	rm -r ros_lib || true
+#	cp -r $(shell rospack find rosserial_client)/src/ros_lib .
+#	rosrun rosserial_client make_library.py . std_msgs tf rosserial_msgs geometry_msgs nav_msgs
+#	rosrun rosserial_client make_library.py . gps_simple
+#	rosrun rosserial_client make_library.py . dagny_msgs
+#	ln -s ../ros.h ros_lib/ros.h
 
 #MAKE_LIBRARY=./make_library.py
 #

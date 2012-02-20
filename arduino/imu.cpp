@@ -18,10 +18,7 @@ extern "C" {
 #include "i2c.h"
 }
 
-#include "ros.h"
-#include <geometry_msgs/Vector3.h>
-#include <geometry_msgs/Twist.h>
-
+#include "twist.h"
 
 #define I2C_ACCEL 0xA6
 #define I2C_COMPASS 0x3C
@@ -34,22 +31,18 @@ extern "C" {
 #define min(a, b) ((a)<(b))?(a):(b)
 #define max(a, b) ((a)>(b))?(a):(b)
 
-geometry_msgs::Vector3 compass_msg;
-geometry_msgs::Vector3 accel_msg;
-geometry_msgs::Vector3 gyro_msg;
+Vector3 compass_msg;
+Vector3 accel_msg;
+Vector3 gyro_msg;
 
-geometry_msgs::Vector3 compass_min;
-geometry_msgs::Vector3 compass_max;
+Vector3 compass_min;
+Vector3 compass_max;
 float compass_err;
-geometry_msgs::Vector3 gyro_offset;
-
-ros::Publisher compass_pub("compass", &compass_msg);
-ros::Publisher accel_pub("accel", &accel_msg);
-ros::Publisher gyro_pub("gyro", &gyro_msg);
+Vector3 gyro_offset;
 
 // IMU State
 //  angles in Yaw Pitch Roll (ZYX) order
-geometry_msgs::Twist imu_state;
+Twist imu_state;
 
 void imu_init() {
    i2c_init();
@@ -92,9 +85,9 @@ void imu_init() {
    compass_err = 0;
 }
 
-geometry_msgs::Vector3 transform(geometry_msgs::Vector3 in,
-      geometry_msgs::Vector3 rpy, bool inverse = false) {
-   geometry_msgs::Vector3 out;
+Vector3 transform(Vector3 in,
+      Vector3 rpy, bool inverse = false) {
+   Vector3 out;
    // correlate math on paper with variables
    // theta: z
    // phi: y
@@ -143,11 +136,11 @@ uint8_t common_buf[8];
 // read compass, accelerometer and gyro and produce pose estimates
 void update_imu() {
    // all estimates are absolute
-   geometry_msgs::Vector3 gyro_est;    // RPY angles
-   geometry_msgs::Vector3 compass_est; // RPY angles
-   geometry_msgs::Vector3 accel_est;   // RPY estimate from accelerometer
+   Vector3 gyro_est;    // RPY angles
+   Vector3 compass_est; // RPY angles
+   Vector3 accel_est;   // RPY estimate from accelerometer
 
-   geometry_msgs::Vector3 odom_est;    // XYZ estimate from odometry
+   Vector3 odom_est;    // XYZ estimate from odometry
 
    // RPY estimation from gyro
    // TODO: make sure scaling on gyro is accurate
@@ -206,6 +199,8 @@ void update_imu() {
    imu_state.angular.x = x;
    imu_state.angular.y = y;
    imu_state.angular.z = z;
+
+   //imu_pub.publish(&imu_state);
 }
 
 int16_t gyro_zero[3];
@@ -247,7 +242,9 @@ void gyro_done(uint8_t * buf) {
       }
    }
 
-   gyro_pub.publish(&gyro_msg);
+   //gyro_pub.publish(&gyro_msg);
+
+   update_imu();
 }
 // read the gyro
 void gyro_read() {
@@ -299,7 +296,7 @@ void accel_done(uint8_t * buf) {
 
    accel = buf[4] | (buf[5] << 8);
    accel_msg.z = ((accel / 256.0) + 3*accel_msg.z) / 4;
-   accel_pub.publish(&accel_msg);
+   //accel_pub.publish(&accel_msg);
 
    compass_read();
 }

@@ -11,14 +11,12 @@ extern "C" {
 #include "main.h"
 }
 
-#include "ros.h"
-#include <gps_simple/SimpleGPS.h>
 #include "TinyGPS.h"
 
 uint8_t gps_port;
-gps_simple::SimpleGPS gps_msg;
-ros::Publisher gps_pub("gps", &gps_msg);
-char gps_frame[] = "";
+//gps_simple::SimpleGPS gps_msg;
+//ros::Publisher gps_pub("gps", &gps_msg);
+//char gps_frame[] = "";
 
 /* initialize GPS listener on serial port */
 void gps_init(uint8_t port) {
@@ -27,8 +25,6 @@ void gps_init(uint8_t port) {
    serial_baud(port, 9600);
 
    gps_port = port;
-
-   gps_msg.header.frame_id = gps_frame;
 }
 
 // output packet for GPS
@@ -46,10 +42,10 @@ void gps_spinOnce(void) {
       if(gps.encode(gps_input)) {
          gps.get_position(&lat, &lon);
 
-         gps_msg.latitude = lat;
-         gps_msg.longitude = lon;
+         //gps_msg.latitude = lat;
+         //gps_msg.longitude = lon;
          // TODO: fill in rest of GPS message
-         gps_pub.publish(&gps_msg);
+         //gps_pub.publish(&gps_msg);
       } 
    }
 }

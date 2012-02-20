@@ -8,15 +8,9 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <geometry_msgs/Twist.h>
 
 #include <stdlib.h>
 #include <util/delay.h>
-
-
-#include "ros.h"
-#include <std_msgs/Int8.h>
-#include <std_msgs/UInt16.h>
 
 extern "C" {
 #include "drivers/pwm.h"
@@ -32,6 +26,7 @@ extern "C" {
 #include "drivers/led.h"
 }
 
+#include "twist.h"
 #include "sonar.h"
 #include "interrupt.h"
 #include "gps.h"
@@ -55,15 +50,13 @@ extern "C" {
     *  turn on LED and loop forever */
    void __cxa_pure_virtual() {
       while(1) {
-         led_on();
+         //led_on(); // pure virtual function call
       }
    }
 }
 
-ros::NodeHandle nh;
-
 // callback on cmd_vel
-void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
+void vel_cb( const Twist & cmd_vel ) {
    // internal speed specified as 2000/(ms per count)
    // 2 / (sec per count)
    // 2 * counts / sec
@@ -95,28 +88,24 @@ void vel_cb( const geometry_msgs::Twist & cmd_vel ) {
    }
    servo_set(0, steer + STEER_OFFSET);
 }
-ros::Subscriber<geometry_msgs::Twist> vel_sub("cmd_vel", & vel_cb);
+//ros::Subscriber<Twist> vel_sub("cmd_vel", & vel_cb);
 
-void steer_cb( const std_msgs::Int8 & s ) {
-   steer = s.data;
+void steer_cb( int8_t s ) {
+   steer = s;
    servo_set(0, steer + STEER_OFFSET);
 }
-ros::Subscriber<std_msgs::Int8> steer_sub("steer", &steer_cb);
-
-// publish battery state
-std_msgs::Int8 battery;
-ros::Publisher battery_pub("battery", &battery);
+//ros::Subscriber<std_msgs::Int8> steer_sub("steer", &steer_cb);
 
 // publish idle time data
-std_msgs::UInt16 idle;
-ros::Publisher idle_pub("avr_idle", &idle);
+uint16_t idle;
+//ros::Publisher idle_pub("avr_idle", &idle);
 uint32_t idle_last = 0;
-
 
 // statically-allocate space for malloc to work from
 //char buffer[BUFSZ];
 
 int main() {
+   pwr_on();
    // nothing to see here. move along.
    // setting up malloc to only use our internal buffer
    //__malloc_heap_start = buffer;
@@ -157,21 +146,6 @@ int main() {
    // imu initialization requires interrupts to be enabled.
    imu_init();
 
-   nh.initNode();
-   nh.advertise(gps_pub);
-   nh.advertise(odom_pub);
-//   nh.advertise(battery_pub);
-   nh.advertise(idle_pub);
-   nh.advertise(sonar_pub);
-
-   // advertise individual IMU topics
-   nh.advertise(compass_pub);
-   nh.advertise(accel_pub);
-   nh.advertise(gyro_pub);
-
-   nh.subscribe(vel_sub);
-   nh.subscribe(steer_sub);
-
    interrupt_init();
 
    // power up!
@@ -180,20 +154,19 @@ int main() {
    while(1) {
       gps_spinOnce();
       sonar_spinOnce();
-      nh.spinOnce();
 
       _delay_ms(1);
-      idle.data++;
+      idle++;
       if( ticks - idle_last > 1000 ) {
          idle_last += 1000;
-         idle_pub.publish(&idle);
-         idle.data = 0;
+         //idle_pub.publish(&idle);
+         idle = 0;
       }
       // currently about 740 idle ticks
    }
    
    // if we're here, we're done. power down.
-   pwr_off();
+//   pwr_off();
    // loop forever, in case the arduino is on external power
    while(1);
 }
