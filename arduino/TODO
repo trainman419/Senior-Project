@@ -10,3 +10,11 @@ Throw away rosserial:
  - imu.cpp
  - main.cpp
  - sonar.cpp
+
+Notes on protocol.h
+- Publisher shouldn't be a subclass of Packet
+- templated append function instead of many different functions
+- don't template Packet on size
+ - will save lots of code space
+- don't template Publisher on size?
+ - pass in statically-allocated buffer instead?
