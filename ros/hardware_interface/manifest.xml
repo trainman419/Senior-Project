@@ -10,10 +10,8 @@
   <url>http://ros.org/wiki/hardware_interface</url>
   <depend package="std_msgs"/>
   <depend package="sensor_msgs"/>
-  <depend package="gps_common"/>
   <depend package="roscpp"/>
-  <depend package="global_map"/>
-  <depend package="goal_list"/>
+  <depend package="nav_msgs"/>
 
 </package>
 

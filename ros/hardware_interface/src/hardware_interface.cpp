@@ -17,13 +17,15 @@
 
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
-#include "gps_common/GPSFix.h"
 #include "nav_msgs/Odometry.h"
+/*
+#include "gps_common/GPSFix.h"
 #include "hardware_interface/Compass.h"
 #include "hardware_interface/Control.h"
 #include "global_map/RevOffset.h"
 #include "global_map/Offset.h"
 #include "goal_list/GoalList.h"
+*/
 
 #include "protocol.h"
 
@@ -35,11 +37,11 @@ int laser_ready;
 // for publishing odometry and compass data
 ros::Publisher odo_pub;
 ros::Publisher compass_pub;
-ros::Publisher goalList_pub;
+//ros::Publisher goalList_pub;
 
 // for resolving offsets back to lat/lon for our user interface
-ros::ServiceClient r_offset;
-ros::ServiceClient offset;
+//ros::ServiceClient r_offset;
+//ros::ServiceClient offset;
 
 struct {
    nav_msgs::Odometry last_pos;
@@ -71,9 +73,10 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
       msg->angle_max * 180.0 / M_PI);
       */
 
-   laser_ready = 1;
+   //laser_ready = 1;
 }
 
+/*
 int gps_ready = 0;
 Packet<32> gps_packet('G');
 
@@ -127,6 +130,7 @@ void controlCallback(const hardware_interface::Control::ConstPtr & msg) {
 
    control_ready = 1;
 }
+*/
 
 #define handler(foo) void foo(Packet<250> & p)
 typedef void (*handler_ptr)(Packet<250> & p);
@@ -163,7 +167,6 @@ handler(shutdown_h) {
    }
    if( shutdown ) {
       ROS_INFO("Received shutdown");
-      // FIXME: shutdown here
       if( system("sudo poweroff") < 0 ) {
          ROS_ERROR("Failed to execute shutdown command");
       }
@@ -176,53 +179,12 @@ handler(shutdown_h) {
    }
 }
 
-int gps_file;
-#define GPS_PIPE "/home/hendrix/gps/gps.out"
-
-// set up whatever we decide to do for GPS
-void gps_setup(void) {
-   gps_file = -1;
-   // create a named FIFO and open it for writing
-
-   struct stat file_info;
-   int res = stat(GPS_PIPE, &file_info);
-   // if our stat filed or the file isn't a fifo, destroy it and make a fifo
-   if( res < 0 || !S_ISFIFO(file_info.st_mode) ) {
-      ROS_INFO("File %s wasn't a FIFO; destroying it and making a FIFO",
-            GPS_PIPE);
-      // remove old whatever
-      unlink(GPS_PIPE);
-      // create our fifo
-      if( mkfifo(GPS_PIPE, 0644) < 0 ) {
-         ROS_PERROR("Error creating fifo");
-      return;
-      }
-   }
-   // open fifo for writing
-   if( (gps_file = open(GPS_PIPE, O_RDWR | O_TRUNC | O_NONBLOCK, 0644)) < 0 ) {
-      ROS_PERROR("Error opening GPS pipe");
-      return;
-   }
-
-   // open gps log file for writing
-   /*gps_file = open("/home/hendrix/log/gps.log", 
-         O_WRONLY | O_APPEND | O_CREAT, 0644);
-   if( gps_file < 0 ) {
-      ROS_ERROR("Error opening GPS log file: %s", strerror(errno));
-   } else {
-      write(gps_file, "GPS log starting\n", 17);
-   }*/
-}
-
-void gps_end(void) {
-   if( gps_file >= 0 ) 
-      close(gps_file);
-}
-
 handler(gps_h) {
+   // TODO: rewrite this now that the arduino is parsing GPS
    // take data from GPS and spew it to a fifo somewhere on disk
    //
    // for now, just de-encapsulate and print it to info
+   /*
    int l = p.outsz() - 1;
    char * buf = (char*)malloc(l + 2);
    memcpy(buf, p.outbuf() + 1, l);
@@ -235,6 +197,7 @@ handler(gps_h) {
       }
    }
    free(buf);
+   */
 }
 
 // set up odometry handling
@@ -245,6 +208,8 @@ void odometry_setup(void) {
 #define Q_SCALE 0.29
 
 handler(odometry_h) {
+   // TODO: rewrite this now that the arduino is handling odometry tracking
+   /*
    static int last_q = 0;
    int rcount = p.readu16();
    int lcount = p.readu16();
@@ -258,10 +223,8 @@ handler(odometry_h) {
    if( abs(last_q - qcount) > 100 ) last_q = qcount;
      // a jump of 100 corresponds to 3 meters
 
-/*
    ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
             rcount, lcount, qcount, rspeed, lspeed, qspeed);
-            */
    ROS_INFO("Odo: %d, %d", qcount, steer);
    double dx = 0.0; // change in X
    double dy = 0.0; // change in Y
@@ -330,18 +293,24 @@ handler(odometry_h) {
    odo_pub.publish(update);
 
    last_q = qcount;
+   */
 }
 
 handler(compass_h) {
+   // TODO: rewrite this
+   /*
    int x = p.reads16();
    int y = p.reads16();
    //ROS_INFO("Compass reading (%d, %d): %f", x, y, atan2(-y, x)*180/M_PI);
    hardware_interface::Compass c;
    c.heading = atan2(-y, x);
    compass_pub.publish(c);
+   */
 }
 
 handler(gpslist_h) {
+   // TODO: update this
+   /*
    int cnt = p.readu8();
    int cursor = p.readu8();
    double * lat = (double*)malloc(cnt*sizeof(double));
@@ -366,6 +335,7 @@ handler(gpslist_h) {
    goalList_pub.publish(list);
    free(lat);
    free(lon);
+   */
 }
 
 FILE * battery_log;
@@ -402,7 +372,7 @@ handler(battery_h) {
    }
    cnt++;
 
-   //ROS_INFO("Idle count: %d", idle);
+   ROS_INFO("Idle count: %d", idle);
 }
 
 #define IN_BUFSZ 1024
@@ -423,35 +393,28 @@ int main(int argc, char ** argv) {
    for( i=0; i<256; i++ ) {
       handlers[i] = no_handler;
    }
-   handlers['Z'] = shutdown_h;
+   //handlers['Z'] = shutdown_h;
 
    odometry_setup();
    handlers['O'] = odometry_h;
-   handlers['C'] = compass_h;
+   //handlers['C'] = compass_h;
 
-   gps_setup();
-   handlers['G'] = gps_h;
-   handlers['L'] = gpslist_h;
-   battery_setup();
-   handlers['b'] = battery_h;
+   //gps_setup();
+   //handlers['G'] = gps_h;
+   //handlers['L'] = gpslist_h;
+   //battery_setup();
+   //handlers['b'] = battery_h;
 
    ros::init(argc, argv, "hardware_interface");
 
    ros::NodeHandle n;
 
-   // TODO: set up publishers here. I don't think we have any yet
-   //  will probably want publishers for battery, sonar, wheel and bump data
-
-   // deal with GPS data some other way; probably write it to a fifo and have
-   //  gpsd pick it up. TODO
-   //
-   
    // I'm going to hardcode the port and settings because this is hardware-
    // specific anyway
    // open serial port
-   int serial = open("/dev/ttyS1", O_RDWR | O_NOCTTY);
+   int serial = open("/dev/ttyACM1", O_RDWR | O_NOCTTY);
    if( serial < 0 ) {
-      perror("Failed to open /dev/ttyS1");
+      perror("Failed to open /dev/ttyACM1");
       // die. ungracefully.
       return -1;
    }
@@ -464,12 +427,6 @@ int main(int argc, char ** argv) {
    tio.c_cc[VMIN] = 0;
    tio.c_cc[VTIME] = 0;
 
-   /*ROS_INFO("c_iflag %X", tio.c_iflag);
-   ROS_INFO("INLCR %X", INLCR);
-   ROS_INFO("IGNCR %X", IGNCR);
-   ROS_INFO("ICRNL %X", ICRNL);
-   ROS_INFO("IXON  %X", IXON);
-   ROS_INFO("IXOFF  %X", IXOFF);*/
    // no input options, just normal input
    tio.c_iflag = 0;
 
@@ -481,15 +438,16 @@ int main(int argc, char ** argv) {
 
 //   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
    //ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
-   ros::Subscriber pos_sub = n.subscribe("position", 5, posCallback);
-   ros::Subscriber control_sub = n.subscribe("control", 5, controlCallback);
+   //ros::Subscriber pos_sub = n.subscribe("position", 5, posCallback);
+   // TODO: update this to take ackermann_cmd
+   //ros::Subscriber control_sub = n.subscribe("control", 5, controlCallback);
 
-   compass_pub = n.advertise<hardware_interface::Compass>("compass", 10);
+   //compass_pub = n.advertise<hardware_interface::Compass>("compass", 10);
    odo_pub = n.advertise<nav_msgs::Odometry>("base_odometry", 100);
-   goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
+   //goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
 
-   r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
-   offset = n.serviceClient<global_map::Offset>("Offset");
+   //r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
+   //offset = n.serviceClient<global_map::Offset>("Offset");
 
    ros::Rate loop_rate(20);
 
@@ -532,10 +490,12 @@ int main(int argc, char ** argv) {
       ros::spinOnce();
 
       // write pending data to serial port
+      /*
       if( gps_ready ) {
          cnt = write(serial, gps_packet.outbuf(), gps_packet.outsz());
          gps_ready = 0;
       }
+      */
 
       //ROS_INFO("start laser transmit");
       if( laser_ready ) {
@@ -548,6 +508,7 @@ int main(int argc, char ** argv) {
          laser_ready = 0;
       }
 
+      /*
       if( control_ready ) {
          cnt = write(serial, control_packet.outbuf(), control_packet.outsz());
          //const char * data = control_packet.outbuf();
@@ -557,9 +518,8 @@ int main(int argc, char ** argv) {
          }
          control_ready = 0;
       }
+      */
 
       loop_rate.sleep();
    }
-
-   gps_end();
 }
