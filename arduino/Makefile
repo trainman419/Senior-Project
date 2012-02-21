@@ -12,7 +12,7 @@ include Makefile.avr
 VPATH=drivers:ros_lib
 
 CSRC=motor.c i2c.c 
-CXXSRC=gps.cpp interrupt.cpp main.cpp steer.cpp TinyGPS.cpp sonar.cpp imu.cpp
+CXXSRC=gps.cpp interrupt.cpp main.cpp steer.cpp TinyGPS.cpp sonar.cpp imu.cpp protocol.cpp
 DRIVERS=adc.o bump.o compass.o power.o pwm.o serial.o serial-interrupt.o servo.o
 
 OBJS=$(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
@@ -69,7 +69,10 @@ size: $(TRG).elf
 clean:
 	rm *.o *.i *.ii *.s *.hex || true
 
+.PHONY: lines
+lines:
+	./lines.pl *.c *.cpp *.h drivers/*.h drivers/*.c   
+
 #include dependency rules
 include $(CSRC:%.c=.%.mk)
 include $(CXXSRC:%.cpp=.%.mk)
-
