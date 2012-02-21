@@ -32,6 +32,7 @@ extern "C" {
 #include "gps.h"
 #include "steer.h"
 #include "imu.h"
+#include "publish.h"
 
 #define CLK 16000
 
@@ -98,7 +99,7 @@ void steer_cb( int8_t s ) {
 
 // publish idle time data
 uint16_t idle;
-//ros::Publisher idle_pub("avr_idle", &idle);
+Publisher<8> idle_pub('I');
 uint32_t idle_last = 0;
 
 // statically-allocate space for malloc to work from
@@ -159,7 +160,9 @@ int main() {
       idle++;
       if( ticks - idle_last > 1000 ) {
          idle_last += 1000;
-         //idle_pub.publish(&idle);
+         idle_pub.reset();
+         idle_pub.append(idle);
+         idle_pub.finish();
          idle = 0;
       }
       // currently about 740 idle ticks

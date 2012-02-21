@@ -11,12 +11,14 @@ extern "C" {
 #include "main.h"
 }
 
+#include "publish.h"
 #include "TinyGPS.h"
 
 uint8_t gps_port;
 //gps_simple::SimpleGPS gps_msg;
 //ros::Publisher gps_pub("gps", &gps_msg);
 //char gps_frame[] = "";
+Publisher<16> gps_pub('G');
 
 /* initialize GPS listener on serial port */
 void gps_init(uint8_t port) {
@@ -42,10 +44,11 @@ void gps_spinOnce(void) {
       if(gps.encode(gps_input)) {
          gps.get_position(&lat, &lon);
 
-         //gps_msg.latitude = lat;
-         //gps_msg.longitude = lon;
+         gps_pub.reset();
+         gps_pub.append(lat);
+         gps_pub.append(lon);
          // TODO: fill in rest of GPS message
-         //gps_pub.publish(&gps_msg);
+         gps_pub.finish();
       } 
    }
 }

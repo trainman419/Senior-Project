@@ -1,20 +1,17 @@
 Lots of things to do. Time to start writing it down.
 - Set up serial input and control for Sonar
-- Set up compass polling and output
+- Set up IMU polling and output
 - Set up bump sensor polling and output
 
 Throw away rosserial:
 - Move back to old protocol.h method
 - Files to convert:
- - gps.cpp
  - imu.cpp
+  - convert accel, gyro, compass and imu publishers
  - main.cpp
- - sonar.cpp
+  - convert subscribers
 
 Notes on protocol.h
-- Publisher shouldn't be a subclass of Packet
 - templated append function instead of many different functions
-- don't template Packet on size
- - will save lots of code space
 - don't template Publisher on size?
  - pass in statically-allocated buffer instead?

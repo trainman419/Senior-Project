@@ -11,6 +11,8 @@ extern "C" {
 #include "drivers/serial.h"
 }
 
+#include "publish.h"
+
 #define SONAR_TIMEOUT 200
 #define SONAR_DELAY 20
 
@@ -25,8 +27,7 @@ uint8_t sonar_tmp;
 extern uint32_t ticks;
 uint32_t last_sonar = 0;
 
-//std_msgs::UInt8 sonar_msg;
-//ros::Publisher sonar_pub("sonar", &sonar_msg);
+Publisher<12> sonar_pub('S');
 
 /* initalize sonar driver */
 void sonar_init(uint8_t port) {
@@ -77,8 +78,14 @@ void sonar_spinOnce(void) {
         case 4:
           if( input == '\r' ) {
             sonar_value[current_sonar] = sonar_tmp;
-            //sonar_msg.data = sonar_tmp;
-            //sonar_pub.publish(&sonar_msg);
+            // if this is the first sonar, reset
+            if( current_sonar == 0 ) 
+               sonar_pub.reset();
+
+            sonar_pub.append(sonar_tmp);
+            // if this is the last sonar, send
+            if( current_sonar == (NUM_SONARS-1) )
+               sonar_pub.finish();
           }
           break;
       }
