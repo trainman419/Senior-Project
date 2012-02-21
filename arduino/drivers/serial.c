@@ -43,12 +43,12 @@ uint8_t rx_byte(uint8_t port) {
 /* send circular fifo */
 uint8_t tx_head[4]; /* next writeable byte */
 volatile uint8_t tx_size[4]; /* number of bytes in buffer */
-uint8_t * tx_ptrs[4][PTR_SZ];
-uint16_t tx_szs[4][PTR_SZ];
+const uint8_t * tx_ptrs[4][PTR_SZ];
+uint16_t * tx_szs[4][PTR_SZ];
 uint16_t tx_pos[4] = {0, 0, 0, 0};
 
 /* transmit an entire buffer */
-void tx_buffer(uint8_t port, uint8_t * buf, uint16_t bufsz) {
+void tx_buffer(uint8_t port, const uint8_t * buf, uint16_t * bufsz) {
 wait:
    while(tx_size[port] >= PTR_SZ);
 

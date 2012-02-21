@@ -62,7 +62,7 @@ int16_t e = 0; // error
 // odometry transmission variables
 volatile uint16_t odom_sz = 0;
 volatile int8_t steer;
-Packet<32> odom('O');
+Publisher<32> odom('O');
 
 // 0.03 meters per tick
 #define Q_SCALE 0.032
@@ -249,7 +249,6 @@ ISR(TIMER0_OVF_vect) {
       odom.append(yaw);
       // odom: total of 5 floats; 4*5 = 20 bytes
       odom.finish();
-      publish(odom);
    }
 
    // IMU and GPS loop; run at 20Hz.

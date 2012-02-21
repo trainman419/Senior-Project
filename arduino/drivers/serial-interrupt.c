@@ -15,8 +15,8 @@ extern uint8_t rx_buf[4][BUF_SZ];
 extern uint8_t tx_head[4]; /* next writeable byte */
 extern volatile uint8_t tx_size[4]; /* number of bytes in buffer */
 
-extern uint8_t * tx_ptrs[4][PTR_SZ];
-extern uint16_t tx_szs[4][PTR_SZ];
+extern const uint8_t * tx_ptrs[4][PTR_SZ];
+extern uint16_t * tx_szs[4][PTR_SZ];
 extern uint16_t tx_pos[4];
 
 #define RX(port, udr, p) ISR(port) { \
@@ -35,7 +35,7 @@ RX(USART3_RX_vect, UDR3, 3);
  *
  * Implementation:
  * store a circular buffer of pointers to buffers and buffer sizes; when the
- * interrupt is done transmitting, free() the buffer.
+ * interrupt is done transmitting, set the buffer size to 0
  */
 
 #define TX(port, ucsr, udr, pn) ISR(port) { \
@@ -44,10 +44,10 @@ RX(USART3_RX_vect, UDR3, 3);
       uint8_t b = tx_ptrs[pn][p][tx_pos[pn]]; \
       udr = b; \
       tx_pos[pn]++; \
-      if( tx_pos[pn] >= tx_szs[pn][p] ) { \
+      if( tx_pos[pn] >= *tx_szs[pn][p] ) { \
+         *tx_szs[pn][p] = 0; \
          tx_pos[pn] = 0; \
          tx_size[pn]--; \
-         free(tx_ptrs[pn][p]); \
       } \
    } else { \
 	   ucsr &= ~(1 << 5); /* disable send interrupt */ \
