@@ -10,8 +10,11 @@ Throw away rosserial:
   - convert accel, gyro, compass and imu publishers
  - main.cpp
   - convert subscribers
+- Update hardware_interface as appropriate
+ - accept incoming imu data
 
 Notes on protocol.h
 - templated append function instead of many different functions
+ - implemented in Publisher; not in Packet yet.
 - don't template Publisher on size?
  - pass in statically-allocated buffer instead?

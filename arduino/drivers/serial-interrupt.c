@@ -1,7 +1,6 @@
 #include "serial.h"
 #include "led.h"
 
-#include <stdlib.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 

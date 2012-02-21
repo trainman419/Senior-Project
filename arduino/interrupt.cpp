@@ -62,7 +62,8 @@ int16_t e = 0; // error
 // odometry transmission variables
 volatile uint16_t odom_sz = 0;
 volatile int8_t steer;
-Publisher<32> odom('O');
+// (5 floats + overhead)*2 = 64
+Publisher<64> odom('O');
 
 // 0.03 meters per tick
 #define Q_SCALE 0.032
@@ -254,6 +255,6 @@ ISR(TIMER0_OVF_vect) {
    // IMU and GPS loop; run at 20Hz.
    // run at a time when the odometry calculations aren't running
    if( ticks % 50 == 24 ) {
-      imu_read(); // read the IMU
+//      imu_read(); // read the IMU
    }
 }

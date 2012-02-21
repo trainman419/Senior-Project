@@ -11,23 +11,18 @@
 #include <termios.h>
 #include <math.h>
 #include <errno.h>
-//#include <stropts.h>
 
 #include <set>
 
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
-#include "nav_msgs/Odometry.h"
-/*
-#include "gps_common/GPSFix.h"
-#include "hardware_interface/Compass.h"
-#include "hardware_interface/Control.h"
-#include "global_map/RevOffset.h"
-#include "global_map/Offset.h"
-#include "goal_list/GoalList.h"
-*/
+#include <ros/ros.h>
+#include <sensor_msgs/LaserScan.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Twist.h>
+#include <tf/transform_broadcaster.h>
+
 
 #include "protocol.h"
+#include "steer.h"
 
 using namespace std;
 
@@ -75,6 +70,49 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
 
    //laser_ready = 1;
 }
+
+int cmd_ready = 0;
+char cmd_buf[12];
+Packet cmd_packet('C', 12, cmd_buf);
+
+// TODO: subscribe to ackermann_msgs::AckermannDrive too/instead
+void cmdCallback( const geometry_msgs::Twist::ConstPtr & cmd_vel ) {
+   // internal speed specified as 2000/(ms per count)
+   // 2 / (sec per count)
+   // 2 * counts / sec
+   // ( 1 count = 0.03 m )
+   // 1/2 * 0.032 m / sec
+   // 0.016 m / sec
+   // target speed in units of 0.016 m / sec
+   int16_t target_speed = cmd_vel->linear.x * 62.5;
+   // angular z > 0 is left
+   // vr = vl / r
+   // r = vl / vr
+   int8_t steer = 0;
+   if( cmd_vel->angular.z == 0.0 ) {
+      steer = 0;
+   } else {
+      float radius = fabs(cmd_vel->linear.x / cmd_vel->angular.z);
+      int16_t tmp = radius2steer(radius);
+
+      if( tmp < -120 ) 
+         tmp = -120;
+      if( tmp > 120 ) 
+         tmp = 120;
+
+      if( cmd_vel->angular.z > 0 ) {
+         steer = -tmp;
+      } else {
+         steer = tmp;
+      }
+   }
+   cmd_packet.reset();
+   cmd_packet.append(target_speed);
+   cmd_packet.append(steer);
+   cmd_packet.finish();
+   cmd_ready = 1;
+}
+
 
 /*
 int gps_ready = 0;
@@ -132,8 +170,8 @@ void controlCallback(const hardware_interface::Control::ConstPtr & msg) {
 }
 */
 
-#define handler(foo) void foo(Packet<250> & p)
-typedef void (*handler_ptr)(Packet<250> & p);
+#define handler(foo) void foo(Packet & p)
+typedef void (*handler_ptr)(Packet & p);
 
 handler_ptr handlers[256];
 
@@ -144,7 +182,7 @@ handler(no_handler) {
    memcpy(buf, in, l);
    buf[l] = 0;
 
-   char * tmpbuf = (char*)malloc(5*l);
+   char * tmpbuf = (char*)malloc(5*l + 1);
    int i;
    for( i=0; i<l; i++ ) {
       sprintf(tmpbuf + (i*5), "0x%02X ", 0xFF & buf[i+1]);
@@ -154,6 +192,7 @@ handler(no_handler) {
    ROS_INFO("No handler for message: %02X(%d) %s", buf[0], l, tmpbuf);
 
    free(buf);
+   free(tmpbuf);
 }
 
 handler(shutdown_h) {
@@ -181,23 +220,13 @@ handler(shutdown_h) {
 
 handler(gps_h) {
    // TODO: rewrite this now that the arduino is parsing GPS
-   // take data from GPS and spew it to a fifo somewhere on disk
-   //
-   // for now, just de-encapsulate and print it to info
-   /*
-   int l = p.outsz() - 1;
-   char * buf = (char*)malloc(l + 2);
-   memcpy(buf, p.outbuf() + 1, l);
-   buf[l] = 0;
-//   ROS_INFO("Received GPS: %s", buf);
-   if( gps_file >= 0 ) {
-      buf[l] = '\n';
-      if( write(gps_file, buf, l+1) != l+1 ) {
-         ROS_INFO("Write to GPS file failed");
-      }
-   }
-   free(buf);
-   */
+   // message format
+   // int32_t lat
+   // int32_t lon
+   int32_t lat = p.reads32();
+   int32_t lon = p.reads32();
+   ROS_INFO("GPS lat: %d lon: %d", lat, lon);
+   // TODO: convert this into an appropriate message type and publish
 }
 
 // set up odometry handling
@@ -208,92 +237,35 @@ void odometry_setup(void) {
 #define Q_SCALE 0.29
 
 handler(odometry_h) {
-   // TODO: rewrite this now that the arduino is handling odometry tracking
-   /*
-   static int last_q = 0;
-   int rcount = p.readu16();
-   int lcount = p.readu16();
-   int qcount = p.readu16();
-   int rspeed = p.reads16();
-   int lspeed = p.reads16();
-   int qspeed = p.reads16();
-   int steer = p.reads8();
+   static tf::TransformBroadcaster odom_tf;
+   // message format:
+   // float linear
+   // float angular
+   // float x
+   // float y
+   // float yaw
+   nav_msgs::Odometry odo_msg;
+   odo_msg.header.stamp = ros::Time::now();
+   odo_msg.header.frame_id = "odom";
+   odo_msg.child_frame_id = "base_link";
+   odo_msg.twist.twist.linear.x = p.readfloat();
+   odo_msg.twist.twist.angular.z = p.readfloat();
+   odo_msg.pose.pose.position.x = p.readfloat();
+   odo_msg.pose.pose.position.y = p.readfloat();
+   float yaw = p.readfloat();
+   odo_msg.pose.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
 
-   // if we have a big jump in encoder count, assume something got reset
-   if( abs(last_q - qcount) > 100 ) last_q = qcount;
-     // a jump of 100 corresponds to 3 meters
+   odo_pub.publish(odo_msg);
 
-   ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
-            rcount, lcount, qcount, rspeed, lspeed, qspeed);
-   ROS_INFO("Odo: %d, %d", qcount, steer);
-   double dx = 0.0; // change in X
-   double dy = 0.0; // change in Y
-   double dt = 0.0; // change in theta
-
-   // use qcount to update distance traveled
-   double d = (qcount - last_q) * Q_SCALE;
-
-   // current heading in rad. points in same direction as forward
-   //  convert to unit-circle angle
-   double theta = (M_PI/2) - state.last_pos.pose.pose.orientation.x;
-   if( steer == 0 ) {
-      // if we're going straight, just generate a straight-line estimate
-      dx = d * cos(theta);
-      dy = d * sin(theta);
-      dt = 0.0;
-   } else {
-      // radius of turn
-      //double r = (786.4 - 170.2 * log(fabs(steer))) / 10.0;
-      double r = 1133.6843998428*pow(fabs(steer), -1.124788650329);
-      dt = d / r; // in rads
-
-      double theta_c1; // in radians
-      double theta_c2; // in radians
-      if( steer > 0 ) {
-         // turning right
-         theta_c1 = theta + M_PI/2;
-      } else {
-         // turning left
-         dt = -dt;
-         theta_c1 = theta - M_PI/2;
-      }
-      theta_c2 = theta_c1 - dt;
-
-      dx = r * (cos(theta_c2) - cos(theta_c1));
-      dy = r * (sin(theta_c2) - sin(theta_c1));
-   }
-
-   nav_msgs::Odometry update;
-   update.pose.pose.position.x = dx;
-   update.pose.pose.position.y = dy;
-   update.pose.pose.orientation.x = dt;
-
-   double var_x = 0.005 * d; // left/right drift varaince
-   double var_y = 0.0015 * d; // distance variance
-   update.pose.covariance[0 + 6*0] = 
-      var_x*cos(theta)*cos(theta) + var_y*sin(theta)*sin(theta); // x x
-   update.pose.covariance[0 + 6*1] = 
-      var_x*sin(theta)*cos(theta) - var_y*sin(theta)*cos(theta); // x y
-   update.pose.covariance[1 + 6*0] =
-      var_x*sin(theta)*cos(theta) - var_y*sin(theta)*cos(theta); // y x
-   update.pose.covariance[1 + 6*1] = 
-      var_y*cos(theta)*cos(theta) + var_x*sin(theta)*sin(theta); // y y
-
-   // TODO: take data to support that translation error and rotation error
-   // are unrelated
-   update.pose.covariance[0 + 6*3] = 0; //  x  rot
-   update.pose.covariance[1 + 6*3] = 0; //  y  rot
-   update.pose.covariance[3 + 6*0] = 0; // rot  x
-   update.pose.covariance[3 + 6*1] = 0; // rot  y
-   // TODO: take data and find a real value for this; currently a total SWAG
-   update.pose.covariance[3 + 6*3] = d * 0.01 * 0.01; // rot rot
-
-   // TODO: measure std dev, compute, and place in update
-
-   odo_pub.publish(update);
-
-   last_q = qcount;
-   */
+   // tf transform
+   geometry_msgs::TransformStamped transform;
+   transform.header = odo_msg.header;
+   transform.child_frame_id = odo_msg.child_frame_id;
+   transform.transform.translation.x = odo_msg.pose.pose.position.x;
+   transform.transform.translation.y = odo_msg.pose.pose.position.y;
+   transform.transform.translation.z = odo_msg.pose.pose.position.z;
+   transform.transform.rotation = odo_msg.pose.pose.orientation;
+   odom_tf.sendTransform(transform);
 }
 
 handler(compass_h) {
@@ -375,6 +347,27 @@ handler(battery_h) {
    ROS_INFO("Idle count: %d", idle);
 }
 
+handler(idle_h) {
+   // idle message format:
+   // uint16_t idle
+
+   uint16_t idle = p.readu16();
+   ROS_INFO("Idle count: %d", idle);
+}
+
+#define NUM_SONARS 5
+handler(sonar_h) {
+   // sonar message format:
+   // uint8_t[5] sonars
+   uint8_t sonars[NUM_SONARS];
+   for( int i=0; i<NUM_SONARS; ++i ) {
+      sonars[i] = p.readu8();
+   }
+   ROS_INFO("Sonar readings: % 3d % 3d % 3d % 3d % 3d", sonars[0], sonars[1],
+         sonars[2], sonars[3], sonars[4]);
+   // TODO: publish as sensor_msgs::Range and/or LaserScan
+}
+
 #define IN_BUFSZ 1024
 
 int main(int argc, char ** argv) {
@@ -398,12 +391,14 @@ int main(int argc, char ** argv) {
    odometry_setup();
    handlers['O'] = odometry_h;
    //handlers['C'] = compass_h;
+   handlers['I'] = idle_h;
 
    //gps_setup();
-   //handlers['G'] = gps_h;
+   handlers['G'] = gps_h;
    //handlers['L'] = gpslist_h;
    //battery_setup();
    //handlers['b'] = battery_h;
+   handlers['S'] = sonar_h;
 
    ros::init(argc, argv, "hardware_interface");
 
@@ -436,6 +431,7 @@ int main(int argc, char ** argv) {
    
    tcsetattr(serial, TCSANOW, &tio);
 
+   ros::Subscriber cmd_sub = n.subscribe("cmd_vel", 1, cmdCallback);
 //   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
    //ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
    //ros::Subscriber pos_sub = n.subscribe("position", 5, posCallback);
@@ -443,11 +439,12 @@ int main(int argc, char ** argv) {
    //ros::Subscriber control_sub = n.subscribe("control", 5, controlCallback);
 
    //compass_pub = n.advertise<hardware_interface::Compass>("compass", 10);
-   odo_pub = n.advertise<nav_msgs::Odometry>("base_odometry", 100);
+   odo_pub = n.advertise<nav_msgs::Odometry>("odom", 10);
    //goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
 
    //r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
    //offset = n.serviceClient<global_map::Offset>("Offset");
+   ROS_INFO("hardware_interface ready");
 
    ros::Rate loop_rate(20);
 
@@ -471,7 +468,7 @@ int main(int argc, char ** argv) {
                // check that our string isn't just the terminating character
                if( i - start > 1 ) {
                   // we got a string. call the appropriate function
-                  Packet<250> p((char*)(in_buffer+start), i-start);
+                  Packet p((char*)(in_buffer+start), i-start);
                   handlers[in_buffer[start]](p);
                }
                start = i+1;
@@ -508,6 +505,13 @@ int main(int argc, char ** argv) {
          laser_ready = 0;
       }
 
+      if( cmd_ready ) {
+         cnt = write(serial, cmd_packet.outbuf(), cmd_packet.outsz());
+         if( cnt != cmd_packet.outsz() ) {
+            ROS_ERROR("Failed to send cmd_vel data");
+         }
+         cmd_ready = 0;
+      }
       /*
       if( control_ready ) {
          cnt = write(serial, control_packet.outbuf(), control_packet.outsz());

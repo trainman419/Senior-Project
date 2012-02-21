@@ -9,7 +9,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include <stdlib.h>
 #include <util/delay.h>
 
 extern "C" {
@@ -57,39 +56,14 @@ extern "C" {
 }
 
 // callback on cmd_vel
-void vel_cb( const Twist & cmd_vel ) {
-   // internal speed specified as 2000/(ms per count)
-   // 2 / (sec per count)
-   // 2 * counts / sec
-   // ( 1 count = 0.03 m )
-   // 1/2 * 0.032 m / sec
-   // 0.016 m / sec
-   // target speed in units of 0.016 m / sec
-   target_speed = cmd_vel.linear.x * 62.5;
-   // angular z > 0 is left
-   // TODO: derive the algorithm and constraints on steering and implement
-   // vr = vl / r
-   // r = vl / vr
-   if( cmd_vel.angular.z == 0.0 ) {
-      steer = 0;
-   } else {
-      float radius = fabs(cmd_vel.linear.x / cmd_vel.angular.z);
-      int16_t tmp = radius2steer(radius);
+void vel_cb(char * buffer, uint8_t sz) {
+   Packet p(buffer, sz);
+   target_speed = p.reads16();
 
-      if( tmp < -STEER_OFFSET ) 
-         tmp = -STEER_OFFSET;
-      if( tmp > (255 - STEER_OFFSET) ) 
-         tmp = 255 - STEER_OFFSET;
-
-      if( cmd_vel.angular.z > 0 ) {
-         steer = -tmp;
-      } else {
-         steer = tmp;
-      }
-   }
+   steer = p.reads8();
    servo_set(0, steer + STEER_OFFSET);
 }
-//ros::Subscriber<Twist> vel_sub("cmd_vel", & vel_cb);
+
 
 void steer_cb( int8_t s ) {
    steer = s;
@@ -102,18 +76,8 @@ uint16_t idle;
 Publisher<8> idle_pub('I');
 uint32_t idle_last = 0;
 
-// statically-allocate space for malloc to work from
-//char buffer[BUFSZ];
-
 int main() {
    pwr_on();
-   // nothing to see here. move along.
-   // setting up malloc to only use our internal buffer
-   //__malloc_heap_start = buffer;
-   //__malloc_heap_end = buffer + BUFSZ;
-   //for( int i=0; i < BUFSZ; ++i ) {
-   //  buffer[i] = 0;
-   //}
 
    led_init();
    motor_init();
@@ -165,7 +129,6 @@ int main() {
          idle_pub.finish();
          idle = 0;
       }
-      // currently about 740 idle ticks
    }
    
    // if we're here, we're done. power down.

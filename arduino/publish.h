@@ -33,11 +33,13 @@ class Publisher {
 
    public:
       Publisher(char topic) : p(topic, (uint8_t)SZ, buffer) {
+         brain_sz = 0;
+         bt_sz = 0;
       }
 
       void reset() {
-         while(brain_sz > 0);
-         while(bt_sz > 0);
+//         while(brain_sz > 0);
+//         while(bt_sz > 0);
          p.reset();
       }
 

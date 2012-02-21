@@ -29,4 +29,4 @@ rosbuild_genmsg()
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 rosbuild_add_executable(hardware_interface src/hardware_interface.cpp
-      src/protocol.cpp)
+      src/protocol.cpp src/steer.cpp)

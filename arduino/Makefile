@@ -13,7 +13,7 @@ VPATH=drivers:ros_lib
 
 CSRC=motor.c i2c.c 
 CXXSRC=gps.cpp interrupt.cpp main.cpp steer.cpp TinyGPS.cpp sonar.cpp imu.cpp protocol.cpp
-DRIVERS=adc.o bump.o compass.o power.o pwm.o serial.o serial-interrupt.o servo.o
+DRIVERS=adc.o bump.o power.o pwm.o serial.o serial-interrupt.o servo.o
 
 OBJS=$(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
