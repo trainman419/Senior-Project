@@ -6,5 +6,5 @@
    <node name="state_publisher" pkg="robot_state_publisher" type="state_publisher" />
    <param name="robot_description" textfile="$(find dagny_model)/dagny.urdf"/>
 
-   <node name="hardware" pkg="hardware_interface" type="hardware_interface" output="screen"/>
+   <node name="hardware" pkg="hardware_interface" type="hardware_interface" output="screen" respawn="true" />
 </launch>
