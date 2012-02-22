@@ -50,26 +50,50 @@ extern "C" {
     *  turn on LED and loop forever */
    void __cxa_pure_virtual() {
       while(1) {
-         //led_on(); // pure virtual function call
+         led_on(); // pure virtual function call
       }
    }
 }
 
+char sub_buffer[256];
+uint8_t sub_pos = 0;
+Packet sub_p(0, 255, sub_buffer);
+char sub_type = 0;
+
 // callback on cmd_vel
-void vel_cb(char * buffer, uint8_t sz) {
-   Packet p(buffer, sz);
+void vel_cb(Packet & p) {
+//   Packet p(buffer, sz);
+   // TODO: assert packet size
    target_speed = p.reads16();
 
    steer = p.reads8();
+//   steer = 0;
    servo_set(0, steer + STEER_OFFSET);
 }
 
-
-void steer_cb( int8_t s ) {
-   steer = s;
-   servo_set(0, steer + STEER_OFFSET);
+// subscriber spin loop
+void sub_spinOnce() {
+   while(rx_ready(BRAIN)) {
+      char b = rx_byte(BRAIN);
+      if( sub_type == 0 ) {
+         sub_type = b;
+      } else {
+         sub_p.input(b);
+         // if we got the end-of-packet flag
+         if( b == '\r' ) {
+            switch(sub_type) {
+               case 'C':
+                  vel_cb(sub_p);
+                  break;
+               default:
+                  break;
+            }
+            sub_p.reset();
+            sub_type = 0;
+         }
+      }
+   }
 }
-//ros::Subscriber<std_msgs::Int8> steer_sub("steer", &steer_cb);
 
 // publish idle time data
 uint16_t idle;
@@ -119,6 +143,7 @@ int main() {
    while(1) {
       gps_spinOnce();
       sonar_spinOnce();
+      sub_spinOnce();
 
       _delay_ms(1);
       idle++;
