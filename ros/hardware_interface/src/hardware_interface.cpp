@@ -16,6 +16,7 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/Range.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <tf/transform_broadcaster.h>
@@ -32,17 +33,20 @@ int laser_ready;
 // for publishing odometry and compass data
 ros::Publisher odo_pub;
 ros::Publisher compass_pub;
+ros::Publisher sonar_pub;
 //ros::Publisher goalList_pub;
 
 // for resolving offsets back to lat/lon for our user interface
 //ros::ServiceClient r_offset;
 //ros::ServiceClient offset;
 
+/*
 struct {
    nav_msgs::Odometry last_pos;
    uint8_t steer;
    int8_t speed;
 } state;
+*/
 
 #define ROS_PERROR(str) ROS_ERROR("%s: %s", str, strerror(errno))
 
@@ -106,6 +110,9 @@ void cmdCallback( const geometry_msgs::Twist::ConstPtr & cmd_vel ) {
          steer = tmp;
       }
    }
+
+   ROS_INFO("cmd_vel: %d %d", target_speed, steer);
+
    cmd_packet.reset();
    cmd_packet.append(target_speed);
    cmd_packet.append(steer);
@@ -355,16 +362,32 @@ handler(idle_h) {
    ROS_INFO("Idle count: %d", idle);
 }
 
+
 #define NUM_SONARS 5
 handler(sonar_h) {
    // sonar message format:
    // uint8_t[5] sonars
-   uint8_t sonars[NUM_SONARS];
+   char sonar_frames[5][8] = { "sonar_1", "sonar_2", "sonar_3", "sonar_4", "sonar_5" };
+   uint8_t s;
+   ros::Time n = ros::Time::now();
+   sensor_msgs::Range sonar;
    for( int i=0; i<NUM_SONARS; ++i ) {
-      sonars[i] = p.readu8();
+      s = p.readu8();
+      sonar.range = s * 0.0254; // convert inches to m
+      sonar.min_range = 6 * 0.0254;
+      sonar.max_range = 255 * 0.0254;
+      sonar.field_of_view = 45 * M_PI / 180.0; // approx 45-degree FOV
+      sonar.radiation_type = sensor_msgs::Range::ULTRASOUND;
+
+      sonar.header.stamp = n;
+      sonar.header.frame_id = sonar_frames[i];
+
+      sonar_pub.publish(sonar);
    }
+   /*
    ROS_INFO("Sonar readings: % 3d % 3d % 3d % 3d % 3d", sonars[0], sonars[1],
          sonars[2], sonars[3], sonars[4]);
+         */
    // TODO: publish as sensor_msgs::Range and/or LaserScan
 }
 
@@ -441,6 +464,7 @@ int main(int argc, char ** argv) {
    //compass_pub = n.advertise<hardware_interface::Compass>("compass", 10);
    odo_pub = n.advertise<nav_msgs::Odometry>("odom", 10);
    //goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
+   sonar_pub = n.advertise<sensor_msgs::Range>("sonar", 10);
 
    //r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
    //offset = n.serviceClient<global_map::Offset>("Offset");
@@ -507,6 +531,7 @@ int main(int argc, char ** argv) {
 
       if( cmd_ready ) {
          cnt = write(serial, cmd_packet.outbuf(), cmd_packet.outsz());
+         ROS_INFO("cmd_vel sent");
          if( cnt != cmd_packet.outsz() ) {
             ROS_ERROR("Failed to send cmd_vel data");
          }
