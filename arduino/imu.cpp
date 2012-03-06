@@ -215,7 +215,7 @@ void gyro_done(uint8_t * buf) {
    } else {
       gyro -= gyro_zero[X];
    }
-   gyro_msg.x = gyro;
+   gyro_msg.x = (gyro * 2000.0) / 0x7FFF;
 
    gyro = (buf[2] << 8) | buf[3];
    if( gyro_start > 0 ) {
@@ -223,7 +223,7 @@ void gyro_done(uint8_t * buf) {
    } else {
       gyro -= gyro_zero[Y];
    }
-   gyro_msg.y = gyro;
+   gyro_msg.y = (gyro * 2000.0) / 0x7FFF;
 
    gyro = (buf[4] << 8) | buf[5];
    if( gyro_start > 0 ) {
@@ -231,7 +231,7 @@ void gyro_done(uint8_t * buf) {
    } else {
       gyro -= gyro_zero[Z];
    }
-   gyro_msg.z = gyro;
+   gyro_msg.z = (gyro * 2000.0) / 0x7FFF;
 
    if( gyro_start > 0 ) {
       --gyro_start;
