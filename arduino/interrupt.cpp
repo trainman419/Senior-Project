@@ -9,6 +9,7 @@ extern "C" {
 #include "drivers/serial.h"
 #include "motor.h"
 #include "drivers/bump.h"
+#include "estop.h"
 }
 
 #include "steer.h"
@@ -68,8 +69,12 @@ Publisher<64> odom('O');
 // 0.03 meters per tick
 #define Q_SCALE 0.032
 
+uint16_t estop_cnt = 0;
+
 /* set up interrupt handling */
 void interrupt_init(void) {
+   estop_init();
+
    // set motor pins as input
    DDRC &= ~( L | R | Q1 | Q2);
    // set pull-ups on inputs
@@ -170,28 +175,40 @@ ISR(TIMER0_OVF_vect) {
    // speed management; run at 10Hz
    const static int16_t Kp = DIV/16; // proportional constant
    if( ticks % 100 == 0 ) {
-      // reflex: stop if we bump into something
-      if( target_speed > 0 && bump() ) {
-         power = 0;
-      } else {
-         speed = qspeed;
+      // E-stop
+      if( estop() ) {
+         estop_cnt = 30;
+      }
 
-         e = target_speed - speed; 
-
-         if( target_speed != 0 ) {
-            e = Kp * e / target_speed;
-            if( e > DIV ) e = DIV;
-            if( e < -DIV ) e = -DIV;
-            mult += e;
+      if( estop_cnt == 0 ) {
+         led_on();
+         // reflex: stop if we bump into something
+         if( target_speed > 0 && bump() ) {
+            power = 0;
          } else {
-            mult = DIV/2;
+            speed = qspeed;
+
+            e = target_speed - speed; 
+
+            if( target_speed != 0 ) {
+               e = Kp * e / target_speed;
+               if( e > DIV ) e = DIV;
+               if( e < -DIV ) e = -DIV;
+               mult += e;
+            } else {
+               mult = DIV/2;
+            }
+
+            if( mult < 1 ) mult = 1;
+            if( abs(mult*target_speed) > 100*DIV ) 
+               mult = 100*DIV/target_speed;
+
+            power = mult * (double)target_speed;
          }
-
-         if( mult < 1 ) mult = 1;
-         if( abs(mult*target_speed) > 100*DIV ) 
-            mult = 100*DIV/target_speed;
-
-         power = mult * (double)target_speed;
+      } else {
+         --estop_cnt;
+         led_off();
+         power = 0;
       }
 
       // output
