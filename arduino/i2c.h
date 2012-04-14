@@ -21,7 +21,7 @@ void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size,
       void(*cb)(void));
 
 // read bytes from an I2C device into a buffer and call a callback when done
-void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
+uint8_t i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
       void(*cb)(uint8_t *));
 
 #endif

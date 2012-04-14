@@ -12,14 +12,10 @@
 #include "protocol.h"
 extern "C" {
 #include "drivers/serial.h"
+#include "drivers/led.h"
 };
 
-/*
-template<int SZ> void publish(Packet<SZ> & p) {
-   int sz = p.outsz();
-   tx_buffer(BRAIN, (uint8_t*)p.outbuf(), sz);
-}
-*/
+extern uint8_t pub_enable;
 
 // experimental publisher class; wraps the Packet class
 // targeted to my AVR
@@ -27,29 +23,32 @@ template<uint8_t SZ>
 class Publisher {
    private:
       uint16_t brain_sz;
-      uint16_t bt_sz;
       char buffer[SZ];
       Packet p;
 
    public:
       Publisher(char topic) : p(topic, (uint8_t)SZ, buffer) {
          brain_sz = 0;
-         bt_sz = 0;
+         //bt_sz = 0;
       }
 
-      void reset() {
-//         while(brain_sz > 0);
-//         while(bt_sz > 0);
-         p.reset();
+      int8_t reset() {
+         if( brain_sz > 0 ) {
+            led_on();
+            return 0;
+         } else {
+            p.reset();
+            return 1;
+         }
       }
 
       void finish() {
          p.finish();
-         brain_sz = p.outsz();
-         tx_buffer(BRAIN, (const uint8_t *)p.outbuf(), &brain_sz);
-
-         //bt_sz = p.outsz();
-         //tx_buffer(BT, (const uint8_t *)p.outbuf(), &bt_sz);
+         if( pub_enable ) {
+            brain_sz = p.outsz();
+            tx_buffer(BRAIN, (const uint8_t *)buffer, &brain_sz);
+            //tx_buffer(BRAIN, (const uint8_t *)p.outbuf(), &brain_sz);
+         }
       }
 
       template<class T> void append(T t) {

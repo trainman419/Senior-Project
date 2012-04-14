@@ -44,11 +44,12 @@ void gps_spinOnce(void) {
       if(gps.encode(gps_input)) {
          gps.get_position(&lat, &lon);
 
-         gps_pub.reset();
-         gps_pub.append(lat);
-         gps_pub.append(lon);
-         // TODO: fill in rest of GPS message
-         gps_pub.finish();
+         if( gps_pub.reset() ) {
+            gps_pub.append(lat);
+            gps_pub.append(lon);
+            // TODO: fill in rest of GPS message
+            gps_pub.finish();
+         }
       } 
    }
 }

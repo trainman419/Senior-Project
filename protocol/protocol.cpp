@@ -29,7 +29,7 @@ void Packet::input(char c) {
 
 // append methods
 void Packet::append(uint8_t c) {
-   if( sz < buf_sz ) {
+   if( sz < (buf_sz-2) ) {
       if( c != '\r' && c != esc ) {
          buffer[sz++] = c;
       } else {
@@ -189,6 +189,8 @@ float Packet::readfloat() {
 
 // do any final prep before transmitting a packet
 void Packet::finish() {
-   buffer[sz++] = '\r';
+   if( sz < buf_sz ) {
+      buffer[sz++] = '\r';
+   }
 }
 

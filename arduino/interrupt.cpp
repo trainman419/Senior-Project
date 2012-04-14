@@ -203,13 +203,6 @@ ISR(TIMER0_OVF_vect) {
       double r = steer2radius(steer);
 
       float speed = qspeed * (Q_SCALE * 0.5);
-      odom.reset();
-      odom.append(speed); // linear speed
-      if( steer == 0 ) {
-         odom.append(0.0f);
-      } else {
-         odom.append(speed / r); // angular speed
-      }
 
       // if we've moved, update position
       if( old_qcount != qcount ) {
@@ -244,17 +237,27 @@ ISR(TIMER0_OVF_vect) {
          old_qcount = qcount;
       }
 
-      // odom position in odom frame
-      odom.append(x);
-      odom.append(y);
-      odom.append(yaw);
-      // odom: total of 5 floats; 4*5 = 20 bytes
-      odom.finish();
+      if(odom.reset() ) {
+         odom.append(speed); // linear speed
+         if( steer == 0 ) {
+            odom.append(0.0f);
+         } else {
+            odom.append(speed / r); // angular speed
+         }
+         // odom position in odom frame
+         odom.append((float)SP);
+         odom.append(x);
+         odom.append(y);
+         odom.append(yaw);
+         // odom: total of 5 floats; 4*5 = 20 bytes
+         odom.finish();
+      }
    }
 
    // IMU and GPS loop; run at 20Hz.
    // run at a time when the odometry calculations aren't running
    if( ticks % 50 == 24 ) {
-//      imu_read(); // read the IMU
+   //if( ticks % 20 == 0 ) {
+      imu_read(); // read the IMU
    }
 }

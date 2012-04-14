@@ -73,6 +73,9 @@
 // state machine mode
 volatile enum { READ = 1, WRITE = 0 } i2c_mode; 
 
+uint8_t i2c_state = 0;
+uint8_t i2c_twsr = 0;
+
 uint8_t i2c_address;  // i2c slave address
 uint8_t i2c_register; // i2c slave register
 uint8_t * i2c_data;   // data to read/write from slave
@@ -83,21 +86,73 @@ uint8_t i2c_errflag;
 volatile uint8_t i2c_ready;
 
 // function pointer to use on data read completion
-void (* i2c_w_callback)(void);
-void (* i2c_r_callback)(uint8_t*);
+void (* i2c_w_callback)(void) = 0;
+void (* i2c_r_callback)(uint8_t*) = 0;
 
-void (*i2c_next)(void);
+// i2c state machine functions
+void i2c_none();
+void i2cf_read();
+void i2cf_address();
+void i2cf_raddress();
+void i2cf_wstop();
+void i2cf_wdata();
+void i2cf_rstart();
+void i2cf_register();
+
+void (*i2c_next)(void) = i2c_none;
 
 // the magic ISR that makes all of this go round
 ISR(TWI_vect) {
-//   led_on();
-   i2c_next();
+   //led_on();
+   // disable TWI interrupt and enable general interrupts.
+   //TWCR &= ~((1 << TWINT) | (1 << TWIE));
+   //sei();
+
+   i2c_twsr = TWSR;
+
+
+   /*
+   if( i2c_next ) {
+      i2c_next();
+   }
+   */
+   // validate i2c_next function pointer
+   if( i2c_none == i2c_next) {
+      i2c_none();
+   } else if( i2cf_read == i2c_next) {
+      i2cf_read();
+   } else if( i2cf_address == i2c_next) {
+      i2cf_address();
+   } else if( i2cf_raddress == i2c_next) {
+      i2cf_raddress();
+   } else if( i2cf_wstop == i2c_next) {
+      i2cf_wstop();
+   } else if( i2cf_wdata == i2c_next) {
+      i2cf_wdata();
+   } else if( i2cf_rstart == i2c_next) {
+      i2cf_rstart();
+   } else if( i2cf_register == i2c_next) {
+      i2cf_register();
+   } else {
+      led_on();
+   }
+
+
+   // re-enable TWI interrupts
+   //TWCR = (TWCR | (1 << TWIE)) & ~(1 << TWINT);
    //if( ! i2c_errflag ) led_off();
+   //led_off();
+   /*
+   if( TWCR & (1 << TWINT) ) {
+      TWCR = TWCR; // reset interrupt flag if set
+   }
+   */
 }
 
 // do nothing
 void i2c_none() {
    i2c_next = i2c_none;
+   i2c_state = 1;
    TWCR = (1 << TWINT); // reset interrupt flag if set
    i2c_ready = 1;
 }
@@ -105,9 +160,12 @@ void i2c_none() {
 // error
 void i2c_err() {
    i2c_next = i2c_none;
-   //led_on();
+   i2c_state = 2;
    i2c_errflag = 1;
+   i2c_ready = 1;
 }
+
+void i2cf_address();
 
 void i2cf_read() {
    if( (TWSR & 0xF8) == 0x40 ) {
@@ -121,6 +179,7 @@ void i2cf_read() {
          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
       }
       i2c_next = i2cf_read;
+      i2c_state = 3;
    } else if( (TWSR & 0xF8) == 0x50 ) {
       // if we received data, wait for more data or nak
       i2c_data[i2c_data_pos++] = TWDR;
@@ -133,19 +192,43 @@ void i2cf_read() {
          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
       }
       i2c_next = i2cf_read;
+      i2c_state = 4;
    } else if( (TWSR & 0xF8) == 0x58 ) {
       // we got our last byte and sent nak
       i2c_data[i2c_data_pos] = TWDR;
       TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
       i2c_ready = 1;
       i2c_next = i2c_none;
+      i2c_state = 5;
       sei();
       if(i2c_r_callback) {
-         i2c_r_callback(i2c_data);
+         void (*tmp_callback)(uint8_t*) = i2c_r_callback;
+         i2c_r_callback = 0;
+         tmp_callback(i2c_data);
       } else {
          i2c_err();
       }
+   } else if( (TWSR & 0xF8) == 0x08 ) {
+      // Start sent. shouldn't happen
+      //led_on();
+      i2c_err();
+   } else if( (TWSR & 0xF8) == 0x10 ) {
+      // repeated start sent. shouldn't happen
+      //led_on();
+      i2c_err();
+   } else if( (TWSR & 0xF8) == 0x38 ) {
+      // arbitration lost or NAK
+      //led_on();
+      i2c_err();
+   } else if( (TWSR & 0xF8) == 0x48 ) {
+      // SLA+R sent; NAK received
+      // generate a stop condition
+      //TWCR = (1<<TWSTA) | (1<<TWSTO) | (1<<TWINT);
+      //i2c_next = i2cf_address;
+      i2c_err();
+      i2c_state = 6;
    } else {
+      //led_on();
       i2c_err();
    }
 }
@@ -156,6 +239,7 @@ void i2cf_raddress() {
       TWDR = i2c_address | 1;
       TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
       i2c_next = i2cf_read;
+      i2c_state = 7;
    } else {
       i2c_err();
    }
@@ -166,6 +250,7 @@ void i2cf_rstart() {
    if( (TWSR & 0xF8) == 0x28 ) {
       TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
       i2c_next = i2cf_raddress;
+      i2c_state = 8;
    } else {
       i2c_err();
    }
@@ -176,9 +261,12 @@ void i2cf_wstop() {
    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO) | (1<<TWIE);
    i2c_ready = 1;
    i2c_next = i2c_none;
+   i2c_state = 9;
    sei();
    if(i2c_w_callback) {
-      i2c_w_callback();
+      void (*tmp_cb)(void) = i2c_w_callback;
+      i2c_w_callback = 0;
+      tmp_cb();
    } 
 }
 
@@ -190,6 +278,7 @@ void i2cf_wdata() {
       --i2c_data_sz;
       if( i2c_data_sz == 0 ) {
          i2c_next = i2cf_wstop;
+         i2c_state = 10;
       }
       TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
    } else {
@@ -204,8 +293,10 @@ void i2cf_register() {
       TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
       if( i2c_mode == WRITE ) {
          i2c_next = i2cf_wdata;
+         i2c_state = 11;
       } else {
          i2c_next = i2cf_rstart;
+         i2c_state = 12;
       }
    } else {
       i2c_err();
@@ -218,6 +309,7 @@ void i2cf_address() {
       TWDR = i2c_address;
       TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWIE);
       i2c_next = i2cf_register;
+      i2c_state = 13;
    } else {
       i2c_err();
    }
@@ -238,6 +330,7 @@ void i2c_init() {
    PORTD &= ~(3);
 
    i2c_next = i2c_none;
+   i2c_state = 14;
    i2c_ready = 1;
 }
 
@@ -262,6 +355,7 @@ void i2c_write(uint8_t addr, uint8_t reg, uint8_t data) {
    i2c_ready = 0;
 
    i2c_next = i2cf_address;
+   i2c_state = 15;
 
    // start I2C mode by sending start bit
    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
@@ -284,15 +378,31 @@ void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size,
    i2c_ready = 0;
 
    i2c_next = i2cf_address;
+   i2c_state = 16;
 
    // start I2C mode by sending start bit
    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
 }
 
 // read bytes from an I2C device into a buffer and call a callback when done
-void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
+int8_t i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
       void(*cb)(uint8_t *)) {
-   while(!i2c_ready); // wait for I2C to become ready
+   uint16_t timeout = 0x0FFF;
+   static uint8_t i2c_fail = 0;
+   // wait for I2C to become ready
+   while(!i2c_ready && timeout > 0) {
+      --timeout;
+   }
+   if(!i2c_ready) {
+      led_on();
+      ++i2c_fail;
+      if( i2c_fail > 20 ) {
+         i2c_fail = 0;
+      } else {
+         return -1;
+      }
+   }
+   led_off();
    while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
    i2c_mode = READ;
    i2c_address = addr;
@@ -307,8 +417,10 @@ void i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size,
    i2c_ready = 0;
 
    i2c_next = i2cf_address;
+   i2c_state = 17;
 
    // start I2C mode by sending start bit
    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
+   return 0;
 }
 
