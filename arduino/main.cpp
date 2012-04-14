@@ -67,7 +67,7 @@ char sub_type = 0;
 #define STOP 0
 #define REMOTE 1
 #define AUTONOMOUS 2
-char control_mode = STOP;
+char control_mode = AUTONOMOUS;
 
 // callback on cmd_vel
 void vel_cb(Packet & p) {
