@@ -17,6 +17,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/Range.h>
+#include <sensor_msgs/NavSatFix.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <tf/transform_broadcaster.h>
@@ -34,6 +35,7 @@ int laser_ready;
 ros::Publisher odo_pub;
 ros::Publisher compass_pub;
 ros::Publisher sonar_pub;
+ros::Publisher gps_pub;
 //ros::Publisher goalList_pub;
 
 // for resolving offsets back to lat/lon for our user interface
@@ -234,6 +236,10 @@ handler(gps_h) {
    int32_t lon = p.reads32();
    ROS_INFO("GPS lat: %d lon: %d", lat, lon);
    // TODO: convert this into an appropriate message type and publish
+   sensor_msgs::NavSatFix gps;
+   gps.latitude = lat / 1000000.0;
+   gps.longitude = lon / 1000000.0;
+   gps_pub.publish(gps);
 }
 
 // set up odometry handling
@@ -359,7 +365,11 @@ handler(idle_h) {
    // uint16_t idle
 
    uint16_t idle = p.readu16();
+   uint8_t i2c_state = p.readu8(); // DEBUG
+   uint8_t twsr = p.readu8(); // DEBUG
+   uint8_t twcr = p.readu8(); // DEBUG
    ROS_INFO("Idle count: %d", idle);
+   ROS_INFO("I2C state: %d 0x%02X 0x%02X", i2c_state, twsr, twcr); // DEBUG
 }
 
 
@@ -384,11 +394,16 @@ handler(sonar_h) {
 
       sonar_pub.publish(sonar);
    }
-   /*
-   ROS_INFO("Sonar readings: % 3d % 3d % 3d % 3d % 3d", sonars[0], sonars[1],
-         sonars[2], sonars[3], sonars[4]);
-         */
-   // TODO: publish as sensor_msgs::Range and/or LaserScan
+}
+
+handler(imu_h) {
+   // imu message format:
+   // float[3]
+   float x, y, z;
+   x = p.readfloat();
+   y = p.readfloat();
+   z = p.readfloat();
+   ROS_INFO("IMU data: (% 03.7f, % 03.7f, % 03.7f)", x, y, z);
 }
 
 #define IN_BUFSZ 1024
@@ -398,6 +413,9 @@ int main(int argc, char ** argv) {
    int in_cnt = 0;
    int cnt = 0;
    int i;
+
+   char heartbeat_buf[8];
+   Packet heartbeat_packet('H', 8, heartbeat_buf);
 
    laser_ready = 0;
 
@@ -413,15 +431,14 @@ int main(int argc, char ** argv) {
 
    odometry_setup();
    handlers['O'] = odometry_h;
-   //handlers['C'] = compass_h;
    handlers['I'] = idle_h;
 
    //gps_setup();
    handlers['G'] = gps_h;
    //handlers['L'] = gpslist_h;
-   //battery_setup();
    //handlers['b'] = battery_h;
    handlers['S'] = sonar_h;
+   handlers['U'] = imu_h;
 
    ros::init(argc, argv, "hardware_interface");
 
@@ -454,9 +471,10 @@ int main(int argc, char ** argv) {
    
    tcsetattr(serial, TCSANOW, &tio);
 
+   sleep(2); // sleep for two seconds while bootloader runs
+
    ros::Subscriber cmd_sub = n.subscribe("cmd_vel", 1, cmdCallback);
 //   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
-   //ros::Subscriber gps_sub = n.subscribe("extended_fix", 5, gpsCallback);
    //ros::Subscriber pos_sub = n.subscribe("position", 5, posCallback);
    // TODO: update this to take ackermann_cmd
    //ros::Subscriber control_sub = n.subscribe("control", 5, controlCallback);
@@ -465,6 +483,7 @@ int main(int argc, char ** argv) {
    odo_pub = n.advertise<nav_msgs::Odometry>("odom", 10);
    //goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
    sonar_pub = n.advertise<sensor_msgs::Range>("sonar", 10);
+   gps_pub = n.advertise<sensor_msgs::NavSatFix>("gps", 10);
 
    //r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
    //offset = n.serviceClient<global_map::Offset>("Offset");
@@ -472,16 +491,15 @@ int main(int argc, char ** argv) {
 
    ros::Rate loop_rate(20);
 
+   int itr = 0;
+   int bw = 0;
+
    while( ros::ok() ) {
-      //ROS_INFO("start serial input");
       cnt = read(serial, in_buffer + in_cnt, IN_BUFSZ - in_cnt - 1); 
       if( cnt > 0 ) {
          // append a null byte
          in_buffer[cnt + in_cnt] = 0;
-         //ROS_INFO("Read %d characters", cnt);
          in_cnt += cnt;
-         //ROS_INFO("Buffer size %d", in_cnt);
-
          // parse out newline-terminated strings and call appropriate functions
          int start = 0;
          int i = 0;
@@ -510,22 +528,10 @@ int main(int argc, char ** argv) {
       
       ros::spinOnce();
 
-      // write pending data to serial port
-      /*
-      if( gps_ready ) {
-         cnt = write(serial, gps_packet.outbuf(), gps_packet.outsz());
-         gps_ready = 0;
-      }
-      */
-
-      //ROS_INFO("start laser transmit");
       if( laser_ready ) {
          cnt = write(serial, "L", 1);
-         //ROS_INFO("Wrote %d bytes", cnt);
          cnt = write(serial, laser_data, 512);
-         //ROS_INFO("Wrote %d bytes", cnt);
          cnt = write(serial, "\r\r\r\r\r\r\r\r", 1);
-         //ROS_INFO("Wrote %d bytes", cnt);
          laser_ready = 0;
       }
 
@@ -537,17 +543,20 @@ int main(int argc, char ** argv) {
          }
          cmd_ready = 0;
       }
-      /*
-      if( control_ready ) {
-         cnt = write(serial, control_packet.outbuf(), control_packet.outsz());
-         //const char * data = control_packet.outbuf();
-         //ROS_ERROR("Control packet: %X %X %X %X", data[0], data[1], data[2], data[3]);
-         if( cnt != control_packet.outsz() ) {
-            ROS_ERROR("Failed to send control data");
-         }
-         control_ready = 0;
+
+      // send heartbeat
+      bw += cnt;
+      ++itr;
+
+      // heartbeat and bandwidth measurement every 0.5 sec
+      if( itr == 9 ) {
+         heartbeat_packet.reset();
+         heartbeat_packet.finish();
+         cnt = write(serial, heartbeat_packet.outbuf(), heartbeat_packet.outsz());
+         ROS_INFO("Bandwidth: %d bytes/sec", bw * 2);
+         itr = 0;
+         bw = 0;
       }
-      */
 
       loop_rate.sleep();
    }
