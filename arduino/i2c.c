@@ -210,7 +210,6 @@ void i2cf_read() {
       }
    } else if( (TWSR & 0xF8) == 0x08 ) {
       // Start sent. shouldn't happen
-      //led_on();
       i2c_err();
    } else if( (TWSR & 0xF8) == 0x10 ) {
       // repeated start sent. shouldn't happen
@@ -218,7 +217,6 @@ void i2cf_read() {
       i2c_err();
    } else if( (TWSR & 0xF8) == 0x38 ) {
       // arbitration lost or NAK
-      //led_on();
       i2c_err();
    } else if( (TWSR & 0xF8) == 0x48 ) {
       // SLA+R sent; NAK received
@@ -228,7 +226,6 @@ void i2cf_read() {
       i2c_err();
       i2c_state = 6;
    } else {
-      //led_on();
       i2c_err();
    }
 }
