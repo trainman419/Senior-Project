@@ -268,8 +268,8 @@ ISR(TIMER0_OVF_vect) {
          odom.append(y);
 
          extern Twist imu_state;
-         //yaw = (yaw + imu_state.angular.z) / 2.0;
-         yaw = imu_state.angular.z;
+         yaw = (yaw + imu_state.angular.z) / 2.0;
+         //yaw = imu_state.angular.z;
          odom.append(yaw);
          // odom: total of 5 floats; 4*5 = 20 bytes
          odom.finish();

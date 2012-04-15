@@ -188,7 +188,7 @@ void update_imu() {
    compass_est = compass_msg;
    //compass_est = transform(compass_msg, accel_est);
    //compass_est.z = atan2(compass_est.y, compass_est.x) - compass_err;
-   compass_est.z = atan2(compass_est.y, compass_est.x);
+   compass_est.z = atan2(compass_est.x, compass_est.y);
    // no compass data on roll or pitch. use existing state
    //compass_est.y = imu_state.angular.y;
    //compass_est.x = imu_state.angular.x;
@@ -367,7 +367,7 @@ void compass_done(uint8_t * buf) {
 
    // interpret and publish data
    int16_t compass = (buf[0] << 8) | buf[1];
-   compass_msg.x = ((compass/1300.0) - compass_offset.x + compass_msg.x) / 2;
+   compass_msg.x = ((-compass/1300.0) - compass_offset.x + compass_msg.x) / 2;
    //compass_msg.x = (compass/1300.0);
 
    compass = (buf[2] << 8) | buf[3];
