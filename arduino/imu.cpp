@@ -359,7 +359,7 @@ void gyro_done(uint8_t * buf) {
 // read the gyro
 void gyro_read() {
    s(5.0);
-   if( i2c_read(I2C_GYRO, 0x1D, common_buf, 6, gyro_done) < 0 ) {
+   if( i2c_read(I2C_GYRO, 0x1D, common_buf, 6, gyro_done) ) {
       ++i2c_fail;
    }
    return;
@@ -395,7 +395,7 @@ void compass_done(uint8_t * buf) {
 // read the compass
 void compass_read() {
    s(3.0);
-   if( i2c_read(I2C_COMPASS, 0x03, common_buf, 6, compass_done) < 0 ) {
+   if( i2c_read(I2C_COMPASS, 0x03, common_buf, 6, compass_done) ) {
       ++i2c_fail;
    }
    return;
@@ -424,7 +424,7 @@ void accel_done(uint8_t * buf) {
 // read the accelerometer
 void accel_read() {
    s(1.0);
-   if( i2c_read(I2C_ACCEL, 0x32, common_buf, 6, accel_done) < 0 ) {
+   if( i2c_read(I2C_ACCEL, 0x32, common_buf, 6, accel_done) ) {
       ++i2c_fail;
    }
    return;
