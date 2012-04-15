@@ -213,9 +213,6 @@ int main() {
          idle_last = (ticks/1000) * 1000;
          if( idle_pub.reset() ) {
             idle_pub.append(idle);
-            idle_pub.append(i2c_state); // DEBUG
-            idle_pub.append(i2c_twsr); // DEBUG
-            idle_pub.append(TWCR); // DEBUG
             idle_pub.finish();
          }
          idle = 0;
