@@ -87,8 +87,8 @@ void imu_init() {
 
    /* flat compass calibration */
    compass_offset.x = -0.036923;
-   compass_offset.y = 0.107692;
-   compass_offset.z = -0.03775;
+   compass_offset.y = -0.107692;
+   compass_offset.z = 0.03775;
 
    /* 3D compass calibration
    // Not as good on flat ground
@@ -248,21 +248,25 @@ void update_imu() {
 
    //imu_pub.publish(&imu_state);
    if( imu_pub.reset() ) {
-      x = imu_state.angular.x * 180.0 / M_PI;
+      //x = imu_state.angular.x * 180.0 / M_PI;
+      x = imu_state.angular.x;
       //x = gyro_est.x * 180.0 / M_PI;
       //x = compass_msg.x;
       //x = compass_min.x;
       imu_pub.append(x);
 
-      y = imu_state.angular.y * 180.0 / M_PI;
+      //y = imu_state.angular.y * 180.0 / M_PI;
+      y = imu_state.angular.y;
       //y = gyro_est.y * 180.0 / M_PI;
       //y = compass_est.x;
       //y = compass_min.y;
       imu_pub.append(y);
 
       //z = imu_state.angular.z * 180.0 / M_PI;
+      z = imu_state.angular.z;
       //z = gyro_est.z * 180.0 / M_PI;
-      z = compass_est.z * 180.0 / M_PI;
+      //z = compass_est.z * 180.0 / M_PI;
+      //z = compass_est.z;
       //z = compass_min.z;
       imu_pub.append(z);
       imu_pub.finish();
@@ -367,11 +371,11 @@ void compass_done(uint8_t * buf) {
    //compass_msg.x = (compass/1300.0);
 
    compass = (buf[2] << 8) | buf[3];
-   compass_msg.y = ((compass/1300.0) - compass_offset.y + compass_msg.y) / 2;
+   compass_msg.y = ((-compass/1300.0) - compass_offset.y + compass_msg.y) / 2;
    //compass_msg.y = (compass/1300.0);
 
    compass = (buf[4] << 8) | buf[5];
-   compass_msg.z = ((compass/1300.0) - compass_offset.z + compass_msg.z) / 2;
+   compass_msg.z = ((-compass/1300.0) - compass_offset.z + compass_msg.z) / 2;
    //compass_msg.z = (compass/1300.0);
 
    /*

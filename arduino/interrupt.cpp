@@ -217,7 +217,8 @@ ISR(TIMER0_OVF_vect) {
    }
 
    // wheel encoder and speed transmit; 20Hz
-   if( ticks % 50 == 0 ) {
+   // wheel encoder and speed transmit; 10Hz
+   if( ticks % 100 == 0 ) {
       double r = steer2radius(steer);
 
       float speed = qspeed * (Q_SCALE * 0.5);
@@ -260,15 +261,16 @@ ISR(TIMER0_OVF_vect) {
          if( steer == 0 ) {
             odom.append(0.0f);
          } else {
-            odom.append(speed / r); // angular speed
+            odom.append((float)(speed / r)); // angular speed
          }
          // odom position in odom frame
          odom.append(x);
          odom.append(y);
 
          extern Twist imu_state;
-         odom.append(imu_state.angular.z);
-         //odom.append(yaw);
+         //yaw = (yaw + imu_state.angular.z) / 2.0;
+         yaw = imu_state.angular.z;
+         odom.append(yaw);
          // odom: total of 5 floats; 4*5 = 20 bytes
          odom.finish();
       }
