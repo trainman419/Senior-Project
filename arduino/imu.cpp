@@ -45,7 +45,7 @@ Vector3 accel_msg;
 Vector3 gyro_msg;
 
 Vector3 compass_offset;
-//Vector3 compass_max;
+//Vector3 compass_min;
 float compass_err;
 Vector3 gyro_offset;
 
@@ -85,9 +85,17 @@ void imu_init() {
    gyro_offset.y = 0;
    gyro_offset.z = 0;
 
+   /* flat compass calibration */
    compass_offset.x = -0.036923;
    compass_offset.y = 0.107692;
    compass_offset.z = -0.03775;
+
+   /* 3D compass calibration
+   // Not as good on flat ground
+   compass_offset.x = 0.0378;
+   compass_offset.y = 0.0851;
+   compass_offset.z = -0.0383;
+   */
 
    compass_err = 0;
 
@@ -147,7 +155,7 @@ uint8_t common_buf[64];
 void update_imu() {
    s(7.0);
    // all estimates are absolute
-   Vector3 gyro_est;    // RPY angles
+   //Vector3 gyro_est;    // RPY angles
    Vector3 compass_est; // RPY angles
    Vector3 accel_est;   // RPY estimate from accelerometer
 
@@ -155,21 +163,30 @@ void update_imu() {
 
    // RPY estimation from gyro
    // TODO: make sure scaling on gyro is accurate
+   /*
    gyro_est.x = gyro_msg.x - gyro_offset.x;
    gyro_est.y = gyro_msg.y - gyro_offset.y;
    gyro_est.z = gyro_msg.z - gyro_offset.z;
-//   gyro_est.x = gyro_msg.x + imu_state.angular.x - gyro_offset.x;
-//   gyro_est.y = gyro_msg.y + imu_state.angular.y - gyro_offset.y;
-//   gyro_est.z = gyro_msg.z + imu_state.angular.z - gyro_offset.z;
+   */
+   /*
+   gyro_est.x = gyro_msg.x + imu_state.angular.x - gyro_offset.x;
+   gyro_est.y = gyro_msg.y + imu_state.angular.y - gyro_offset.y;
+   gyro_est.z = gyro_msg.z + imu_state.angular.z - gyro_offset.z;
+   */
 
+   /*
    NORMALIZE(gyro_est.x);
    NORMALIZE(gyro_est.y);
    NORMALIZE(gyro_est.z);
+   */
 
    // RPY estimation from compass
    // project compass onto the plane using old imu state
+   accel_est = imu_state.angular;
+   accel_est.z = 0.0;
+
    compass_est = compass_msg;
-   //compass_est = transform(compass_msg, imu_state.angular);
+   //compass_est = transform(compass_msg, accel_est);
    //compass_est.z = atan2(compass_est.y, compass_est.x) - compass_err;
    compass_est.z = atan2(compass_est.y, compass_est.x);
    // no compass data on roll or pitch. use existing state
@@ -200,7 +217,8 @@ void update_imu() {
    //  sources: gyro, compass, odometry
    //  start with weighted average
    //z = (1.0 * gyro_est.z + 1.0 * compass_est.z + 1.0 * odom_est.z) / 3.0;
-   z = (1.0 * gyro_est.z + 1.0 * odom_est.z) / 2.0;
+   //z = (1.0 * gyro_est.z + 1.0 * odom_est.z) / 2.0;
+   z = (1.0 * compass_est.z + 1.0 * odom_est.z) / 2.0;
    // if our compass error is too big, update the error value
    /*
    if( fabs( (compass_est.z - z) / z) > 0.1 ) {
@@ -215,12 +233,14 @@ void update_imu() {
    // y: pitch
    //  sources: gyro and accelerometer
    //  weighted average until something better comes along
-   y = (1.0 * gyro_est.y + 1.0 * accel_est.y) / 2.0;
+   //y = (1.0 * gyro_est.y + 1.0 * accel_est.y) / 2.0;
+   y = (2.0 * accel_est.y) / 2.0;
 
 
    // x: roll
    //  sources: gyro and accelerometer
-   x = (1.0 * gyro_est.x + 1.0 * accel_est.y) / 2.0;
+   //x = (1.0 * gyro_est.x + 1.0 * accel_est.y) / 2.0;
+   x = (2.0 * accel_est.y) / 2.0;
 
    imu_state.angular.x = x;
    imu_state.angular.y = y;
@@ -228,17 +248,22 @@ void update_imu() {
 
    //imu_pub.publish(&imu_state);
    if( imu_pub.reset() ) {
-      //x = imu_state.angular.x * 180.0 / M_PI;
-      //x = compass_est.x * 180.0 / M_PI;
-      x = compass_msg.x;
+      x = imu_state.angular.x * 180.0 / M_PI;
+      //x = gyro_est.x * 180.0 / M_PI;
+      //x = compass_msg.x;
+      //x = compass_min.x;
       imu_pub.append(x);
-      //y = imu_state.angular.y * 180.0 / M_PI;
-      //y = compass_est.y * 180.0 / M_PI;
-      y = compass_msg.y;
+
+      y = imu_state.angular.y * 180.0 / M_PI;
+      //y = gyro_est.y * 180.0 / M_PI;
+      //y = compass_est.x;
+      //y = compass_min.y;
       imu_pub.append(y);
+
       //z = imu_state.angular.z * 180.0 / M_PI;
+      //z = gyro_est.z * 180.0 / M_PI;
       z = compass_est.z * 180.0 / M_PI;
-      //z = compass_msg.z;
+      //z = compass_min.z;
       imu_pub.append(z);
       imu_pub.finish();
       s(8.0);
@@ -265,10 +290,12 @@ void gyro_done(uint8_t * buf) {
       gyro_msg.x = 0.0;
    } else {
       gyro -= gyro_zero[X];
+      /*
       if( abs(gyro) < GYRO_THRESHOLD ) {
          gyro_zero[X] += gyro / 2;
          gyro = 0;
       }
+      */
       gyro_msg.x = (gyro * 2000.0) / 0x7FFF;
       gyro_msg.x /= GYRO_DIV;
       gyro_msg.x *= M_PI / 180.0;
@@ -281,10 +308,12 @@ void gyro_done(uint8_t * buf) {
       gyro_msg.y = 0.0;
    } else {
       gyro -= gyro_zero[Y];
+      /*
       if( abs(gyro) < GYRO_THRESHOLD ) {
          gyro_zero[Y] += gyro / 2;
          gyro = 0;
       }
+      */
       gyro_msg.y = -(gyro * 2000.0) / 0x7FFF;
       gyro_msg.y /= GYRO_DIV;
       gyro_msg.y *= M_PI / 180.0;
@@ -297,10 +326,12 @@ void gyro_done(uint8_t * buf) {
       gyro_msg.z = 0.0;
    } else {
       gyro -= gyro_zero[Z];
+      /*
       if( abs(gyro) < GYRO_THRESHOLD ) {
          gyro_zero[Z] += gyro / 2;
          gyro = 0;
       }
+      */
       gyro_msg.z = (gyro * 2000.0) / 0x7FFF;
       gyro_msg.z /= GYRO_DIV;
       gyro_msg.z *= M_PI / 180.0;
@@ -333,14 +364,24 @@ void compass_done(uint8_t * buf) {
    // interpret and publish data
    int16_t compass = (buf[0] << 8) | buf[1];
    compass_msg.x = ((compass/1300.0) - compass_offset.x + compass_msg.x) / 2;
+   //compass_msg.x = (compass/1300.0);
 
    compass = (buf[2] << 8) | buf[3];
    compass_msg.y = ((compass/1300.0) - compass_offset.y + compass_msg.y) / 2;
+   //compass_msg.y = (compass/1300.0);
 
    compass = (buf[4] << 8) | buf[5];
    compass_msg.z = ((compass/1300.0) - compass_offset.z + compass_msg.z) / 2;
+   //compass_msg.z = (compass/1300.0);
 
-   gyro_read();
+   /*
+   compass_min.x = max(compass_min.x, compass_msg.x);
+   compass_min.y = max(compass_min.y, compass_msg.y);
+   compass_min.z = max(compass_min.z, compass_msg.z);
+   */
+
+   update_imu();
+   //gyro_read();
    return;
 }
 

@@ -15,6 +15,7 @@ extern "C" {
 #include "steer.h"
 #include "imu.h"
 #include "publish.h"
+#include "twist.h"
 
 #define abs(x) ((x)>0?(x):-(x))
 
@@ -262,10 +263,12 @@ ISR(TIMER0_OVF_vect) {
             odom.append(speed / r); // angular speed
          }
          // odom position in odom frame
-         odom.append((float)SP);
          odom.append(x);
          odom.append(y);
-         odom.append(yaw);
+
+         extern Twist imu_state;
+         odom.append(imu_state.angular.z);
+         //odom.append(yaw);
          // odom: total of 5 floats; 4*5 = 20 bytes
          odom.finish();
       }
