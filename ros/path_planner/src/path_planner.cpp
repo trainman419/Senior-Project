@@ -48,7 +48,9 @@ using namespace std;
 // distance where we decide we're too far off-path
 #define CLOSE_LEN 4.0
 // minimum turning radius (m)
-#define MIN_RADIUS 2.0
+#define MIN_RADIUS 0.695 
+// maximum planned radius (m)
+#define MAX_RADIUS 10.0
 // how close we want to get to our goal before we're "there" (m)
 #define GOAL_ERR 0.3
 // maximum number of iterations to look for a path
@@ -57,10 +59,10 @@ using namespace std;
 #define MAP_RES 0.10
 
 // speed for path traversal (m/s)
-#define MAX_SPEED 0.5
+#define MAX_SPEED 1.0
 #define MIN_SPEED 0.1
 #define MAX_TRAVERSE 4.0
-#define MAX_ACCEL 0.2
+#define MAX_ACCEL 0.3
 
 // types, to make life easier
 struct loc {
@@ -225,9 +227,10 @@ path plan_path(loc start, loc end) {
 
    double d = dist(start, end);
    double traverse_dist = min(d, MAX_TRAVERSE);
-   double speed = MAX_SPEED * traverse_dist / MAX_TRAVERSE;
+   double speed = min(MAX_SPEED, 
+         MAX_SPEED * (2.0 * traverse_dist / MAX_TRAVERSE));
    if( speed < MIN_SPEED) speed = MIN_SPEED;
-   //ROS_INFO("Traverse distance %lf", traverse_dist);
+   ROS_INFO("Traverse distance %lf, speed %lf", traverse_dist, speed);
 
    // radius > 0 -> left
    double radius = 0;
@@ -245,6 +248,14 @@ path plan_path(loc start, loc end) {
 
    double beta = (M_PI - fabs(alpha)) / 2.0; // internal angle
    radius = d * sin(beta) / sin(alpha);
+   // if we want to turn around, use minimum radius
+   if( fabs(arc_len) > M_PI ) {
+      if( radius > 0 ) {
+         radius = MIN_RADIUS;
+      } else {
+         radius = -MIN_RADIUS;
+      }
+   }
    arc_len = arc_len * radius;
 
    //ROS_INFO("%lf %lf %lf", d, beta, alpha);
@@ -253,6 +264,10 @@ path plan_path(loc start, loc end) {
       radius = 0;
       arc_len = MIN_RADIUS;
    }
+
+   // don't plan huge sweeping curves; choose max radius
+   radius = min(radius,  MAX_RADIUS);
+   radius = max(radius, -MAX_RADIUS);
 
    arc_len = min(arc_len, MAX_TRAVERSE);
 
@@ -349,8 +364,12 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr & msg) {
       double speed = p.speed;
 
       // limit acceleration
-      speed = min(speed, msg->twist.twist.linear.x + MAX_ACCEL);
-      speed = max(speed, msg->twist.twist.linear.x - MAX_ACCEL);
+      if( speed > 0 ) {
+         speed = min(speed, msg->twist.twist.linear.x + MAX_ACCEL);
+      } else if( speed < 0 ) {
+         speed = max(speed, msg->twist.twist.linear.x - MAX_ACCEL);
+      }
+      // no limit on deceleration
 
 
       // steering radius = linear / angular
