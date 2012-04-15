@@ -51,7 +51,7 @@ bool active = false;
 
 // Goal Tolerance
 //  TODO: convert to parameter shared with path planner
-#define GOAL_TOLERANCE 3.0
+#define GOAL_TOLERANCE 5.0
 
 void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr & msg) {
    geometry_msgs::Point goal = last_odom; // goal, in odom frame
