@@ -329,6 +329,8 @@ void i2c_init() {
    DDRD &= ~(3);
    PORTD &= ~(3);
 
+   TWCR = 0;
+
    i2c_next = i2c_none;
    i2c_state = 14;
    i2c_ready = 1;
@@ -384,11 +386,12 @@ void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size,
    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
 }
 
+uint8_t i2c_fail = 0;
+
 // read bytes from an I2C device into a buffer and call a callback when done
 int8_t i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
       void(*cb)(uint8_t *)) {
    uint16_t timeout = 0x0FFF;
-   static uint8_t i2c_fail = 0;
    // wait for I2C to become ready
    while(!i2c_ready && timeout > 0) {
       --timeout;
@@ -398,8 +401,10 @@ int8_t i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size,
       ++i2c_fail;
       if( i2c_fail > 20 ) {
          i2c_fail = 0;
-      } else {
+         i2c_ready = 1;
          return -1;
+      } else {
+         return 0;
       }
    }
    led_off();
