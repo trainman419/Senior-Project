@@ -21,6 +21,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <tf/transform_broadcaster.h>
+#include <std_msgs/Float32.h>
 
 
 #include "protocol.h"
@@ -32,8 +33,8 @@ char laser_data[512];
 int laser_ready;
 
 // for publishing odometry and compass data
+float heading;
 ros::Publisher odo_pub;
-ros::Publisher compass_pub;
 ros::Publisher sonar_pub;
 ros::Publisher gps_pub;
 //ros::Publisher goalList_pub;
@@ -281,18 +282,6 @@ handler(odometry_h) {
    odom_tf.sendTransform(transform);
 }
 
-handler(compass_h) {
-   // TODO: rewrite this
-   /*
-   int x = p.reads16();
-   int y = p.reads16();
-   //ROS_INFO("Compass reading (%d, %d): %f", x, y, atan2(-y, x)*180/M_PI);
-   hardware_interface::Compass c;
-   c.heading = atan2(-y, x);
-   compass_pub.publish(c);
-   */
-}
-
 handler(gpslist_h) {
    // TODO: update this
    /*
@@ -365,11 +354,7 @@ handler(idle_h) {
    // uint16_t idle
 
    uint16_t idle = p.readu16();
-   uint8_t i2c_state = p.readu8(); // DEBUG
-   uint8_t twsr = p.readu8(); // DEBUG
-   uint8_t twcr = p.readu8(); // DEBUG
    ROS_INFO("Idle count: %d", idle);
-   ROS_INFO("I2C state: %d 0x%02X 0x%02X", i2c_state, twsr, twcr); // DEBUG
 }
 
 
@@ -403,7 +388,8 @@ handler(imu_h) {
    x = p.readfloat();
    y = p.readfloat();
    z = p.readfloat();
-   ROS_INFO("IMU data: (% 03.7f, % 03.7f, % 03.7f)", x, y, z);
+   //ROS_INFO("IMU data: (% 03.7f, % 03.7f, % 03.7f)", x, y, z);
+   heading = z;
 }
 
 #define IN_BUFSZ 1024
@@ -479,7 +465,6 @@ int main(int argc, char ** argv) {
    // TODO: update this to take ackermann_cmd
    //ros::Subscriber control_sub = n.subscribe("control", 5, controlCallback);
 
-   //compass_pub = n.advertise<hardware_interface::Compass>("compass", 10);
    odo_pub = n.advertise<nav_msgs::Odometry>("odom", 10);
    //goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
    sonar_pub = n.advertise<sensor_msgs::Range>("sonar", 10);
