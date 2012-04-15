@@ -37,6 +37,7 @@ float heading;
 ros::Publisher odo_pub;
 ros::Publisher sonar_pub;
 ros::Publisher gps_pub;
+ros::Publisher heading_pub;
 //ros::Publisher goalList_pub;
 
 // for resolving offsets back to lat/lon for our user interface
@@ -114,7 +115,7 @@ void cmdCallback( const geometry_msgs::Twist::ConstPtr & cmd_vel ) {
       }
    }
 
-   ROS_INFO("cmd_vel: %d %d", target_speed, steer);
+   //ROS_INFO("cmd_vel: %d %d", target_speed, steer);
 
    cmd_packet.reset();
    cmd_packet.append(target_speed);
@@ -390,6 +391,9 @@ handler(imu_h) {
    z = p.readfloat();
    //ROS_INFO("IMU data: (% 03.7f, % 03.7f, % 03.7f)", x, y, z);
    heading = z;
+   std_msgs::Float32 h;
+   h.data = z;
+   heading_pub.publish(h);
 }
 
 #define IN_BUFSZ 1024
@@ -469,6 +473,7 @@ int main(int argc, char ** argv) {
    //goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
    sonar_pub = n.advertise<sensor_msgs::Range>("sonar", 10);
    gps_pub = n.advertise<sensor_msgs::NavSatFix>("gps", 10);
+   heading_pub = n.advertise<std_msgs::Float32>("heading", 10);
 
    //r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
    //offset = n.serviceClient<global_map::Offset>("Offset");
@@ -522,7 +527,7 @@ int main(int argc, char ** argv) {
 
       if( cmd_ready ) {
          cnt = write(serial, cmd_packet.outbuf(), cmd_packet.outsz());
-         ROS_INFO("cmd_vel sent");
+         //ROS_INFO("cmd_vel sent");
          if( cnt != cmd_packet.outsz() ) {
             ROS_ERROR("Failed to send cmd_vel data");
          }
