@@ -14,6 +14,7 @@
   <depend package="goal_list"/>
   <depend package="nav_msgs"/>
   <depend package="sensor_msgs"/>
+  <depend package="tf"/>
 
 </package>
 

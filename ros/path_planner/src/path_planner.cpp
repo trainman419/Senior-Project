@@ -28,33 +28,39 @@
 #include <map>
 #include <vector>
 
+#include <boost/foreach.hpp>
+
 #include <ros/ros.h>
+#include <tf/tf.h>
 
 #include <global_map/Location.h>
-#include <hardware_interface/Control.h>
 #include <goal_list/Goal.h>
 #include <nav_msgs/Odometry.h>
+#include <nav_msgs/OccupancyGrid.h>
+#include <nav_msgs/Path.h>
 #include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/NavSatFix.h>
 
 using namespace std;
 
 // length for stock line segments
 #define ARC_LEN 3.0
-
 // distance where we decide we're too far off-path
 #define CLOSE_LEN 4.0
-
-// minimum turning radius
-#define MIN_RADIUS 20.0
-
-// how close we want to get to our goal before we're "there"
-#define GOAL_ERR 3.0
-
+// minimum turning radius (m)
+#define MIN_RADIUS 2.0
+// how close we want to get to our goal before we're "there" (m)
+#define GOAL_ERR 0.3
 // maximum number of iterations to look for a path
 #define MAX_ITER 10000
+// map resolution, in meters per pixel
+#define MAP_RES 0.10
 
-// speed for path traversal
-#define SPEED 40
+// speed for path traversal (m/s)
+#define MAX_SPEED 0.5
+#define MIN_SPEED 0.1
+#define MAX_TRAVERSE 4.0
+#define MAX_ACCEL 0.2
 
 // types, to make life easier
 struct loc {
@@ -62,19 +68,12 @@ struct loc {
    double x;
    double y;
    double pose;
-
-   // for path-finding: the node previous to this one
-   int prev;
-   // for path-finding: this node's index
-   int idx;
-   // for path-finding: the cost to get to this node
-   double cost;
-   // the arc we followed to get to this point
-   int steer;
 };
 
-// our current path
-list<loc> * path;
+struct path {
+   double speed;
+   double radius;
+};
 
 // the local obstacle map
 // fixed dimensions: 10m by 10m, centered about the associated center point
@@ -86,8 +85,8 @@ double map_center_y = 0.0;
 // get the value of the local obstacle map at (x, y)
 //  return 0 for any point not within the obstacle map
 inline int map_get(double x, double y) {
-   int i = round(x - map_center_x) + 50;
-   int j = round(y - map_center_y) + 50;
+   int i = round((x - map_center_x)/MAP_RES) + 50;
+   int j = round((y - map_center_y)/MAP_RES) + 50;
    if( i >= 0 && i < 101 && j >= 0 && j < 101 ) {
       return map_data[i][j];
    } else {
@@ -98,8 +97,8 @@ inline int map_get(double x, double y) {
 // get the value of the local obstacle map at (x, y)
 //  return 0 for any point not within the obstacle map
 inline void map_set(double x, double y, int v) {
-   int i = round(x - map_center_x) + 50;
-   int j = round(y - map_center_y) + 50;
+   int i = round((x - map_center_x)/MAP_RES) + 50;
+   int j = round((y - map_center_y)/MAP_RES) + 50;
    if( i >= 0 && i < 101 && j >= 0 && j < 101 ) {
       map_data[i][j] = v;
    }
@@ -124,273 +123,257 @@ bool test_collision(loc here) {
    return map_get(here.x, here.y) != 0;
 }
 
-#define dist(a, b) hypot(a.x - b.x, a.y - b.y)
+// test an arc start at start with radius r for length l
+bool test_arc(loc start, double r, double l) {
+   if( r != 0.0 ) {
+      // normal case; traverse an arc
+      double center_x, center_y, theta;
+      theta = start.pose - M_PI/2;
+      center_x = start.x + r * cos(start.pose + M_PI/2);
+      center_y = start.y + r * sin(start.pose + M_PI/2);
 
-// plan a path from start to end and update the current path
-// implemented as A*
-void plan_path(loc start, loc end) {
-   loc here = start;
-
-   print_map();
-
-   ROS_INFO("Searching for path from (% 5.2lf, % 5.2lf) to (% 5.2lf, % 5.2lf)",
-         start.x, start.y, end.x, end.y);
-   int iter = 0;
-
-   // identify positions where we've been by an int and store them
-   vector<loc> * points = new vector<loc>();
-   // sorted list of points, in order from closest to furthest
-   //  we don't index this, we just use it for the fact that it's sorted
-   //  and we pull the first element off the list each time
-   map<double, int> * unvisited = new map<double, int>();
-
-   here.idx = 0;
-   here.cost = 0;
-   points->push_back(here);
-   (*unvisited)[dist(here, end)] = 0;
-
-   int steer[] = {-100, -64, -32, -16, -8, -4, -2, 0, 2, 4, 8, 16, 32, 64, 100};
-
-   while( dist(here, end) > GOAL_ERR && iter < MAX_ITER
-         && unvisited->size() > 0 ) {
-      iter++;
-
-      // visit the point nearest the goal
-      assert(unvisited->size() > 0);
-      map<double, int>::iterator next = unvisited->begin();
-
-      assert(next->second < points->size());
-      here = points->at(next->second);
-
-      unvisited->erase(next);
-
-      //cout << "Here: (" << here.x << ", " << here.y << ", " << here.pose << 
-      //   ")" << endl;
-
-      // FIXME: only drive forward
-
-      // generate points to visit
-      for( unsigned int i=0; i<(sizeof(steer)/sizeof(int)); i++ ) {
-      //for( unsigned int i=0; i<15; i++ ) {
-         double d = ARC_LEN;  // distance to travel
-         double r = 0;
-
-         double dx, dy, dt;
-
-         double theta = here.pose;
-         if( steer[i] == 0 ) {
-            // if we're going straight, just generate a straight-line estimate
-            dx = d * cos(theta);
-            dy = d * sin(theta);
-            dt = 0.0;
-         } else {
-            // radius of turn
-            r = (786.4 - 170.2 * log(fabs(steer[i]))) / 10.0;
-            dt = d / r; // in rads
-
-            double theta_c1; // in radians
-            double theta_c2; // in radians
-            if( steer[i] > 0 ) {
-               // turning right
-               dt = -dt;
-               theta_c1 = theta + M_PI/2;
-            } else {
-               // turning left
-               theta_c1 = theta - M_PI/2;
-            }
-            theta_c2 = theta_c1 + dt;
-
-            dx = r * (cos(theta_c2) - cos(theta_c1));
-            dy = r * (sin(theta_c2) - sin(theta_c1));
-
-            if( steer[i] < 0 ) {
-               r = -r;
-            }
+      // traverse along the arc until we hit something
+      for( double dist = 0; dist < l; dist += MAP_RES/2.0 ) {
+         double x = r * cos(theta + dist / r) + center_x;
+         double y = r * sin(theta + dist / r) + center_y;
+         if( map_get(x, y) ) {
+            //ROS_WARN("Obstacle at %lf", dist);
+            return false;
          }
-
-         loc n;
-         n.x = here.x + dx;
-         n.y = here.y + dy;
-         n.pose = here.pose + dt;
-         n.prev = here.idx;
-         n.steer = steer[i];
-         n.cost = here.cost + ARC_LEN;
-
-         while( n.pose < -M_PI ) n.pose += M_PI*2;
-         while( n.pose >  M_PI ) n.pose -= M_PI*2;
-
-         if( !test_collision(n) ) {
-            n.idx = points->size();
-            points->push_back(n);
-
-            double len = dist(n, end) + n.cost;
-            (*unvisited)[len] = n.idx;
+      }
+   } else {
+      // degenerate case; traverse a line
+      for( double dist = 0; dist < l; dist += MAP_RES/2.0 ) {
+         if( map_get(start.x + dist*cos(start.pose), 
+                  start.y + dist*sin(start.pose)) ) {
+            //ROS_WARN("Obstacle at %lf", dist);
+            return false;
          }
       }
    }
+   return true;
+}
 
-   ROS_INFO("Found path in %d iterations!", iter);
+nav_msgs::Path arcToPath(loc start, double r, double l) {
+   nav_msgs::Path p;
+   p.header.frame_id = "odom";
+   if( r != 0.0 ) {
+      // normal case; traverse an arc
+      double center_x, center_y, theta;
+      theta = start.pose - M_PI/2;
+      center_x = start.x + r * cos(start.pose + M_PI/2);
+      center_y = start.y + r * sin(start.pose + M_PI/2);
 
-   path->clear();
+      // traverse along the arc until we hit something
+      for( double dist = 0; dist < l; dist += MAP_RES/2.0 ) {
+         double x = r * cos(theta + dist / r) + center_x;
+         double y = r * sin(theta + dist / r) + center_y;
+         geometry_msgs::PoseStamped pose;
+         pose.header.frame_id = "odom";
+         pose.pose.position.x = x;
+         pose.pose.position.y = y;
+         p.poses.push_back(pose);
+      }
+   } else {
+      // degenerate case; traverse a line
+      for( double dist = 0; dist < l; dist += MAP_RES/2.0 ) {
+         geometry_msgs::PoseStamped pose;
+         pose.header.frame_id = "odom";
+         pose.pose.position.x = start.x + dist*cos(start.pose);
+         pose.pose.position.y = start.y + dist*sin(start.pose);
+         p.poses.push_back(pose);
+      }
+   }
+   return p;
+}
 
-   // walk backwards and build path
-   while( here.idx != 0 ) {
-      path->push_front(here);
-      here = points->at(here.prev);
+loc arc_end(loc start, double r, double l) {
+   loc ret;
+   if( r != 0.0 ) {
+      // normal case; traverse an arc
+      double center_x, center_y, theta;
+      theta = start.pose - M_PI/2;
+      center_x = start.x + r * cos(start.pose + M_PI/2);
+      center_y = start.y + r * sin(start.pose + M_PI/2);
+
+      ret.x = center_x + r*cos(theta + l / r);
+      ret.y = center_y + r*sin(theta + l / r);
+      ret.pose = theta + l / r;
+   } else {
+      // degenerate case: straight line
+      ret.x = start.x + l*cos(start.pose);
+      ret.y = start.y + l*sin(start.pose);
+      ret.pose = start.pose;
+   }
+   return ret;
+}
+
+#define dist(a, b) hypot(a.x - b.x, a.y - b.y)
+
+ros::Publisher path_pub;
+
+// plan a path from start to end and update the current path
+// implemented as A*
+path plan_path(loc start, loc end) {
+   /*
+   ROS_INFO("Searching for path from (% 5.2lf, % 5.2lf) to (% 5.2lf, % 5.2lf)",
+         start.x, start.y, end.x, end.y);
+         */
+
+   double theta = atan2(end.y - start.y, end.x - start.x);
+   //ROS_INFO("Angle to goal: %lf", theta);
+
+   double d = dist(start, end);
+   double traverse_dist = min(d, MAX_TRAVERSE);
+   double speed = MAX_SPEED * traverse_dist / MAX_TRAVERSE;
+   if( speed < MIN_SPEED) speed = MIN_SPEED;
+   //ROS_INFO("Traverse distance %lf", traverse_dist);
+
+   // radius > 0 -> left
+   double radius = 0;
+
+   // test tangent arc through the goal point:
+   double alpha = 2.0 * (theta - start.pose); // arc angle
+   // normalize (theta - start.pose)
+   while( alpha > 2.0*M_PI )  alpha -= M_PI * 4.0;
+   while( alpha < -2.0*M_PI ) alpha += M_PI * 4.0;
+   double arc_len = alpha; // grab inner angle before normalization
+
+   // normalize while maintaining sign
+   if( alpha >  M_PI ) alpha =  M_PI * 2.0 - alpha;
+   if( alpha < -M_PI ) alpha = -M_PI * 2.0 - alpha;
+
+   double beta = (M_PI - fabs(alpha)) / 2.0; // internal angle
+   radius = d * sin(beta) / sin(alpha);
+   arc_len = arc_len * radius;
+
+   //ROS_INFO("%lf %lf %lf", d, beta, alpha);
+   if( fabs(radius) < MIN_RADIUS ) {
+      //ROS_INFO("Tangent arc radius too small; looping around. %lf", radius);
+      radius = 0;
+      arc_len = MIN_RADIUS;
    }
 
-   ROS_INFO("Path with %d points:", path->size());
+   arc_len = min(arc_len, MAX_TRAVERSE);
 
-   for( list<loc>::iterator itr = path->begin(); itr != path->end(); itr++ ) {
-      ROS_INFO("Point % 3d (% 4.2lf, % 4.2lf, % 4.2lf) steer %d", itr->idx, 
-            itr->x, itr->y, itr->pose, itr->steer);
+   if( !test_arc(start, radius, arc_len) ) {
+      ROS_WARN("Tangent arc failed");
+
+      // test various radii for traverse_dist
+      list<double> arcs;
+      if( test_arc(start, 0, traverse_dist) ) {
+         arcs.push_back(0);
+      }
+      // 1, 2, 4, 8 * MIN_RADIUS
+      for( int i=1; i<9; i *= 2 ) {
+         // traverse at most a quarter turn
+         double d = min(traverse_dist, MIN_RADIUS * M_PI / 2);
+         if( test_arc(start, MIN_RADIUS*i, d) ) {
+            arcs.push_back(MIN_RADIUS*i);
+         }
+         if( test_arc(start, -MIN_RADIUS*i, d) ) {
+            arcs.push_back(-MIN_RADIUS*i);
+         }
+      }
+      if( arcs.size() == 0 ) {
+         ROS_WARN("No valid forward paths found");
+         speed = 0;
+         radius = 0;
+      } else {
+         // choose arc that gets us closest to goal
+         //ROS_INFO("%zd forward paths found", arcs.size());
+         double best_r = arcs.front();
+         double l = min(traverse_dist, best_r * M_PI / 2);
+         loc e = arc_end(start, best_r, l);
+         double min_dist = dist(e, end);
+
+         BOOST_FOREACH(double r, arcs) {
+            l = min(traverse_dist, r * M_PI / 2);
+            e = arc_end(start, r, l);
+            double d = dist(e, end);
+            if( d < min_dist ) {
+               best_r = r;
+               min_dist = d;
+            }
+         }
+         radius = best_r;
+         nav_msgs::Path p = arcToPath(start, best_r, 
+               min(traverse_dist, best_r * M_PI / 2));
+         path_pub.publish(p);
+      }
+   } else {
+      nav_msgs::Path p = arcToPath(start, radius, arc_len);
+      path_pub.publish(p);
    }
 
-   delete points;
-   delete unvisited;
+   path p;
+   p.radius = radius;
+   p.speed = speed;
+   return p;
 }
 
 // publisher for publishing movement commands
-ros::Publisher control_pub;
+ros::Publisher cmd_pub;
+// publisher for map
+ros::Publisher map_pub;
 
-bool active = false;
+bool active = true;
 bool path_valid = false;
 loc goal;
 
-void goalCallback(const goal_list::Goal::ConstPtr & msg) {
-   if( msg->valid ) {
-      goal.x = msg->loc.col;
-      goal.y = msg->loc.row;
-      active = true;
-      path_valid = false;
-      ROS_INFO("Path following activated");
-   } else {
-      active = false;
-      ROS_INFO("Path following deactivated");
-   }
+void goalCallback(const geometry_msgs::Point::ConstPtr & msg) {
+   goal.x = msg->x;
+   goal.y = msg->y;
 }
 
 // the last location we were at.
 //  used as the center point for our local map
 loc last_loc;
+geometry_msgs::Pose last_pose;
    
-void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
+void odomCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    loc here;
    here.x = msg->pose.pose.position.x;
    here.y = msg->pose.pose.position.y;
-   here.pose = (M_PI/2) - msg->pose.pose.orientation.x;
+   here.pose = tf::getYaw(msg->pose.pose.orientation);
+
    last_loc = here;
+   last_pose = msg->pose.pose;
    if( active ) {
-      hardware_interface::Control c;
-      // if our path is invalid due to a new goal or such, re-plan
-      /*
-      if( !path_valid ) {
-         ROS_INFO("Path invalid; re-planning");
-         path_valid = true;
-         plan_path(here, goal);
-      }
+      geometry_msgs::Twist cmd;
 
-      // find the closest point on our path to the robot
-      list<loc>::iterator itr = path->begin();
-      double close_d = dist((*itr), here);
-      list<loc>::iterator close_i = itr;
-      for( itr++ ; itr != path->end(); itr++ ) {
-         double d = dist((*itr), here);
-         if( d < close_d ) {
-            close_d = d;
-            close_i = itr;
-         }
-      }
+      //ROS_INFO("Current angle: %lf", here.pose);
 
-      // if we're too far off the path, re-plan
-      if( close_d > CLOSE_LEN ) {
-         ROS_INFO("Too far off path(%lf); re-planning", close_d);
-         // stop the robot while we re-plan
-         c.speed = 0;
-         c.steer = 0;
-         control_pub.publish(c);
+      path p = plan_path(here, goal);
+      double radius = p.radius;
+      double speed = p.speed;
 
-         // re-pan
-         plan_path(here, goal);
-         close_i = path->begin();
-      }
-      // get directions to get to the next point
-      ROS_INFO("Closest point %d, steer %d", close_i->idx, close_i->steer);
-      c.steer = close_i->steer;
-      */
+      // limit acceleration
+      speed = min(speed, msg->twist.twist.linear.x + MAX_ACCEL);
+      speed = max(speed, msg->twist.twist.linear.x - MAX_ACCEL);
 
-      ROS_INFO("Current angle: %lf", here.pose);
 
-      // FIXME: complete hack to get by for the Sparkfun AVC
-      double theta = atan2(goal.y - here.y, goal.x - here.x);
-      ROS_INFO("Angle to goal: %lf", theta);
-
-      double x, y;
-
-      bool collide = true;
-      double target = theta;
-      double traverse_dist = min(dist(here, goal), 50.0);
-      //ROS_INFO("Traverse distance %lf", traverse_dist);
-
-      int i=1;
-
-      //print_map();
-
-      // look for a target angle that doesn't collide with anything
-      while( collide && i < 20) {
-         collide = false;
-         if( i & 1 ) {
-            target = theta + (M_PI/16)*(i/2);
-         } else {
-            target = theta - (M_PI/16)*(i/2);
-         }
-         double diff = target - here.pose;
-         while( diff >  M_PI ) diff -= 2*M_PI;
-         while( diff < -M_PI ) diff += 2*M_PI;
-         // don't try to turn to an angle where we can't see
-         if( fabs(diff) > M_PI/2 ) {
-            collide = true;
-         } else {
-            // check across our map to see if our path is clear
-            for( double dist = 0; dist <= traverse_dist; dist += 0.5 ) {
-               x = here.x + dist*cos(target);
-               y = here.y + dist*sin(target);
-               if( map_get(x, y) ) {
-                  collide = true;
-                  break;
-               }
-            }
-         }
-         i++;
-      }
-
-      ROS_INFO("Target angle:  %lf", target);
-      if( collide ) {
-         ROS_WARN("Target angle has a collision!");
-      }
-
-      double diff = target - here.pose;
-      while( diff > M_PI  ) diff -= 2*M_PI;
-      while( diff < -M_PI ) diff += 2*M_PI;
-
-      ROS_INFO("Angle difference: %lf", diff);
-
-      if( diff > M_PI/2 ) {
-         c.steer = -100;
-      } else if( diff < -M_PI/2 ) {
-         c.steer = 100;
+      // steering radius = linear / angular
+      // angular = linear / radius
+      if( radius != 0.0 ) {
+         cmd.angular.z = speed / radius;
       } else {
-         c.steer = (int)(-diff*60.0);
+         cmd.angular.z = 0;
       }
-      ROS_INFO("steer: %d", c.steer);
 
-      c.speed = SPEED;
-      control_pub.publish(c);
+      //ROS_INFO("Target radius: %lf, angular: %lf", radius, cmd.angular.z);
+
+      if( dist(here, goal) > GOAL_ERR ) {
+         //ROS_INFO("Target speed: %lf", speed);
+         cmd.linear.x = speed;
+      } else {
+         cmd.linear.x = 0;
+         cmd.angular.z = 0;
+      }
+      cmd_pub.publish(cmd);
    } else {
-      hardware_interface::Control c;
-      c.steer = 0;
-      c.speed = 0;
-      control_pub.publish(c);
+      geometry_msgs::Twist cmd;
+      cmd_pub.publish(cmd);
    }
 }
 
@@ -404,34 +387,25 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
    double x;
    double y;
 
-   /*
-   for( int i=0; i<101; i++ ) {
-      for( int j=0; j<101; j++ ) {
-         map_data[i][j] = 0;
-      }
-   }
-   */
-   // memset ought to ba faster
+   // clear map
    memset(map_data, 0, 101*101*sizeof(int));
 
    for( unsigned int i=0; i<msg->ranges.size(); i++, 
          theta += msg->angle_increment ) {
       // 0 means max range... I think
       if( msg->ranges[i] != 0.0 ) {
-         x = map_center_x + msg->ranges[i]*cos(theta)*10.0; // convert to 10 x m
-         y = map_center_y + msg->ranges[i]*sin(theta)*10.0;
+         x = map_center_x + msg->ranges[i]*cos(theta); 
+         y = map_center_y + msg->ranges[i]*sin(theta);
          map_set(x, y, 1);
       }
    }
-
-   //print_map();
 
    // we hope we aren't sitting on an obstacle
    map_data[50][50] = 0;
 
    // grow obstacles by radius of robot; makes collision-testing easier
    // order: O(n^2 * 12)
-   for( int r=1; r<5; r++ ) {
+   for( int r=1; r<(0.4/MAP_RES); r++ ) {
       for( int i=0; i<101; i++ ) {
          for( int j=0; j<101; j++ ) {
             if( map_data[i][j] == 0 ) {
@@ -444,40 +418,26 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
       }
    }
 
-   //print_map();
-
-   /*
-   if( active ) {
-      // test path for collisions and re-plan if collision iminent
-      bool collide = false;
-      for( list<loc>::iterator itr = path->begin(); itr != path->end(); itr++ ) {
-         if( test_collision(*itr) ) {
-            collide = true;
-            break;
-         }
-      }
-      if( collide ) {
-         ROS_INFO("Collision iminenet, re-planning");
-         hardware_interface::Control c;
-
-         // stop the robot while we re-plan
-         c.speed = 0;
-         c.steer = 0;
-         //control_pub.publish(c);
-
-         // mark path as invalid
-         path_valid = false;
-         // we'll start moving again when we get a location update
+   // publish map
+   nav_msgs::OccupancyGrid map;
+   map.header = msg->header;
+   map.header.frame_id = "odom";
+   map.info.resolution = MAP_RES;
+   map.info.width = 101;
+   map.info.height = 101;
+   map.info.origin.position.x = last_loc.x - 5.0;
+   map.info.origin.position.y = last_loc.y - 5.0;
+   map.info.origin.orientation.w = 1.0;
+   for( int i=0; i<101; i++ ) {
+      for( int j=0; j<101; j++ ) {
+         map.data.push_back(map_data[j][i]);
       }
    }
-   */
-
+   map_pub.publish(map);
    return;
 }
 
 int main(int argc, char ** argv) {
-   path = new list<loc>();
-
    // set map to empty
    for( int i=0; i<101; i++ ) {
       for( int j=0; j<101; j++ ) {
@@ -490,21 +450,15 @@ int main(int argc, char ** argv) {
    ros::NodeHandle n;
 
    // subscribe to our location and current goal
-   ros::Subscriber pos_sub = n.subscribe("position", 2, positionCallback);
+   ros::Subscriber odom_sub = n.subscribe("odom", 2, odomCallback);
    ros::Subscriber goal_sub = n.subscribe("current_goal", 2, goalCallback);
    ros::Subscriber laser_sub = n.subscribe("scan", 2, laserCallback);
 
-   control_pub = n.advertise<hardware_interface::Control>("control", 10);
-
-   ros::Rate loop(10.0);
+   cmd_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+   map_pub = n.advertise<nav_msgs::OccupancyGrid>("map", 10);
+   path_pub = n.advertise<nav_msgs::Path>("path", 10);
 
    ROS_INFO("Path planner ready");
 
    ros::spin();
-   /*
-   while( ros::ok() ) {
-      ros::spinOnce();
-      loop.sleep();
-   }
-   */
 }
