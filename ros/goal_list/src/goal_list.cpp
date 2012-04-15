@@ -17,6 +17,9 @@
 #include <goal_list/Goal.h>
 #include <goal_list/GoalList.h>
 
+#include <geometry_msgs/Point.h>
+#include <sensor_msgs/NavSatFix.h>
+
 #include <nav_msgs/Odometry.h>
 
 // declare ourselves to be "at" a goal when we are within 1 meter
@@ -24,15 +27,23 @@
 
 using namespace std;
 
-vector<global_map::Location> * goals;
+//vector<global_map::Location> * goals;
+vector<sensor_msgs::NavSatFix> * goals;
 unsigned int current_goal;
+
+int loop = 0;
 
 // publisher for current goal
 ros::Publisher goal_pub;
+
+geometry_msgs::Point last_odom;
    
 void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    ROS_INFO("Got position update");
 
+   last_odom = msg->pose.pose.position;
+   
+   /*
    if( current_goal < goals->size() ) {
       double dist = hypot(msg->pose.pose.position.y - 
                               goals->at(current_goal).row, 
@@ -44,10 +55,16 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
          current_goal++;
          goal_list::Goal g;
          if( current_goal >= goals->size() ) {
-            // umm... do we go back to goal #1 or just stop here?
-            // going back to the start is easier to handle
-            current_goal = goals->size();
-            g.valid = 0;
+            if( loop ) {
+               // go back to start, if looping
+               current_goal = 0;
+               g.valid = 1;
+               g.loc = goals->at(current_goal);
+            } else {
+               // else, stop
+               current_goal = goals->size();
+               g.valid = 0;
+            }
          } else {
             ROS_INFO("Advancing to goal %d", current_goal);
             g.loc = goals->at(current_goal);
@@ -56,11 +73,28 @@ void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
          goal_pub.publish(g);
       }
    }
+   */
+}
+
+bool active = false;
+
+void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr & msg) {
+   geometry_msgs::Point goal = last_odom; // goal, in odom frame
+   if( active ) {
+      // TODO: compute offset to goal in m
+
+      // use last_odom as the position in the odom frame that corresponds to
+      // this GPS location
+      
+      // if we're close enough to goal, swtich to next goal
+   }
+   goal_pub.publish(goal);
 }
 
 // TODO: rewrite this so that we don't have to have a thousand special cases
 //  most likely this means implementing full-duplex goal list exchange with
 //  the UI, and letting it determine what the next goal is
+/*
 void goalListCallback(const goal_list::GoalList::ConstPtr & msg) {
    ROS_INFO("Got Goal List, length %d", msg->goals.size());
    int oldsize = goals->size();
@@ -81,19 +115,24 @@ void goalListCallback(const goal_list::GoalList::ConstPtr & msg) {
       g.loc = goals->at(current_goal);
       goal_pub.publish(g);
    }
-
 }
+*/
 
 int main(int argc, char ** argv) {
-   goals = new vector<global_map::Location>();
+   goals = new vector<sensor_msgs::NavSatFix>();
 
    ros::init(argc, argv, "goal_list");
 
    ros::NodeHandle n;
 
+   // TODO: load goal list from parameter server
+
    ros::Subscriber position = n.subscribe("position", 2, positionCallback);
-   ros::Subscriber goalList = n.subscribe("goal_list", 2, goalListCallback);
-   goal_pub = n.advertise<goal_list::Goal>("current_goal", 10);
+   ros::Subscriber gps = n.subscribe("gps", 2, gpsCallback);
+   //ros::Subscriber goalList = n.subscribe("goal_list", 2, goalListCallback);
+   goal_pub = n.advertise<geometry_msgs::Point>("current_goal", 10);
+
+   ROS_INFO("Goal List ready");
 
    ros::spin();
 }
