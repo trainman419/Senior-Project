@@ -9,7 +9,10 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/cone_detector</url>
   <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
   <depend package="sensor_msgs"/>
+  <depend package="visualization_msgs"/>
+  <depend package="tf"/>
 
 </package>
 
