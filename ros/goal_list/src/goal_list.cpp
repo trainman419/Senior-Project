@@ -38,42 +38,10 @@ ros::Publisher goal_pub;
 
 geometry_msgs::Point last_odom;
    
-void positionCallback(const nav_msgs::Odometry::ConstPtr & msg) {
+void odomCallback(const nav_msgs::Odometry::ConstPtr & msg) {
    ROS_INFO("Got position update");
 
    last_odom = msg->pose.pose.position;
-   
-   /*
-   if( current_goal < goals->size() ) {
-      double dist = hypot(msg->pose.pose.position.y - 
-                              goals->at(current_goal).row, 
-                          msg->pose.pose.position.x - 
-                              goals->at(current_goal).col);
-
-      if( dist < GOAL_DIST ) {
-         // advance to next goal
-         current_goal++;
-         goal_list::Goal g;
-         if( current_goal >= goals->size() ) {
-            if( loop ) {
-               // go back to start, if looping
-               current_goal = 0;
-               g.valid = 1;
-               g.loc = goals->at(current_goal);
-            } else {
-               // else, stop
-               current_goal = goals->size();
-               g.valid = 0;
-            }
-         } else {
-            ROS_INFO("Advancing to goal %d", current_goal);
-            g.loc = goals->at(current_goal);
-            g.valid = 1;
-         }
-         goal_pub.publish(g);
-      }
-   }
-   */
 }
 
 bool active = false;
@@ -83,12 +51,11 @@ bool active = false;
 
 // Goal Tolerance
 //  TODO: convert to parameter shared with path planner
-#define GOAL_TOLERANCE 0.3
+#define GOAL_TOLERANCE 3.0
 
 void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr & msg) {
    geometry_msgs::Point goal = last_odom; // goal, in odom frame
    if( active ) {
-      // TODO: compute offset to goal in m
       sensor_msgs::NavSatFix gps_goal = goals->at(current_goal);
 
       // use last_odom as the position in the odom frame that corresponds to
@@ -99,16 +66,13 @@ void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr & msg) {
       end_lat = gps_goal.latitude / 180.0 * M_PI;
       end_lon = gps_goal.longitude / 180.0 * M_PI;
 
-      ROS_INFO("Start: %lf, %lf", msg->latitude, msg->longitude);
-      ROS_INFO("End: %lf, %lf", gps_goal.latitude, gps_goal.longitude);
-
       // Haversine formula (http://www.movable-type.co.uk/scripts/latlong.html)
       double delta_lat = end_lat - start_lat;
       double delta_lon = end_lon - start_lon;
       double a = sin(delta_lat/2.0)*sin(delta_lat/2.0) + 
          cos(start_lat)*cos(end_lat)*sin(delta_lon/2.0)*sin(delta_lon/2);
       double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-      double d = R * c; // distance
+      double d = R * c; // distance to goal
 
 
       // Bearing formula (from above)
@@ -117,10 +81,10 @@ void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr & msg) {
             cos(start_lat)*sin(end_lat) - 
             sin(start_lat)*cos(end_lat)*cos(delta_lon));
 
-      ROS_INFO("Goal distance %lf, bearing %lf", d, theta * 180.0 / M_PI);
-
       // convert to radians North of East
       double heading = (M_PI / 2.0) - theta;
+
+      ROS_INFO("Goal %d: distance %lf, heading %lf", current_goal, d, heading);
 
       // no need to normalize heading
       goal.x = last_odom.x + d * cos(heading);
@@ -146,33 +110,6 @@ void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr & msg) {
    goal_pub.publish(goal);
 }
 
-// TODO: rewrite this so that we don't have to have a thousand special cases
-//  most likely this means implementing full-duplex goal list exchange with
-//  the UI, and letting it determine what the next goal is
-/*
-void goalListCallback(const goal_list::GoalList::ConstPtr & msg) {
-   ROS_INFO("Got Goal List, length %d", msg->goals.size());
-   int oldsize = goals->size();
-   *goals = msg->goals;
-   if( goals->size() == 0) {
-      goal_list::Goal g;
-      g.valid = 0;
-      goal_pub.publish(g);
-   } else if( goals->size() < current_goal || oldsize == 0 ) {
-      current_goal = 0;
-      goal_list::Goal g;
-      g.valid = 1;
-      g.loc = goals->at(current_goal);
-      goal_pub.publish(g);
-   } else if( goals->size() > current_goal && current_goal == oldsize ) {
-      goal_list::Goal g;
-      g.valid = 1;
-      g.loc = goals->at(current_goal);
-      goal_pub.publish(g);
-   }
-}
-*/
-
 int main(int argc, char ** argv) {
    goals = new vector<sensor_msgs::NavSatFix>();
    current_goal = 0;
@@ -181,7 +118,7 @@ int main(int argc, char ** argv) {
 
    ros::NodeHandle n;
 
-   // TODO: load goal list from parameter server
+   // load goal list from parameter server
    XmlRpc::XmlRpcValue xml_goals;
    n.getParam("goals", xml_goals);
    if( xml_goals.getType() != XmlRpc::XmlRpcValue::TypeArray ) {
@@ -212,9 +149,8 @@ int main(int argc, char ** argv) {
    n.getParam("loop", loop);
 
 
-   ros::Subscriber position = n.subscribe("position", 2, positionCallback);
+   ros::Subscriber odom = n.subscribe("odom", 2, odomCallback);
    ros::Subscriber gps = n.subscribe("gps", 2, gpsCallback);
-   //ros::Subscriber goalList = n.subscribe("goal_list", 2, goalListCallback);
    goal_pub = n.advertise<geometry_msgs::Point>("current_goal", 10);
 
    ROS_INFO("Goal List ready");
