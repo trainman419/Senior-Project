@@ -355,7 +355,10 @@ handler(idle_h) {
    // uint16_t idle
 
    uint16_t idle = p.readu16();
+   uint8_t i2c_fail = p.readu8();
+   uint8_t i2c_resets = p.readu8();
    ROS_INFO("Idle count: %d", idle);
+   ROS_INFO("I2C failures: %d, resets: %d", i2c_fail, i2c_resets);
 }
 
 

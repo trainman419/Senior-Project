@@ -194,7 +194,7 @@ int main() {
    sei(); // enable interrupts
 
    // imu initialization requires interrupts to be enabled.
-   //imu_init();
+   imu_init();
 
    interrupt_init();
 
@@ -213,6 +213,10 @@ int main() {
          idle_last = (ticks/1000) * 1000;
          if( idle_pub.reset() ) {
             idle_pub.append(idle);
+            extern uint8_t i2c_fail;
+            idle_pub.append(i2c_fail);
+            extern uint8_t i2c_resets;
+            idle_pub.append(i2c_resets);
             idle_pub.finish();
          }
          idle = 0;

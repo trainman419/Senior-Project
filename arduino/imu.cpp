@@ -37,6 +37,9 @@ extern "C" {
 
 uint8_t imu_enable = 0;
 
+uint8_t i2c_fail = 0;
+uint8_t i2c_resets = 0;
+
 float imu_status = 0.0;
 #define s(status) imu_status = max(status, imu_status)
 
@@ -357,7 +360,7 @@ void gyro_done(uint8_t * buf) {
 void gyro_read() {
    s(5.0);
    if( i2c_read(I2C_GYRO, 0x1D, common_buf, 6, gyro_done) < 0 ) {
-      imu_enable = 0;
+      ++i2c_fail;
    }
    return;
 }
@@ -393,7 +396,7 @@ void compass_done(uint8_t * buf) {
 void compass_read() {
    s(3.0);
    if( i2c_read(I2C_COMPASS, 0x03, common_buf, 6, compass_done) < 0 ) {
-      imu_enable = 0;
+      ++i2c_fail;
    }
    return;
 }
@@ -422,7 +425,7 @@ void accel_done(uint8_t * buf) {
 void accel_read() {
    s(1.0);
    if( i2c_read(I2C_ACCEL, 0x32, common_buf, 6, accel_done) < 0 ) {
-      imu_enable = 0;
+      ++i2c_fail;
    }
    return;
 }
@@ -436,9 +439,12 @@ void imu_read() {
    if( imu_enable ) {
       s(0.0);
       accel_read();
-      //gyro_read();
-   } else {
+   } 
+   if( i2c_fail > 5 ) {
+      ++i2c_resets;
+      imu_enable = 0;
       imu_init();
+      i2c_fail = 0;
    }
    return;
 }

@@ -386,8 +386,6 @@ void i2c_writem( uint8_t addr, uint8_t reg, uint8_t * data, uint8_t size,
    TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTA) | (1<<TWIE);
 }
 
-uint8_t i2c_fail = 0;
-
 // read bytes from an I2C device into a buffer and call a callback when done
 int8_t i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size, 
       void(*cb)(uint8_t *)) {
@@ -398,14 +396,7 @@ int8_t i2c_read(uint8_t addr, uint8_t reg, uint8_t * buf, uint8_t size,
    }
    if(!i2c_ready) {
       led_on();
-      ++i2c_fail;
-      if( i2c_fail > 20 ) {
-         i2c_fail = 0;
-         i2c_ready = 1;
-         return -1;
-      } else {
-         return 0;
-      }
+      return -1;
    }
    led_off();
    while(TWCR & (1<<TWSTO) ); // wait for stop bit to become clear
