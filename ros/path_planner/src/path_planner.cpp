@@ -53,8 +53,8 @@ using namespace std;
 #define MAX_RADIUS 10.0
 // how close we want to get to our goal before we're "there" (m)
 #define GOAL_ERR 0.3
-// maximum number of iterations to look for a path
-#define MAX_ITER 10000
+// how close we are before we switch to cone mode (m)
+#define CONE_DIST 6.0
 
 // map resolution, in meters per pixel
 #define MAP_RES 0.10
@@ -565,42 +565,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
 
    free(local_map);
 
-   // TODO: update all of this
    /*
-   // clear map
-   memset(map_data, 0, 101*101*sizeof(int));
-
-   for( unsigned int i=0; i<msg->ranges.size(); i++, 
-         theta += msg->angle_increment ) {
-      // 0 means max range... I think
-      if( msg->ranges[i] != 0.0 ) {
-         x = map_center_x + msg->ranges[i]*cos(theta); 
-         y = map_center_y + msg->ranges[i]*sin(theta);
-         map_set(x, y, 1);
-      }
-   }
-
-   // we hope we aren't sitting on an obstacle
-   map_data[50][50] = 0;
-
-   // grow obstacles by radius of robot; makes collision-testing easier
-   // order: O(n^2 * 12)
-   for( int r=1; r<(0.4/MAP_RES); r++ ) {
-      for( int i=0; i<101; i++ ) {
-         for( int j=0; j<101; j++ ) {
-            if( map_data[i][j] == 0 ) {
-               if( i > 0   && map_data[i-1][j] == r ) map_data[i][j] = r+1;
-               if( j > 0   && map_data[i][j-1] == r ) map_data[i][j] = r+1;
-               if( i < 100 && map_data[i+1][j] == r ) map_data[i][j] = r+1;
-               if( j < 100 && map_data[i][j+1] == r ) map_data[i][j] = r+1;
-            }
-         }
-      }
-   }
-   */
-
-   /*
-   */
    static int div = 0;
    ++div;
    if( div % 20 == 0 ) {
@@ -621,6 +586,7 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
       }
       map_pub.publish(map);
    }
+   */
    return;
 }
 
