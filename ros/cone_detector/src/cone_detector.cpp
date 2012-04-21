@@ -24,6 +24,8 @@
 #define MIN_CIRCLE_SIZE 4
 #define STD_DEV_THRESHOLD 15.0
 
+#define SAME_CONE_THRESHOLD 0.25
+
 double dist(geometry_msgs::Point a, geometry_msgs::Point b) {
    return hypot(a.x - b.x, a.y - b.y);
 }
@@ -38,6 +40,11 @@ private:
    tf::TransformListener listener;
    ros::Subscriber laser_sub;
    ros::Publisher marker_pub;
+
+   // last seen and point
+   typedef std::pair<ros::Time, geometry_msgs::Point> cone_type;
+   typedef std::list<cone_type> cone_list;
+   cone_list cones;
 
 public:
    ConeDetector() : listener(n, ros::Duration(20.0)) {
@@ -82,6 +89,10 @@ public:
          ROS_ERROR("%s", e.what());
       }
 
+      // new cones
+      cone_list new_cones;
+
+      // set up markers
       visualization_msgs::Marker markers;
       markers.header.frame_id = "/odom";
       markers.header.stamp = msg->header.stamp;
@@ -146,13 +157,52 @@ public:
                std_dev = sqrt(std_dev) * 180.0 / M_PI;
                if( std_dev < STD_DEV_THRESHOLD ) {
                   // compute center of circle
+                  double theta = atan2(last.y - first.y, last.x - first.x);
+                  double d = dist(first, last);
 
+                  double x = d / 2;
+                  double y = d * tan(avg_angle - M_PI/2.0);
+
+                  center.x = first.x + x * cos(theta) - y*sin(theta);
+                  center.y = first.y + y * cos(theta) + x*sin(theta);
+
+                  double r = hypot(x, y);
+
+                  //markers.points.push_back(center);
+
+                  ROS_INFO("Found circle with radius %lf", r);
+
+                  cone_list::iterator nearest = cones.begin();
+                  d = dist(cones.front().second, center);
+                  // determine if this is a cone we've seen before
+                  for( cone_list::iterator itr = cones.begin(); 
+                        itr != cones.end(); ++itr ) {
+                     if( dist(itr->second, center) < d ) {
+                        d = dist(itr->second, center);
+                        nearest = itr;
+                     }
+                  }
+                  if( dist(nearest->second, center) < SAME_CONE_THRESHOLD ) {
+                     cones.erase(nearest);
+                  }
+                  new_cones.push_back(cone_type(ros::Time::now(), center));
                   // markers at ends of arc
-                  markers.points.push_back(first);
-                  markers.points.push_back(last);
+                  //markers.points.push_back(first);
+                  //markers.points.push_back(last);
                }
             }
          }
+      }
+
+      BOOST_FOREACH(cone_type p, cones) {
+         if( p.first > (ros::Time::now() - ros::Duration(2.0)) ) {
+            new_cones.push_back(p);
+         }
+      }
+      cones.clear();
+      BOOST_FOREACH(cone_type p, new_cones) {
+         markers.points.push_back(p.second);
+         cones.push_back(p);
       }
       marker_pub.publish(markers);
    }
