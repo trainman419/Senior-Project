@@ -271,6 +271,7 @@ ISR(TIMER0_OVF_vect) {
          yaw = (yaw + imu_state.angular.z) / 2.0;
          //yaw = imu_state.angular.z;
          odom.append(yaw);
+         odom.append(bump());
          // odom: total of 5 floats; 4*5 = 20 bytes
          odom.finish();
       }
