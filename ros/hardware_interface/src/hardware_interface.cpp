@@ -22,6 +22,7 @@
 #include <geometry_msgs/Twist.h>
 #include <tf/transform_broadcaster.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Bool.h>
 
 
 #include "protocol.h"
@@ -38,6 +39,7 @@ ros::Publisher odo_pub;
 ros::Publisher sonar_pub;
 ros::Publisher gps_pub;
 ros::Publisher heading_pub;
+ros::Publisher bump_pub;
 //ros::Publisher goalList_pub;
 
 // for resolving offsets back to lat/lon for our user interface
@@ -281,6 +283,11 @@ handler(odometry_h) {
    transform.transform.translation.z = odo_msg.pose.pose.position.z;
    transform.transform.rotation = odo_msg.pose.pose.orientation;
    odom_tf.sendTransform(transform);
+
+   uint8_t b = p.readu8();
+   std_msgs::Bool bump;
+   bump.data = (b != 0);
+   bump_pub.publish(bump);
 }
 
 handler(gpslist_h) {
@@ -397,6 +404,7 @@ handler(imu_h) {
    std_msgs::Float32 h;
    h.data = z;
    heading_pub.publish(h);
+
 }
 
 #define IN_BUFSZ 1024
@@ -477,6 +485,7 @@ int main(int argc, char ** argv) {
    sonar_pub = n.advertise<sensor_msgs::Range>("sonar", 10);
    gps_pub = n.advertise<sensor_msgs::NavSatFix>("gps", 10);
    heading_pub = n.advertise<std_msgs::Float32>("heading", 10);
+   bump_pub = n.advertise<std_msgs::Bool>("bump", 10);
 
    //r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
    //offset = n.serviceClient<global_map::Offset>("Offset");
