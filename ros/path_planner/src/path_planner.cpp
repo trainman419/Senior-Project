@@ -40,6 +40,8 @@
 #include <nav_msgs/Path.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <std_msgs/Bool.h>
+#include <visualization_msgs/Marker.h>
 
 using namespace std;
 
@@ -211,12 +213,17 @@ loc arc_end(loc start, double r, double l) {
 ros::Publisher path_pub;
 
 enum pstate {
-   BACKING, FORWARD
+   BACKING, FORWARD, CONE
 };
 
 pstate planner_state;
 
 ros::Time planner_timeout;
+
+visualization_msgs::Marker cones;
+
+bool bump = false;
+
 
 /* plan a path from start to end
  *  TODO: find a clear path all the way to the edge of the map or the goal, 
@@ -230,6 +237,10 @@ path plan_path(loc start, loc end) {
          start.x, start.y, end.x, end.y);
          */
    path p;
+   double d = dist(start, end);
+   if( d < CONE_DIST && planner_state == FORWARD ) {
+      planner_state = CONE;
+   }
 
    switch(planner_state) {
       case BACKING:
@@ -240,11 +251,29 @@ path plan_path(loc start, loc end) {
             planner_timeout.sec = 0;
          }
          break;
+      case CONE:
+         {
+            // find nearest cone
+            geometry_msgs::Point cone = cones.points.front();
+            double cone_d = hypot(cone.x - start.x, cone.y - start.y);
+            BOOST_FOREACH(geometry_msgs::Point p, cones.points) {
+               double d = hypot(p.x - start.x, p.y - start.y);
+               if( d < cone_d ) {
+                  cone = p;
+                  cone_d = d;
+               }
+            }
+            // if we hit the cone, back up and keep going
+            if( bump ) {
+               planner_timeout = ros::Time::now();
+               planner_state = BACKING;
+            }
+         }
+         break;
       case FORWARD:
          double theta = atan2(end.y - start.y, end.x - start.x);
          //ROS_INFO("Angle to goal: %lf", theta);
 
-         double d = dist(start, end);
          double traverse_dist = min(d, MAX_TRAVERSE);
          double speed = min(MAX_SPEED, 
                MAX_SPEED * (2.0 * traverse_dist / MAX_TRAVERSE));
@@ -590,6 +619,14 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
    return;
 }
 
+void bumpCb(const std_msgs::Bool::ConstPtr & msg ) {
+   bump = msg->data;
+}
+
+void conesCb(const visualization_msgs::Marker::ConstPtr & msg ) {
+   cones = *msg;
+}
+
 int main(int argc, char ** argv) {
    map_data = (map_type*)malloc(MAP_SIZE * MAP_SIZE * sizeof(map_type));
    // set map to empty
@@ -607,6 +644,8 @@ int main(int argc, char ** argv) {
    ros::Subscriber odom_sub = n.subscribe("odom", 2, odomCallback);
    ros::Subscriber goal_sub = n.subscribe("current_goal", 2, goalCallback);
    ros::Subscriber laser_sub = n.subscribe("scan", 2, laserCallback);
+   ros::Subscriber bump_sub = n.subscribe("bump", 2, bumpCb);
+   ros::Subscriber cones_sub = n.subscribe("cone_markers", 2, conesCb);
 
    cmd_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 10);
    map_pub = n.advertise<nav_msgs::OccupancyGrid>("map", 1);
