@@ -64,7 +64,7 @@ using namespace std;
 #define MAP_SIZE 5000
 
 // speed for path traversal (m/s)
-#define MAX_SPEED 1.0
+#define MAX_SPEED 1.5
 #define MIN_SPEED 0.1
 #define MAX_TRAVERSE 4.0
 #define MAX_ACCEL 0.3
@@ -238,9 +238,13 @@ path plan_path(loc start, loc end) {
          */
    path p;
    double d = dist(start, end);
+   /*
    if( d < CONE_DIST && planner_state == FORWARD ) {
       planner_state = CONE;
+      planner_timeout = ros::Time::now();
+      ROS_INFO("Starting cone tracking");
    }
+   */
 
    switch(planner_state) {
       case BACKING:
@@ -254,19 +258,53 @@ path plan_path(loc start, loc end) {
       case CONE:
          {
             // find nearest cone
-            geometry_msgs::Point cone = cones.points.front();
-            double cone_d = hypot(cone.x - start.x, cone.y - start.y);
-            BOOST_FOREACH(geometry_msgs::Point p, cones.points) {
-               double d = hypot(p.x - start.x, p.y - start.y);
-               if( d < cone_d ) {
-                  cone = p;
-                  cone_d = d;
+            if( cones.points.size() > 0 ) {
+               geometry_msgs::Point cone = cones.points.front();
+               double cone_d = hypot(cone.x - start.x, cone.y - start.y);
+               BOOST_FOREACH(geometry_msgs::Point p, cones.points) {
+                  double d = hypot(p.x - start.x, p.y - start.y);
+                  if( d < cone_d ) {
+                     cone = p;
+                     cone_d = d;
+                  }
                }
+               p.speed = MIN_SPEED * 4.0;
+               p.radius = 0;
+               double cone_angle = atan2(cone.y - start.y, cone.x - start.x);
+               double turn_angle = cone_angle - start.pose;
+               // normalize turn angle
+               while( turn_angle > M_PI ) turn_angle -= 2*M_PI;
+               while( turn_angle < -M_PI ) turn_angle += 2 * M_PI;
+
+               ROS_INFO("Angle to cone %lf", turn_angle);
+               if( turn_angle > 0.1 ) {
+                  p.radius = MIN_RADIUS;
+                  ROS_INFO("Cone left");
+               }
+               if( turn_angle < -0.1 ) {
+                  p.radius = -MIN_RADIUS;
+                  ROS_INFO("Cone right");
+               }
+            } else {
+               ROS_INFO("No cones");
+               // if we don't see any cones, drive in circles
+               p.speed = MIN_SPEED * 4.0;
+               p.radius = MIN_RADIUS;
             }
+            
             // if we hit the cone, back up and keep going
             if( bump ) {
                planner_timeout = ros::Time::now();
                planner_state = BACKING;
+               p.speed = 0;
+               p.radius = 0;
+               ROS_INFO("Cone hit");
+            }
+            if( planner_timeout + ros::Duration(60.0) < ros::Time::now() ) {
+               planner_state = FORWARD;
+               p.speed = 0;
+               p.radius = 0;
+               ROS_INFO("Cone tracking timed out");
             }
          }
          break;

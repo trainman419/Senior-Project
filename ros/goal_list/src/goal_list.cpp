@@ -22,9 +22,6 @@
 
 #include <nav_msgs/Odometry.h>
 
-// declare ourselves to be "at" a goal when we are within 1 meter
-#define GOAL_DIST 10.0
-
 using namespace std;
 
 //vector<global_map::Location> * goals;
