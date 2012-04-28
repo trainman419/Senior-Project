@@ -13,6 +13,8 @@
   <depend package="roscpp"/>
   <depend package="nav_msgs"/>
   <depend package="geometry_msgs"/>
+  <depend package="diagnostic_msgs"/>
+  <depend package="diagnostic_updater"/>
   <depend package="tf"/>
 
 </package>

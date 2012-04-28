@@ -1,0 +1,11 @@
+Diagnostics to publish:
+ + AVR Idle Count
+ + Serial Bandwidth
+  + In
+  * Out
+ + I2C failures and resets
+ + GPS status/lock
+ * IMU state/frequency ?
+  - might be able to use instrumented publisher
+ * Odometry frequency ?
+  - might be able to use instrumented publisher

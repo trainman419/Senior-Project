@@ -23,6 +23,9 @@
 #include <tf/transform_broadcaster.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
+#include <diagnostic_msgs/DiagnosticArray.h>
+
+#include <diagnostic_updater/diagnostic_updater.h>
 
 
 #include "protocol.h"
@@ -40,46 +43,10 @@ ros::Publisher sonar_pub;
 ros::Publisher gps_pub;
 ros::Publisher heading_pub;
 ros::Publisher bump_pub;
-//ros::Publisher goalList_pub;
 
-// for resolving offsets back to lat/lon for our user interface
-//ros::ServiceClient r_offset;
-//ros::ServiceClient offset;
-
-/*
-struct {
-   nav_msgs::Odometry last_pos;
-   uint8_t steer;
-   int8_t speed;
-} state;
-*/
+ros::Publisher diagnostics_pub;
 
 #define ROS_PERROR(str) ROS_ERROR("%s: %s", str, strerror(errno))
-
-// callback on laser scan received.
-void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
-   //ROS_INFO("Data size %d", msg->ranges.size());
-   //for(int i=0; i<msg->ranges.size(); i+= 2 ) {
-   for(unsigned int i=0; i<msg->ranges.size(); i++ ) {
-      if( i < 512 ) {
-         // average adjacent data points
-         //float data = (msg->ranges[i] + msg->ranges[i+1]) / 2;
-         float data = msg->ranges[i];
-         // scale to fit into a byte. 250 = 5.0m
-         data = data * 50;
-         //laser_data[i/2] = (char)data;
-         laser_data[i] = (char)data;
-      }
-   }
-
-   /*ROS_INFO("Angle min: %lf, angle delta: %lf, angle max: %lf",
-      msg->angle_min * 180.0 / M_PI, 
-      msg->angle_increment * 180.0 / M_PI,
-      msg->angle_max * 180.0 / M_PI);
-      */
-
-   //laser_ready = 1;
-}
 
 int cmd_ready = 0;
 char cmd_buf[12];
@@ -117,71 +84,12 @@ void cmdCallback( const geometry_msgs::Twist::ConstPtr & cmd_vel ) {
       }
    }
 
-   //ROS_INFO("cmd_vel: %d %d", target_speed, steer);
-
    cmd_packet.reset();
    cmd_packet.append(target_speed);
    cmd_packet.append(steer);
    cmd_packet.finish();
    cmd_ready = 1;
 }
-
-
-/*
-int gps_ready = 0;
-Packet<32> gps_packet('G');
-
-// callback on GPS location received
-void gpsCallback(const gps_common::GPSFix::ConstPtr & msg) {
-   ROS_INFO("Received GPS fix; lat: %f, lon: %f", msg->latitude,
-         msg->longitude);
-   gps_packet.reset();
-   int32_t lat = msg->latitude * 1000000.0;
-   int32_t lon = msg->longitude * 1000000.0;
-   gps_packet.append(lat);
-   gps_packet.append(lon);
-   gps_packet.finish();
-   gps_ready = 1;
-}
-
-void posCallback(const nav_msgs::Odometry::ConstPtr & msg) {
-   global_map::RevOffset off;
-   off.request.loc.col = msg->pose.pose.position.x;
-   off.request.loc.row = msg->pose.pose.position.y;
-
-   state.last_pos = *msg;
-
-   if( r_offset.call(off) ) {
-      ROS_INFO("Received position lat: %lf, lon: %lf", off.response.lat,
-            off.response.lon);
-      int32_t lat = off.response.lat * 1000000.0;
-      int32_t lon = off.response.lon * 1000000.0;
-
-      gps_packet.reset();
-      gps_packet.append(lat);
-      gps_packet.append(lon);
-      gps_packet.finish();
-      gps_ready = 1;
-   } else {
-      ROS_ERROR("Failed to call RevOffset");
-   }
-}
-
-int control_ready = 0;
-Packet<16> control_packet('M');
-void controlCallback(const hardware_interface::Control::ConstPtr & msg) {
-   ROS_INFO("Control packet: (%d, %d)", msg->speed, msg->steer);
-   control_packet.reset();
-   control_packet.append(msg->speed);
-   control_packet.append(msg->steer);
-   control_packet.finish();
-
-   state.steer = msg->steer;
-   state.speed = msg->speed;
-
-   control_ready = 1;
-}
-*/
 
 #define handler(foo) void foo(Packet & p)
 typedef void (*handler_ptr)(Packet & p);
@@ -231,19 +139,20 @@ handler(shutdown_h) {
    }
 }
 
+ros::Time last_gps;
+
 handler(gps_h) {
-   // TODO: rewrite this now that the arduino is parsing GPS
    // message format
    // int32_t lat
    // int32_t lon
    int32_t lat = p.reads32();
    int32_t lon = p.reads32();
-   ROS_INFO("GPS lat: %d lon: %d", lat, lon);
-   // TODO: convert this into an appropriate message type and publish
+   //ROS_INFO("GPS lat: %d lon: %d", lat, lon);
    sensor_msgs::NavSatFix gps;
    gps.latitude = lat / 1000000.0;
    gps.longitude = lon / 1000000.0;
    gps_pub.publish(gps);
+   last_gps = ros::Time::now();
 }
 
 // set up odometry handling
@@ -290,36 +199,6 @@ handler(odometry_h) {
    bump_pub.publish(bump);
 }
 
-handler(gpslist_h) {
-   // TODO: update this
-   /*
-   int cnt = p.readu8();
-   int cursor = p.readu8();
-   double * lat = (double*)malloc(cnt*sizeof(double));
-   double * lon = (double*)malloc(cnt*sizeof(double));
-
-   goal_list::GoalList list;
-   global_map::Offset o;
-
-   ROS_INFO("GPS List, size: %d, cursor: %d", cnt, cursor);
-   for( int i=0; i<cnt; i++ ) {
-      lat[i] = (double)p.reads32() / 1000000.0;
-      lon[i] = (double)p.reads32() / 1000000.0;
-      o.request.lat = lat[i];
-      o.request.lon = lon[i];
-      if( offset.call(o) ) {
-         list.goals.push_back(o.response.loc);
-      } else {
-         ROS_ERROR("Failed to call Offset");
-      }
-      ROS_INFO("Lat: %f, Lon: %f", lat[i], lon[i]);
-   }
-   goalList_pub.publish(list);
-   free(lat);
-   free(lon);
-   */
-}
-
 FILE * battery_log;
 void battery_setup() {
    char logfile[1024];
@@ -336,38 +215,18 @@ void battery_setup() {
    }
 }
 
-handler(battery_h) {
-   static uint8_t cnt = 0;
-   uint8_t main = p.readu8();
-   uint8_t motor = p.readu8();
-   uint32_t idle = p.readu32();
-
-   if( cnt % 5 == 0 ) {
-      char date[256];
-      struct tm * timeptr;
-      time_t now = time(0);
-
-      timeptr = localtime(&now);
-      strftime(date, 256, "%F-%T", timeptr);
-      fprintf(battery_log, "%s: %d %d\n", date, main, motor);
-      fflush(battery_log);
-   }
-   cnt++;
-
-   ROS_INFO("Idle count: %d", idle);
-}
+uint16_t idle_cnt;
+uint8_t i2c_resets;
 
 handler(idle_h) {
    // idle message format:
    // uint16_t idle
-
-   uint16_t idle = p.readu16();
+   // uint8_t i2c_failures
+   // uint8_t i2c_resets
+   idle_cnt = p.readu16();
    uint8_t i2c_fail = p.readu8();
-   uint8_t i2c_resets = p.readu8();
-   ROS_INFO("Idle count: %d", idle);
-   ROS_INFO("I2C failures: %d, resets: %d", i2c_fail, i2c_resets);
+   i2c_resets = p.readu8();
 }
-
 
 #define NUM_SONARS 5
 handler(sonar_h) {
@@ -407,6 +266,67 @@ handler(imu_h) {
 
 }
 
+int bandwidth = 0;
+
+void idle_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat) {
+   // Idle Count
+   if( idle_cnt < 200 ) {
+      // error
+      stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR,
+            "ERROR: AVR too busy");
+   } else if( idle_cnt < 400 ) {
+      // warn
+      stat.summary(diagnostic_msgs::DiagnosticStatus::WARN,
+            "Warning: AVR load high");
+   } else {
+      // OK
+      stat.summary(diagnostic_msgs::DiagnosticStatus::OK,
+            "OK: AVR load normal");
+   }
+   stat.addf("Idle Count", "%d", idle_cnt);
+}
+
+void bandwidth_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat) {
+   if( bandwidth == 0 ) {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR,
+            "ERROR: No AVR data");
+   } else if( bandwidth < 400 ) {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::WARN,
+            "Warning: Low AVR bandwidth");
+   } else if( bandwidth > 1000 ) {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::WARN,
+            "Warning: High AVR bandwidth");
+   } else {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::OK,
+            "OK: AVR bandwidth normal");
+   }
+   stat.addf("Bandwidth", "%d bytes/sec", bandwidth);
+}
+
+void i2c_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat) {
+   if( i2c_resets == 0 ) {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::OK,
+            "OK: No I2C resets");
+   } else if( i2c_resets < 5 ) {
+      stat.summaryf(diagnostic_msgs::DiagnosticStatus::WARN,
+            "Warning: %d I2C resets", i2c_resets);
+   } else {
+      stat.summaryf(diagnostic_msgs::DiagnosticStatus::ERROR,
+            "Error: %d I2C resets", i2c_resets);
+   }
+}
+
+void gps_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat) {
+   double gps_diff = (ros::Time::now() - last_gps).toSec();
+   if( gps_diff < 1.1 ) {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::OK,
+            "OK: GPS fix good");
+   } else {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::WARN,
+            "Warning: GPS out of date");
+   }
+}
+
 #define IN_BUFSZ 1024
 
 int main(int argc, char ** argv) {
@@ -428,7 +348,6 @@ int main(int argc, char ** argv) {
    for( i=0; i<256; i++ ) {
       handlers[i] = no_handler;
    }
-   //handlers['Z'] = shutdown_h;
 
    odometry_setup();
    handlers['O'] = odometry_h;
@@ -436,8 +355,6 @@ int main(int argc, char ** argv) {
 
    //gps_setup();
    handlers['G'] = gps_h;
-   //handlers['L'] = gpslist_h;
-   //handlers['b'] = battery_h;
    handlers['S'] = sonar_h;
    handlers['U'] = imu_h;
 
@@ -475,10 +392,6 @@ int main(int argc, char ** argv) {
    sleep(2); // sleep for two seconds while bootloader runs
 
    ros::Subscriber cmd_sub = n.subscribe("cmd_vel", 1, cmdCallback);
-//   ros::Subscriber sub = n.subscribe("scan", 5, laserCallback);
-   //ros::Subscriber pos_sub = n.subscribe("position", 5, posCallback);
-   // TODO: update this to take ackermann_cmd
-   //ros::Subscriber control_sub = n.subscribe("control", 5, controlCallback);
 
    odo_pub = n.advertise<nav_msgs::Odometry>("odom", 10);
    //goalList_pub = n.advertise<goal_list::GoalList>("goal_list", 2);
@@ -487,8 +400,13 @@ int main(int argc, char ** argv) {
    heading_pub = n.advertise<std_msgs::Float32>("heading", 10);
    bump_pub = n.advertise<std_msgs::Bool>("bump", 10);
 
-   //r_offset = n.serviceClient<global_map::RevOffset>("RevOffset");
-   //offset = n.serviceClient<global_map::Offset>("Offset");
+   diagnostic_updater::Updater updater;
+   updater.setHardwareID("Dagny");
+   updater.add("AVR Load", idle_diagnostics);
+   updater.add("AVR Bandwidth", bandwidth_diagnostics);
+   updater.add("I2C Status", i2c_diagnostics);
+   updater.add("GPS Status", gps_diagnostics);
+
    ROS_INFO("hardware_interface ready");
 
    ros::Rate loop_rate(20);
@@ -527,6 +445,7 @@ int main(int argc, char ** argv) {
 
          in_cnt -= start;
       }
+      bw += cnt;
       
       ros::spinOnce();
 
@@ -547,18 +466,19 @@ int main(int argc, char ** argv) {
       }
 
       // send heartbeat
-      bw += cnt;
       ++itr;
 
       // heartbeat and bandwidth measurement every 0.5 sec
       if( itr == 9 ) {
          heartbeat_packet.reset();
          heartbeat_packet.finish();
-         cnt = write(serial, heartbeat_packet.outbuf(), heartbeat_packet.outsz());
-         ROS_INFO("Bandwidth: %d bytes/sec", bw * 2);
+         cnt =write(serial,heartbeat_packet.outbuf(),heartbeat_packet.outsz());
          itr = 0;
+         bandwidth = bw * 2;
          bw = 0;
       }
+
+      updater.update();
 
       loop_rate.sleep();
    }
