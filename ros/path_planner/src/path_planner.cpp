@@ -53,19 +53,12 @@
 using namespace std;
 
 // minimum turning radius (m)
-// TODO: convert to parameter
-#define MIN_RADIUS 0.695 
+double min_radius = 0.695;
 // maximum planned radius (m)
-// TODO: convert to parameter
-#define MAX_RADIUS 10.0
 double max_radius = 10.0;
 // how close we want to get to our goal before we're "there" (m)
-// TODO: convert to dynamic_reconfigure
-#define GOAL_ERR 0.3
 double goal_err = 0.3;
 // how close we are before we switch to cone mode (m)
-// TODO: convert to dynamic_reconfigure
-#define CONE_DIST 6.0
 double cone_dist = 6.0;
 
 // TODO: enable/disable for cone mode
@@ -78,25 +71,15 @@ double cone_dist = 6.0;
 #define MAP_SIZE 5000
 
 // speed for path traversal (m/s)
-// TODO: convert to dynamic_reconfigure
-#define MAX_SPEED 1.5
 double max_speed = 1.5;
-// TODO: convert to dynamic_reconfigure
-#define MIN_SPEED 0.1
 double min_speed = 0.1;
-// TODO: convert to dynamic_reconfigure
-#define MAX_TRAVERSE 4.0
 double planner_lookahead = 4.0;
-// TODO: convert to dynamic_reconfigure
 // TODO: use proper units
-#define MAX_ACCEL 0.3
 double max_accel = 0.3;
 
 // planner timeouts
-// TODO: convert to dynamic_reconfigure
-#define BACKUP_TIME 6.0
-// TODO: convert to dynamic_reconfigure
-#define STUCK_TIMEOUT 2.0
+double backup_time = 6.0;
+double stuck_timeout = 2.0;
 
 // types, to make life easier
 struct loc {
@@ -263,19 +246,19 @@ path plan_path(loc start, loc end) {
          */
    path p;
    double d = dist(start, end);
-   /*
-   if( d < CONE_DIST && planner_state == FORWARD ) {
+   // TODO: add enable/disable switch for cone tracking
+   // TODO: don't go into cone tracking immediately on startup
+   if( d < cone_dist && planner_state == FORWARD ) {
       planner_state = CONE;
       planner_timeout = ros::Time::now();
       ROS_INFO("Starting cone tracking");
    }
-   */
 
    switch(planner_state) {
       case BACKING:
-         p.speed = -2.0 * MIN_SPEED;
+         p.speed = -2.0 * min_speed;
          p.radius = 0;
-         if( (ros::Time::now() - planner_timeout).toSec() > BACKUP_TIME ) {
+         if( (ros::Time::now() - planner_timeout).toSec() > backup_time ) {
             planner_state = FORWARD;
             planner_timeout.sec = 0;
          }
@@ -293,7 +276,7 @@ path plan_path(loc start, loc end) {
                      cone_d = d;
                   }
                }
-               p.speed = MIN_SPEED * 4.0;
+               p.speed = min_speed * 4.0;
                p.radius = 0;
                double cone_angle = atan2(cone.y - start.y, cone.x - start.x);
                double turn_angle = cone_angle - start.pose;
@@ -303,18 +286,18 @@ path plan_path(loc start, loc end) {
 
                ROS_INFO("Angle to cone %lf", turn_angle);
                if( turn_angle > 0.1 ) {
-                  p.radius = MIN_RADIUS;
+                  p.radius = min_radius;
                   ROS_INFO("Cone left");
                }
                if( turn_angle < -0.1 ) {
-                  p.radius = -MIN_RADIUS;
+                  p.radius = -min_radius;
                   ROS_INFO("Cone right");
                }
             } else {
                ROS_INFO("No cones");
                // if we don't see any cones, drive in circles
-               p.speed = MIN_SPEED * 4.0;
-               p.radius = MIN_RADIUS;
+               p.speed = min_speed * 4.0;
+               p.radius = min_radius;
             }
             
             // if we hit the cone, back up and keep going
@@ -337,10 +320,10 @@ path plan_path(loc start, loc end) {
          double theta = atan2(end.y - start.y, end.x - start.x);
          //ROS_INFO("Angle to goal: %lf", theta);
 
-         double traverse_dist = min(d, MAX_TRAVERSE);
-         double speed = min(MAX_SPEED, 
-               MAX_SPEED * (2.0 * traverse_dist / MAX_TRAVERSE));
-         if( speed < MIN_SPEED) speed = MIN_SPEED;
+         double traverse_dist = min(d, planner_lookahead);
+         double speed = min(max_speed, 
+               max_speed * (2.0 * traverse_dist / planner_lookahead));
+         if( speed < min_speed) speed = min_speed;
          //ROS_INFO("Traverse distance %lf, speed %lf", traverse_dist, speed);
 
          // radius > 0 -> left
@@ -362,26 +345,26 @@ path plan_path(loc start, loc end) {
          // if we want to turn around, use minimum radius
          if( fabs(arc_len) > M_PI ) {
             if( radius > 0 ) {
-               radius = MIN_RADIUS;
+               radius = min_radius;
             } else {
-               radius = -MIN_RADIUS;
+               radius = -min_radius;
             }
          }
          arc_len = arc_len * radius;
 
          // if our turn radius is below our minimum radius, go straight
-         if( fabs(radius) < MIN_RADIUS ) {
+         if( fabs(radius) < min_radius ) {
             //ROS_INFO("Tangent arc radius too small; looping around. %lf", radius);
             radius = 0;
             // we should go forward by our minimum radius, and then loop around
-            arc_len = MIN_RADIUS;
+            arc_len = min_radius;
          }
 
          // don't plan huge sweeping curves; choose max radius
-         radius = min(radius,  MAX_RADIUS);
-         radius = max(radius, -MAX_RADIUS);
+         radius = min(radius,  max_radius);
+         radius = max(radius, -max_radius);
 
-         arc_len = min(arc_len, MAX_TRAVERSE);
+         arc_len = min(arc_len, planner_lookahead);
 
          if( !test_arc(start, radius, arc_len) ) {
             ROS_WARN("Tangent arc failed");
@@ -391,17 +374,17 @@ path plan_path(loc start, loc end) {
             if( test_arc(start, 0, traverse_dist) ) {
                arcs.push_back(0);
             }
-            // 1, 2, 4, 8 * MIN_RADIUS
+            // 1, 2, 4, 8 * min_radius
             for( int i=1; i<9; i *= 2 ) {
                // traverse at most a quarter turn
                // TODO: try various traverse distances
                //  followed by a straight path to the edge of the map
-               double d = min(traverse_dist, MIN_RADIUS * i * M_PI / 2);
-               if( test_arc(start, MIN_RADIUS*i, d) ) {
-                  arcs.push_back(MIN_RADIUS*i);
+               double d = min(traverse_dist, min_radius * i * M_PI / 2);
+               if( test_arc(start, min_radius*i, d) ) {
+                  arcs.push_back(min_radius*i);
                }
-               if( test_arc(start, -MIN_RADIUS*i, d) ) {
-                  arcs.push_back(-MIN_RADIUS*i);
+               if( test_arc(start, -min_radius*i, d) ) {
+                  arcs.push_back(-min_radius*i);
                }
             }
             if( arcs.size() == 0 ) {
@@ -410,7 +393,7 @@ path plan_path(loc start, loc end) {
                radius = 0;
                if( planner_timeout.sec != 0 ) {
                   if( (ros::Time::now() -  planner_timeout).toSec() > 
-                        STUCK_TIMEOUT ) {
+                        stuck_timeout ) {
                      planner_state = BACKING;
                      planner_timeout = ros::Time::now();
                      ROS_WARN("Robot stuck; backing up");
@@ -438,7 +421,7 @@ path plan_path(loc start, loc end) {
                radius = best_r;
                arc_len = fabs(best_r * M_PI / 2);
                if( best_r == 0.0 ) arc_len = traverse_dist;
-               speed = min(MAX_SPEED, MAX_SPEED * (2.0 * arc_len / MAX_TRAVERSE));
+               speed = min(max_speed, max_speed * (2.0 * arc_len / planner_lookahead));
                nav_msgs::Path p = arcToPath(start, best_r, 
                      min(traverse_dist, arc_len));
                path_pub.publish(p);
@@ -498,9 +481,9 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr & msg) {
 
       // limit acceleration
       if( speed > 0 ) {
-         speed = min(speed, msg->twist.twist.linear.x + MAX_ACCEL);
+         speed = min(speed, msg->twist.twist.linear.x + max_accel);
       } else if( speed < 0 ) {
-         speed = max(speed, msg->twist.twist.linear.x - MAX_ACCEL);
+         speed = max(speed, msg->twist.twist.linear.x - max_accel);
       }
       // no limit on deceleration
 
@@ -515,7 +498,7 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr & msg) {
 
       //ROS_INFO("Target radius: %lf, angular: %lf", radius, cmd.angular.z);
 
-      if( dist(here, goal) > GOAL_ERR ) {
+      if( dist(here, goal) > goal_err ) {
          //ROS_INFO("Target speed: %lf", speed);
          cmd.linear.x = speed;
       } else {
@@ -684,6 +667,14 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
 
 void reconfigureCb(path_planner::PathPlannerConfig & config, 
          uint32_t level) {
+   goal_err             = config.goal_err;
+   cone_dist            = config.cone_dist;
+   max_speed            = config.max_speed;
+   min_speed            = config.min_speed;
+   planner_lookahead    = config.planner_lookahead;
+   max_accel            = config.max_accel;
+   backup_time          = config.backup_time;
+   stuck_timeout        = config.stuck_timeout;
 }
 
 void bumpCb(const std_msgs::Bool::ConstPtr & msg ) {
