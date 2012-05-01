@@ -20,11 +20,8 @@
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 
-#define GROUPING_THRESHOLD 0.05
-#define MIN_CIRCLE_SIZE 4
-#define STD_DEV_THRESHOLD 15.0
-
-#define SAME_CONE_THRESHOLD 0.25
+#include <dynamic_reconfigure/server.h>
+#include <cone_detector/ConeDetectorConfig.h>
 
 double dist(geometry_msgs::Point a, geometry_msgs::Point b) {
    return hypot(a.x - b.x, a.y - b.y);
@@ -40,16 +37,33 @@ private:
    tf::TransformListener listener;
    ros::Subscriber laser_sub;
    ros::Publisher marker_pub;
+   dynamic_reconfigure::Server<cone_detector::ConeDetectorConfig> server;
 
    // last seen and point
    typedef std::pair<ros::Time, geometry_msgs::Point> cone_type;
    typedef std::list<cone_type> cone_list;
    cone_list cones;
 
+   double grouping_threshold;
+   int min_circle_size;
+   double std_dev_threshold;
+   double same_cone_threshold;
+   double min_cone_radius;
+   double max_cone_radius;
 public:
    ConeDetector() : listener(n, ros::Duration(20.0)) {
       laser_sub = n.subscribe("scan", 1, &ConeDetector::laserCallback, this);
       marker_pub = n.advertise<visualization_msgs::Marker>("cone_markers", 1);;
+      
+      min_circle_size = 4;
+      grouping_threshold = 0.05;
+      std_dev_threshold = 15.0;
+      same_cone_threshold = 0.25;
+      min_cone_radius = 0.1;
+      max_cone_radius = 0.2;
+
+      server.setCallback(boost::bind(&ConeDetector::reconfigureCb, 
+               this, _1, _2));
    }
 
    void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
@@ -78,7 +92,7 @@ public:
                listener.transformPoint("/odom", a, b);
 
                double d = dist(b, prev);
-               if( d > GROUPING_THRESHOLD ) {
+               if( d > grouping_threshold ) {
                   groups.push_back(std::list<geometry_msgs::Point>());
                }
                groups.back().push_back(b.point);
@@ -110,7 +124,7 @@ public:
 
       // circle detection
       BOOST_FOREACH(std::list<geometry_msgs::Point> group, groups) {
-         if( group.size() > MIN_CIRCLE_SIZE ) {
+         if( group.size() > min_circle_size ) {
             // calculate inscribed angles for each inner point in group
             std::list<double> angles;
             double avg_angle = 0;
@@ -137,7 +151,6 @@ public:
             bool circle = true;
             {
                double theta = atan2(last.x - first.x, last.y - first.y);
-               //double theta = atan((first.x - last.x)/(first.y - last.y));
                double x2 = - (((center.x-first.x) * cos(theta)) - 
                      ((center.y-first.y) * sin(theta)));
                if( 0.1 * dist(first, last) > x2 ) circle = false;
@@ -155,7 +168,7 @@ public:
                }
                std_dev /= (group.size() - 2);
                std_dev = sqrt(std_dev) * 180.0 / M_PI;
-               if( std_dev < STD_DEV_THRESHOLD ) {
+               if( std_dev < std_dev_threshold ) {
                   // compute center of circle
                   double theta = atan2(last.y - first.y, last.x - first.x);
                   double d = dist(first, last);
@@ -168,33 +181,39 @@ public:
 
                   double r = hypot(x, y);
 
-                  //markers.points.push_back(center);
+                  if( r > min_cone_radius && r < max_cone_radius ) {
+                     //markers.points.push_back(center);
 
-                  ROS_INFO("Found circle with radius %lf", r);
+                     ROS_INFO("Found circle with radius %lf", r);
 
-                  cone_list::iterator nearest = cones.begin();
-                  d = dist(cones.front().second, center);
-                  // determine if this is a cone we've seen before
-                  for( cone_list::iterator itr = cones.begin(); 
-                        itr != cones.end(); ++itr ) {
-                     if( dist(itr->second, center) < d ) {
-                        d = dist(itr->second, center);
-                        nearest = itr;
+                     if( cones.size() > 0 ) {
+                        cone_list::iterator nearest = cones.begin();
+                        d = dist(cones.front().second, center);
+                        // determine if this is a cone we've seen before
+                        for( cone_list::iterator itr = cones.begin(); 
+                              itr != cones.end(); ++itr ) {
+                           if( dist(itr->second, center) < d ) {
+                              d = dist(itr->second, center);
+                              nearest = itr;
+                           }
+                        }
+                        if( dist(nearest->second, center) < 
+                              same_cone_threshold ) {
+                           cones.erase(nearest);
+                        }
                      }
+                     new_cones.push_back(cone_type(ros::Time::now(), center));
+                     // markers at ends of arc
+                     //markers.points.push_back(first);
+                     //markers.points.push_back(last);
                   }
-                  if( dist(nearest->second, center) < SAME_CONE_THRESHOLD ) {
-                     cones.erase(nearest);
-                  }
-                  new_cones.push_back(cone_type(ros::Time::now(), center));
-                  // markers at ends of arc
-                  //markers.points.push_back(first);
-                  //markers.points.push_back(last);
                }
             }
          }
       }
 
       BOOST_FOREACH(cone_type p, cones) {
+         // TODO: dynamic_reconfigure parameter
          if( p.first > (ros::Time::now() - ros::Duration(2.0)) ) {
             new_cones.push_back(p);
          }
@@ -207,6 +226,15 @@ public:
       marker_pub.publish(markers);
    }
 
+   void reconfigureCb(cone_detector::ConeDetectorConfig & config, 
+         uint32_t level) {
+      grouping_threshold  = config.grouping_threshold;
+      min_circle_size     = config.min_circle_size;
+      std_dev_threshold   = config.std_dev_threshold;
+      same_cone_threshold = config.same_cone_threshold;
+      min_cone_radius     = config.min_cone_radius;
+      max_cone_radius     = config.max_cone_radius;
+   }
 };
 
 int main(int argc, char ** argv) {
