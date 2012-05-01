@@ -4,19 +4,23 @@
  * subscribes to the robot's current position and the current goal, and
  * uses this information to plan and execute a path to the goal
  *
- * Algorithm ideas:
- * we need to re-plan when:
- * - the goal changes
- * - we deviate too far from our planned path
- * - the map changes
+ * All distances in meters
  *
- * The first two of these are easy: we subscribe to the current location
- * and the current goal, and receive updates when either changes.
+ * Author: Austin Hendrix
  *
- * We don't yet have a mechanism to subscribe to changes in the map in the same
- * way. Ideally, we should create one.
- *
- * All distances in decimeters
+ * TODO:
+ *  Find synchronization bug with goal_list
+ *  Add swtich to turn cone tracking on and off
+ *  Add parameters
+ *  Add dynamic_reconfigure
+ *  Better detection of being stuck
+ *  Sonar integration
+ *  Wheel slip detection
+ *  Switch to publish local costmap
+ *  Downsample and/or crop local costmap before publishing
+ * 
+ * Long-term:
+ *  Take lessons learned here and port to navigation stack
  */
 
 #include <math.h>
@@ -43,34 +47,55 @@
 #include <std_msgs/Bool.h>
 #include <visualization_msgs/Marker.h>
 
+#include <dynamic_reconfigure/server.h>
+#include <path_planner/PathPlannerConfig.h>
+
 using namespace std;
 
-// length for stock line segments
-#define ARC_LEN 3.0
-// distance where we decide we're too far off-path
-#define CLOSE_LEN 4.0
 // minimum turning radius (m)
+// TODO: convert to parameter
 #define MIN_RADIUS 0.695 
 // maximum planned radius (m)
+// TODO: convert to parameter
 #define MAX_RADIUS 10.0
+double max_radius = 10.0;
 // how close we want to get to our goal before we're "there" (m)
+// TODO: convert to dynamic_reconfigure
 #define GOAL_ERR 0.3
+double goal_err = 0.3;
 // how close we are before we switch to cone mode (m)
+// TODO: convert to dynamic_reconfigure
 #define CONE_DIST 6.0
+double cone_dist = 6.0;
+
+// TODO: enable/disable for cone mode
 
 // map resolution, in meters per pixel
+// TODO: convert to parameter
 #define MAP_RES 0.10
 // map size, in cells
+// TODO: convert to parameter
 #define MAP_SIZE 5000
 
 // speed for path traversal (m/s)
+// TODO: convert to dynamic_reconfigure
 #define MAX_SPEED 1.5
+double max_speed = 1.5;
+// TODO: convert to dynamic_reconfigure
 #define MIN_SPEED 0.1
+double min_speed = 0.1;
+// TODO: convert to dynamic_reconfigure
 #define MAX_TRAVERSE 4.0
+double planner_lookahead = 4.0;
+// TODO: convert to dynamic_reconfigure
+// TODO: use proper units
 #define MAX_ACCEL 0.3
+double max_accel = 0.3;
 
 // planner timeouts
+// TODO: convert to dynamic_reconfigure
 #define BACKUP_TIME 6.0
+// TODO: convert to dynamic_reconfigure
 #define STUCK_TIMEOUT 2.0
 
 // types, to make life easier
@@ -657,6 +682,10 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
    return;
 }
 
+void reconfigureCb(path_planner::PathPlannerConfig & config, 
+         uint32_t level) {
+}
+
 void bumpCb(const std_msgs::Bool::ConstPtr & msg ) {
    bump = msg->data;
 }
@@ -688,6 +717,9 @@ int main(int argc, char ** argv) {
    cmd_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 10);
    map_pub = n.advertise<nav_msgs::OccupancyGrid>("map", 1);
    path_pub = n.advertise<nav_msgs::Path>("path", 10);
+
+   dynamic_reconfigure::Server<path_planner::PathPlannerConfig> server;
+   server.setCallback(boost::bind(&reconfigureCb, _1, _2));
 
    ROS_INFO("Path planner ready");
 
