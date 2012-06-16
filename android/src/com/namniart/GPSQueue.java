@@ -27,10 +27,10 @@ public class GPSQueue implements List<GeoPoint> {
 		cursor = c;
 	}
 	
-	private byte[] toByteArray() {
-		Packet res = new Packet();
+	private Packet toPacket() {
+		Packet res = new Packet('L');
 		
-		res.append((byte)'L');
+		//res.append((byte)'L');
 		res.append((byte)points.size());
 		res.append((byte)cursor);
 		
@@ -40,13 +40,14 @@ public class GPSQueue implements List<GeoPoint> {
 		}
 		res.finish();
 		
-		return res.toByteArray();
+		return res;
 	}
 	
 	private void transmit() {
 		new Thread() {
 			public void run() {
-				mApp.getHwMan().sendBytes(toByteArray());
+				//mApp.getHwMan().sendBytes(toByteArray());
+				mApp.getHwMan().sendPacket(toPacket());
 			}
 		}.start();
 	}

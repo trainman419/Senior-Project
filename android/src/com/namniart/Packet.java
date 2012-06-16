@@ -8,8 +8,9 @@ public class Packet {
 	private static final byte ESC = 0x1b;
 	
 	// constructors
-	public Packet() {
+	public Packet(char t) {
 		data = new LinkedList<Byte>();
+		data.add((byte)t);
 	}
 	
 	public Packet(byte[] in) {

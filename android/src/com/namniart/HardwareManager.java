@@ -60,7 +60,7 @@ public class HardwareManager extends Thread {
 	private boolean mAutonomous;
 	
 	// raw bytes that the application has requested to send
-	private List<byte[]> outBytes;
+	private List<Packet> mPackets;
 		
 	/**
 	 * Create a hardware manager instance. Talk to the robot on the other of socket s, send status messages
@@ -78,11 +78,10 @@ public class HardwareManager extends Thread {
 		mSpeed = 0;
 		mDirection = 120;
 		
-		outBytes = new LinkedList<byte[]>();
+		mPackets = new LinkedList<Packet>();
 	}
 	
 	private void message(String msg) {
-		//System.out.println(msg);
 		Log.d("HardwareManager", msg);
 	}
 	
@@ -116,7 +115,6 @@ public class HardwareManager extends Thread {
 				while( in.available() < 1 
 						&& mUpdateSent 
 						&& !mStop ) sleep(10); // this limits how quickly we can send/receive updates from the hardware
-				//while( mUpdateSent && !mStop ) sleep(10);
 				
 				if( in.available() > 0 ) {
 					//message("Receiving data");
@@ -146,54 +144,40 @@ public class HardwareManager extends Thread {
 							data[9] = '\r';
 							out.write(data);
 						} else {
-							byte data[] = new byte[3];
+							Packet cmd = new Packet('C');
 							
 							if( mAutonomous ) {
-								// set autonomous mode
-								data[0] = 'C';
-								data[1] = 0;
-								data[2] = '\r';
-								out.write(data);
+								cmd.append((byte)2); // autonomous mode
+								cmd.append((byte)0); // zero speed
+								cmd.append((byte)0); // zero steer angle
 							} else {
-								// unset autonomous mode
-								data[0] = 'C';
-								data[1] = 1;
-								data[2] = '\r';
-								out.write(data);
-
-								data[0] = 'M';
-								data[1] = mSpeed;
-								data[2] = '\r';
-								// speed command
-								out.write(data);
-								
-								// direction command
-								data[0] = 'S';
-								data[1] = mDirection;
-								data[2] = '\r';
-								out.write(data);
+								cmd.append((byte)1); // remote mode
+								cmd.append(mSpeed);
+								cmd.append(mDirection);
 							}
+							cmd.finish();
+							out.write(cmd.toByteArray());
 						}
 					}
 					//message("Update sent");
 				}
 				
-				// send any raw data requested by the application
-				synchronized(outBytes) {
-					for(byte[] b : outBytes) {
-						message("Transmitting raw packet starting with " + b[0]);
-						out.write(b);
+				// send any packets requested by the application
+				synchronized(mPackets) {
+					for( Packet p : mPackets ) {
+						message("Transmitting packet");
+						out.write(p.toByteArray());
 					}
-					outBytes.clear();
+					mPackets.clear();
 				}
 			}
 			
 			// hardcoded stop on thread end
-			out.write('M');
+			// TODO: update this for packets
+			out.write('C');
 			out.write(0);
-			out.write('\r');
-			out.write('S');
-			out.write(120);
+			out.write(0);
+			out.write(0);
 			out.write('\r');
 			
 			// don't forget to close our socket when we're done.
@@ -276,24 +260,13 @@ public class HardwareManager extends Thread {
 			}		
 		}
 	}
-	
+		
 	/**
-	 * send raw bytes to the robot
+	 * send a packet to the robot
 	 */
-	public void sendBytes(byte [] b) {
-		synchronized(outBytes) {
-			outBytes.add(b);
+	public void sendPacket(Packet p) {
+		synchronized(mPackets) {
+			mPackets.add(p);
 		}
 	}
 }
-
-/* Simulator idea:
- * this will only really be useful for testing the mapping algorithms
- *
- * log entire state data to the SD card at regular intervals (every second?)
- * write a fake hardware module that plays back this log at the same interval
- * 
- * this has the severe limitation that the simulator won't react to commands,
- * but it should still be useful for passive mapping, and to replay obscure scenarios that
- * cause edge cases in the code so that they can be more carefully observed
- */
