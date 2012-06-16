@@ -1,7 +1,11 @@
 package com.namniart;
 
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import android.app.AlertDialog;
@@ -10,18 +14,23 @@ import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.hardware.Camera;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.VideoView;
 
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
@@ -42,6 +51,9 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 	private LocationListOverlay mLocList;
 	private MyMapView mMapView;
 	private RobotLocationOverlay mLocOverlay;
+	private MediaRecorder mMediaRecorder;
+	private VideoView mVideoView;
+	private Camera mCamera;
 
 	// bluetooth-related variables
 	private BluetoothDevice mDevice;
@@ -76,6 +88,7 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
         
+        mVideoView = (VideoView)findViewById(R.id.videoView);
         findViewById(R.id.autonomousButton).setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -96,6 +109,75 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 	        	mApp.getHwMan().setAutonomous(false);
 	        	halt = true;
 			}
+        });
+        findViewById(R.id.recordButton).setOnClickListener(new OnClickListener() {
+        	@Override
+        	public void onClick(View v) {
+        		CheckBox c = (CheckBox)v;
+        		if( c.isChecked() ) {
+        			// show the preview window
+        			mVideoView.setVisibility(View.VISIBLE);
+        			
+        			// clean up any leftovers
+        			if( null != mMediaRecorder ) {
+        				mMediaRecorder.stop();
+        				mMediaRecorder.reset();
+        				mMediaRecorder.release();
+        				mMediaRecorder = null;
+        			}
+        			if( null != mCamera ) {
+        				mCamera.release();
+        				mCamera = null;
+        			}
+        			// generate the filename
+        			Date now = new Date();
+        			SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US);
+        			String file = "/sdcard/robot-";
+        			file += sdf.format(now);
+        			file += ".mp4";
+        			System.out.println("Recording to " + file);
+        			
+        			// grab the camera
+        			mCamera = Camera.open();
+        			mCamera.setDisplayOrientation(90);
+        			mCamera.unlock();
+        			
+        			// start recording
+        			mMediaRecorder = new MediaRecorder();
+        			mMediaRecorder.setCamera(mCamera);
+        			mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+        			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.DEFAULT);
+        			mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
+        			mMediaRecorder.setOrientationHint(90);
+        			mMediaRecorder.setOutputFile(file); // TODO: date-based file name
+        			mMediaRecorder.setMaxDuration(10 * 60 * 1000); //10 minutes
+        			mMediaRecorder.setMaxFileSize(512 * 1024 * 1024); // 500MB
+        			SurfaceHolder h = mVideoView.getHolder();
+        			mMediaRecorder.setPreviewDisplay(h.getSurface());
+        			try {
+        				mMediaRecorder.prepare();
+            			mMediaRecorder.start();
+        			} catch(IOException e) {
+        				e.printStackTrace(System.out);
+        			} catch(IllegalStateException e) {
+        				e.printStackTrace(System.out);
+        			}
+        		} else {
+        			// hide the preview window
+        			mVideoView.setVisibility(View.INVISIBLE);
+        			// stop recording and clean up
+        			if( null != mMediaRecorder ) {
+        				mMediaRecorder.stop();
+        				mMediaRecorder.reset();
+        				mMediaRecorder.release();
+        				mMediaRecorder = null;
+        			}
+        			if( null != mCamera ) {
+        				mCamera.release();
+        				mCamera = null;
+        			}
+        		}
+        	}
         });
 
         mMapView = (MyMapView)findViewById(R.id.mapview);
@@ -325,7 +407,6 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 		
 		if( !halt ) {
 			byte s = (byte)steer;
-			s += 120;
 			mApp.getHwMan().setDirection(s);
 	
 			int speed = (int)forward_angle;
@@ -334,7 +415,7 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 			byte m = (byte)speed;
 			mApp.getHwMan().setSpeed(m);
 		} else {
-			mApp.getHwMan().setDirection((byte)120);
+			mApp.getHwMan().setDirection((byte)0);
 			mApp.getHwMan().setSpeed((byte)0);
 		}
 	}

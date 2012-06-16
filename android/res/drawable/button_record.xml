@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:constantSize="false"
+    android:dither="false"
+    android:variablePadding="false">
+    <item android:state_pressed="true" android:state_checked="true" >
+        <shape
+		    xmlns:android="http://schemas.android.com/apk/res/android"
+		    android:shape="oval"
+		    >
+		    <size
+		    	android:width="28dp"
+		    	android:height="28dp"
+		    />
+		    <padding
+		        android:left=  "4dp"
+		        android:top=   "4dp"
+		        android:right= "4dp"
+		        android:bottom="4dp" />
+		    <solid
+		        android:color="#a00" />
+		    <stroke
+		    	android:width="1dp"
+		    	android:color="#000"
+		    	/>
+		</shape>
+	</item>
+    <item android:state_pressed="true">
+        <shape
+		    xmlns:android="http://schemas.android.com/apk/res/android"
+		    android:shape="ring"
+		    android:innerRadius="10dp"
+		    android:thickness="3dp"
+		    android:useLevel="false"
+		    >
+		    <size
+		    	android:width="28dp"
+		    	android:height="28dp"
+		    />
+		    <padding
+		        android:left=  "4dp"
+		        android:top=   "4dp"
+		        android:right= "4dp"
+		        android:bottom="4dp" />
+		    <solid
+		        android:color="#f00" />
+		    <stroke
+		    	android:width="1dp"
+		    	android:color="#000"
+		    	/>
+		</shape>
+	</item>
+    <item android:state_checked="true">
+        <shape
+		    xmlns:android="http://schemas.android.com/apk/res/android"
+		    android:shape="oval"
+		    >
+		    <size
+		    	android:width="28dp"
+		    	android:height="28dp"
+		    />
+		    <padding
+		        android:left=  "4dp"
+		        android:top=   "4dp"
+		        android:right= "4dp"
+		        android:bottom="4dp" />
+		    <solid
+		        android:color="#f00" />
+		    <stroke
+		    	android:width="1dp"
+		    	android:color="#000"
+		    	/>
+		</shape>
+	</item>   
+	<item>
+        <shape
+		    xmlns:android="http://schemas.android.com/apk/res/android"
+		    android:shape="ring"
+		    android:innerRadius="10dp"
+		    android:thickness="3dp"
+		    android:useLevel="false"
+		    >
+		    <size
+		    	android:width="28dp"
+		    	android:height="28dp"
+		    />
+		    <padding
+		        android:left=  "4dp"
+		        android:top=   "4dp"
+		        android:right= "4dp"
+		        android:bottom="4dp" />
+		    <solid
+		        android:color="#a00" />
+		    <stroke
+		    	android:width="1dp"
+		    	android:color="#000"
+		    	/>
+		</shape>
+	</item>
+</selector>
