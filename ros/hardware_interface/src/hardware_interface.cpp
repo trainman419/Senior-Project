@@ -65,6 +65,7 @@ handler(shutdown_h) {
    if( shutdown ) {
       ROS_INFO("Received shutdown");
       // TODO: shutdown here
+      //system("sudo poweroff");
    } else {
       char * buf = (char*)malloc(l + 1);
       memcpy(buf, in, l);
@@ -178,49 +179,6 @@ int main(int argc, char ** argv) {
          }
 
          in_cnt -= start;
-
-         
-         /*int i;
-         for( i=0; i<in_cnt && 'Z' != in_buffer[i]; i++ );
-
-         // if we don't have any Z's in our buffer, toss it
-         if( i == in_cnt ) in_cnt = 0;
-         else {
-            if( in_cnt - i > 8 ) {
-               int z_cnt = 0;
-               int last = i;
-               for( int j=i; j<in_cnt && z_cnt < 8; j++ ) {
-                  if( in_buffer[j] == 'Z' ) {
-                     z_cnt++;
-                  } else {
-                     z_cnt = 0;
-                     last = j;
-                  }
-               }
-               if( z_cnt == 8 ) {
-                  // oh holy shit this is where we power off
-                  // TODO: shut down
-                  ROS_INFO("Got a power down message");
-                  system("sudo poweroff");
-               } else {
-                  // shift down from last non-Z character
-                  last++;
-                  int offset = last;
-                  for( int j=0; last < in_cnt; last++,j++) {
-                     in_buffer[j] = in_buffer[last];
-                  }
-                  in_cnt -= offset;
-               }
-            } else {
-               int offset=i;
-               // shift buffer down and wait for later
-               for( int j=0; i < in_cnt; i++, j++ ) {
-                  in_buffer[j] = in_buffer[i];
-               }
-               // adjust count
-               in_cnt -= offset;
-            }
-         }*/
       }
       
       ros::spinOnce();
