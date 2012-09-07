@@ -53,6 +53,7 @@ handler(no_handler) {
    memcpy(buf, in, l);
    buf[l] = 0;
    ROS_INFO("No handler for message: %s", buf);
+   free(buf);
 }
 
 handler(shutdown_h) {
@@ -64,13 +65,45 @@ handler(shutdown_h) {
    }
    if( shutdown ) {
       ROS_INFO("Received shutdown");
-      // TODO: shutdown here
+      // FIXME: shutdown here
       //system("sudo poweroff");
    } else {
       char * buf = (char*)malloc(l + 1);
       memcpy(buf, in, l);
       buf[l] = 0;
       ROS_INFO("Malformed shutdown %s", buf);
+      free(buf);
+   }
+}
+
+// set up whatever we decide to do for GPS
+void gps_setup(void) {
+}
+
+handler(gps_h) {
+   // TODO: figure out whether we want gpsd to handle GPS or do it ourselves...
+}
+
+// set up odometry handling
+void odometry_setup(void) {
+}
+
+inline int read16(char * in) {
+   return in[0] | (in[1] << 8);
+}
+handler(odometry_h) {
+   if( l != 13 ) {
+      ROS_INFO("Malformed odometry message; len %d", l);
+   } else {
+      int rcount = read16(in + 1);
+      int lcount = read16(in + 3);
+      int qcount = read16(in + 5);
+      int rspeed = read16(in + 7);
+      int lspeed = read16(in + 9);
+      int qspeed = read16(in + 11);
+      // TODO: publish odometry
+      ROS_INFO("Odometry: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
+            rcount, lcount, qcount, rspeed, lspeed, qspeed);
    }
 }
 
@@ -92,6 +125,10 @@ int main(int argc, char ** argv) {
       handlers[i] = no_handler;
    }
    handlers['Z'] = shutdown_h;
+
+   odometry_setup();
+   handlers['O'] = odometry_h;
+
 
    ros::init(argc, argv, "hardware_interface");
 
@@ -133,10 +170,8 @@ int main(int argc, char ** argv) {
    ros::Rate loop_rate(10);
 
    while( ros::ok() ) {
-      // TODO: read serial port for incoming data and do something with it
       
-      //ROS_INFO("Starting output");
-      // TODO: write pending data to serial port
+      // write pending data to serial port
       if( laser_ready ) {
          cnt = write(serial, "L", 1);
          cnt = write(serial, laser_data, 512);
@@ -144,9 +179,7 @@ int main(int argc, char ** argv) {
          laser_ready = 0;
       }
 
-      //ROS_INFO("Starting input");
       cnt = read(serial, in_buffer + in_cnt, IN_BUFSZ - in_cnt - 1); 
-      //cnt = 0;
       if( cnt > 0 ) {
          // append a null byte
          in_buffer[cnt + in_cnt] = 0;
@@ -154,18 +187,16 @@ int main(int argc, char ** argv) {
          //ROS_INFO("Read %s", in_buffer);
          in_cnt += cnt;
 
-         // TODO: parse out newline-terminated strings and call appropriate 
-         //  functions here
-
+         // parse out newline-terminated strings and call appropriate functions
          int start = 0;
          int i = 0;
          while( i < in_cnt ) {
-            for( ; i < in_cnt && 
-                   (in_buffer[i] != '\r' && in_buffer[i] != '\n');
-                   i++);
-            if( in_buffer[i] == '\r' || in_buffer[i] == '\n') {
-               // we got a string. call the appropriate function
+            for( ; i < in_cnt && in_buffer[i] != '\r' ; i++);
+
+            if( in_buffer[i] == '\r' ) {
+               // check that our string isn't just the terminating character
                if( i - start > 1 ) {
+                  // we got a string. call the appropriate function
                   handlers[in_buffer[start]](in_buffer+start, i - start);
                }
                start = i+1;
@@ -185,6 +216,4 @@ int main(int argc, char ** argv) {
 
       loop_rate.sleep();
    }
-
-   // TODO: send system shutdown, then send timed shutdown command over serial
 }
