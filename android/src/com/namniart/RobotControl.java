@@ -22,6 +22,7 @@ import android.hardware.SensorManager;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -132,14 +133,14 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
         			// generate the filename
         			Date now = new Date();
         			SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US);
-        			String file = "/sdcard/robot-";
+        			String file = Environment.getExternalStorageDirectory().getPath() + "/robot-";
         			file += sdf.format(now);
         			file += ".mp4";
         			System.out.println("Recording to " + file);
         			
         			// grab the camera
         			mCamera = Camera.open();
-        			mCamera.setDisplayOrientation(90);
+        			//mCamera.setDisplayOrientation(90);
         			mCamera.unlock();
         			
         			// start recording
@@ -148,7 +149,7 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
         			mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.DEFAULT);
         			mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
-        			mMediaRecorder.setOrientationHint(90);
+        			//mMediaRecorder.setOrientationHint(90);
         			mMediaRecorder.setOutputFile(file); // TODO: date-based file name
         			mMediaRecorder.setMaxDuration(10 * 60 * 1000); //10 minutes
         			mMediaRecorder.setMaxFileSize(512 * 1024 * 1024); // 500MB
@@ -428,7 +429,7 @@ public class RobotControl extends MapActivity implements SensorEventListener, Ge
 
 	@Override
 	public boolean onDoubleTapEvent(MotionEvent e) {
-		// TODO Auto-generated method stub
+		// Double-tap to add GPS goal
 		if( e.getAction() == MotionEvent.ACTION_UP ) {
 			Projection projection = mMapView.getProjection();
 			float x = e.getX();
