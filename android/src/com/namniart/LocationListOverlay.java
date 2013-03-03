@@ -50,7 +50,6 @@ public class LocationListOverlay extends ItemizedOverlay<OverlayItem> {
 		dialog.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
-				// TODO trigger an update to send this data to the robot
 				mItems.remove(index);
 				setLastFocusedIndex(-1);
 				populate();
