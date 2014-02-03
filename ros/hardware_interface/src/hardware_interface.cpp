@@ -13,6 +13,7 @@
 
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
+#include "protocol.h"
 
 char laser_data[512];
 int laser_ready;
@@ -42,13 +43,14 @@ void laserCallback(const sensor_msgs::LaserScan::ConstPtr & msg) {
    laser_ready = 1;
 }
 
-typedef void message_handler(char * in, int len);
-#define handler(foo) void foo(char * in, int l)
-typedef void (*handler_ptr)(char *, int);
+#define handler(foo) void foo(Packet & p)
+typedef void (*handler_ptr)(Packet & p);
 
 handler_ptr handlers[256];
 
 handler(no_handler) {
+   int l = p.outsz();
+   const char * in = p.outbuf();
    char * buf = (char*)malloc(l + 1);
    memcpy(buf, in, l);
    buf[l] = 0;
@@ -57,6 +59,8 @@ handler(no_handler) {
 }
 
 handler(shutdown_h) {
+   int l = p.outsz();
+   const char * in = p.outbuf();
    int shutdown = 1;
    if( l == 9 ) {
       for( int i=0; i<l; i++ ) {
@@ -81,7 +85,15 @@ void gps_setup(void) {
 }
 
 handler(gps_h) {
-   // TODO: figure out whether we want gpsd to handle GPS or do it ourselves...
+   // take data from GPS and spew it to a fifo somewhere on disk
+   //
+   // for now, just de-encapsulate and print it to info
+   int l = p.outsz() - 1;
+   char * buf = (char*)malloc(l + 1);
+   memcpy(buf, p.outbuf() + 1, l);
+   buf[l] = 0;
+   ROS_INFO("Received GPS: %s", p.outbuf());
+   free(buf);
 }
 
 // set up odometry handling
@@ -92,19 +104,15 @@ inline int read16(char * in) {
    return in[0] | (in[1] << 8);
 }
 handler(odometry_h) {
-   if( l != 13 ) {
-      ROS_INFO("Malformed odometry message; len %d", l);
-   } else {
-      int rcount = read16(in + 1);
-      int lcount = read16(in + 3);
-      int qcount = read16(in + 5);
-      int rspeed = read16(in + 7);
-      int lspeed = read16(in + 9);
-      int qspeed = read16(in + 11);
-      // TODO: publish odometry
-      ROS_INFO("Odometry: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
+   int rcount = p.readu16();
+   int lcount = p.readu16();
+   int qcount = p.readu16();
+   int rspeed = p.reads16();
+   int lspeed = p.reads16();
+   int qspeed = p.reads16();
+   // TODO: publish odometry
+   ROS_INFO("Odo: rc: %d, lc: %d, qc: %d, rs: %d, ls: %d, qs: %d",
             rcount, lcount, qcount, rspeed, lspeed, qspeed);
-   }
 }
 
 #define IN_BUFSZ 1024
@@ -113,15 +121,16 @@ int main(int argc, char ** argv) {
    char in_buffer[IN_BUFSZ];
    int in_cnt = 0;
    int cnt = 0;
+   int i;
 
    laser_ready = 0;
 
-   for( int i=0; i<512; i++ ) {
+   for( i=0; i<512; i++ ) {
       laser_data[i] = 64;
    }
 
    // Set up message handler array
-   for( int i=0; i<256; i++ ) {
+   for( i=0; i<256; i++ ) {
       handlers[i] = no_handler;
    }
    handlers['Z'] = shutdown_h;
@@ -129,6 +138,7 @@ int main(int argc, char ** argv) {
    odometry_setup();
    handlers['O'] = odometry_h;
 
+   handlers['G'] = gps_h;
 
    ros::init(argc, argv, "hardware_interface");
 
@@ -141,12 +151,10 @@ int main(int argc, char ** argv) {
    //  gpsd pick it up. TODO
    //
    
-   // TODO: open serial port and set up here
    // I'm going to hardcode the port and settings because this is hardware-
    // specific anyway
    // open serial port
    int serial = open("/dev/ttyS1", O_RDWR | O_NOCTTY);
-   // TODO: set baud rate and parity
    if( serial < 0 ) {
       perror("Failed to open /dev/ttyS1");
       // die. ungracefully.
@@ -156,10 +164,21 @@ int main(int argc, char ** argv) {
    struct termios tio;
    tcgetattr(serial, &tio);
 
+   // set non-blocking input mode
    tio.c_lflag = 0; // raw input
    tio.c_cc[VMIN] = 0;
    tio.c_cc[VTIME] = 0;
 
+   /*ROS_INFO("c_iflag %X", tio.c_iflag);
+   ROS_INFO("INLCR %X", INLCR);
+   ROS_INFO("IGNCR %X", IGNCR);
+   ROS_INFO("ICRNL %X", ICRNL);
+   ROS_INFO("IXON  %X", IXON);
+   ROS_INFO("IXOFF  %X", IXOFF);*/
+   // no input options, just normal input
+   tio.c_iflag = 0;
+
+   // set baud rate
    cfsetospeed(&tio, B115200);
    cfsetispeed(&tio, B115200);
    
@@ -172,13 +191,18 @@ int main(int argc, char ** argv) {
    while( ros::ok() ) {
       
       // write pending data to serial port
+      //ROS_INFO("start laser transmit");
       if( laser_ready ) {
          cnt = write(serial, "L", 1);
+         //ROS_INFO("Wrote %d bytes", cnt);
          cnt = write(serial, laser_data, 512);
+         //ROS_INFO("Wrote %d bytes", cnt);
          cnt = write(serial, "\r\r\r\r\r\r\r\r", 1);
+         //ROS_INFO("Wrote %d bytes", cnt);
          laser_ready = 0;
       }
 
+      //ROS_INFO("start serial input");
       cnt = read(serial, in_buffer + in_cnt, IN_BUFSZ - in_cnt - 1); 
       if( cnt > 0 ) {
          // append a null byte
@@ -186,6 +210,7 @@ int main(int argc, char ** argv) {
          //ROS_INFO("Read %d characters", cnt);
          //ROS_INFO("Read %s", in_buffer);
          in_cnt += cnt;
+         ROS_INFO("Buffer size %d", in_cnt);
 
          // parse out newline-terminated strings and call appropriate functions
          int start = 0;
@@ -197,7 +222,8 @@ int main(int argc, char ** argv) {
                // check that our string isn't just the terminating character
                if( i - start > 1 ) {
                   // we got a string. call the appropriate function
-                  handlers[in_buffer[start]](in_buffer+start, i - start);
+                  Packet p(in_buffer+start, i-start);
+                  handlers[in_buffer[start]](p);
                }
                start = i+1;
             }
