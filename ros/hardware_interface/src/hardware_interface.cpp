@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <math.h>
+#include <errno.h>
 
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
@@ -80,8 +81,22 @@ handler(shutdown_h) {
    }
 }
 
+int gps_file;
 // set up whatever we decide to do for GPS
 void gps_setup(void) {
+   // open gps log file for writing
+   gps_file = open("/home/hendrix/log/gps.log", 
+         O_WRONLY | O_APPEND | O_CREAT, 0644);
+   if( gps_file < 0 ) {
+      ROS_ERROR("Error opening GPS log file: %s", strerror(errno));
+   } else {
+      write(gps_file, "GPS log starting\n", 17);
+   }
+}
+
+void gps_end(void) {
+   if( gps_file > 0 ) 
+      close(gps_file);
 }
 
 handler(gps_h) {
@@ -89,10 +104,14 @@ handler(gps_h) {
    //
    // for now, just de-encapsulate and print it to info
    int l = p.outsz() - 1;
-   char * buf = (char*)malloc(l + 1);
+   char * buf = (char*)malloc(l + 2);
    memcpy(buf, p.outbuf() + 1, l);
    buf[l] = 0;
    ROS_INFO("Received GPS: %s", p.outbuf());
+   if( gps_file >= 0 ) {
+      buf[l] = '\n';
+      write(gps_file, buf, l+1);
+   }
    free(buf);
 }
 
@@ -138,6 +157,7 @@ int main(int argc, char ** argv) {
    odometry_setup();
    handlers['O'] = odometry_h;
 
+   gps_setup();
    handlers['G'] = gps_h;
 
    ros::init(argc, argv, "hardware_interface");
@@ -242,4 +262,6 @@ int main(int argc, char ** argv) {
 
       loop_rate.sleep();
    }
+
+   gps_end();
 }
