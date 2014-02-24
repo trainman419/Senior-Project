@@ -1,0 +1,14 @@
+<resources>
+   <declare-styleable name="DialView">
+       <attr name="position" format="enum">
+           <enum name="top_left" value="0"/>
+           <enum name="top_right" value="1"/>
+           <enum name="bottom_left" value="2"/>
+           <enum name="bottom_right" value="3"/>
+       </attr>
+       <attr name="direction" format="enum">
+           <enum name="cw" value="0"/>
+           <enum name="ccw" value="1"/>
+       </attr>
+   </declare-styleable>
+</resources>

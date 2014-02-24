@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:custom="http://schemas.android.com/apk/res/com.namniart"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
@@ -72,4 +73,35 @@
 		android:layout_height="120dp"
 		android:layout_gravity="bottom|left"
 		/>
+	
+	<com.namniart.DialView
+		android:layout_width="120dp"
+		android:layout_height="120dp"
+	    android:id="@+id/computerBattery"
+	    custom:position="bottom_left"
+	    custom:direction="ccw"
+	    android:layout_gravity="bottom|left"
+	    />
+	<com.namniart.DialView
+		android:layout_width="120dp"
+		android:layout_height="120dp"
+	    android:id="@+id/motorBattery"
+	    custom:position="bottom_right"
+	    custom:direction="ccw"
+	    android:layout_gravity="bottom|right"
+	    />
+	<com.namniart.DialView
+		android:layout_width="120dp"
+		android:layout_height="120dp"
+	    custom:position="top_left"
+	    custom:direction="ccw"
+	    android:layout_gravity="top|left"
+	    />
+	<com.namniart.DialView
+		android:layout_width="120dp"
+		android:layout_height="120dp"
+	    custom:position="top_right"
+	    custom:direction="ccw"
+	    android:layout_gravity="top|right"
+	    />
 </FrameLayout>
