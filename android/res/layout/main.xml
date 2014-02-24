@@ -11,97 +11,90 @@
 		android:layout_height="fill_parent"
 	    android:clickable="true"
 	    android:apiKey="0_O45XqEgTRcRhZa1JhiMRk8oOBOeRCcdxXZVyQ"/>
-    <RadioGroup
+	
+	<LinearLayout
     	android:layout_width="fill_parent"
     	android:layout_height="wrap_content"
-    	android:padding="10px"
-    	android:orientation="horizontal">       
-		<RadioButton
-			android:id="@+id/rcButton"
+		android:layout_marginLeft="100dp"
+    	>
+	    <RadioGroup
+	    	android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+			android:layout_weight="1.0"
+	    	android:padding="10dp"
+	    	android:orientation="horizontal">       
+			<RadioButton
+				android:id="@+id/rcButton"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:button="@drawable/button_l"
+				android:background="@drawable/button_l"
+				android:layout_weight="1.0"
+				android:checked="true"
+				android:text="@string/rc"
+				android:gravity="center"
+				/>
+			<RadioButton
+				android:id="@+id/autonomousButton"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:button="@drawable/button_c"
+				android:background="@drawable/button_c"
+				android:layout_weight="1.0"
+				android:text="@string/autonomous"
+				android:gravity="center"
+				/>
+			<RadioButton
+				android:id="@+id/stopButton"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:button="@drawable/button_r"
+				android:background="@drawable/button_r"
+				android:layout_weight="1.0"
+				android:text="@string/stop"
+				android:gravity="center"
+				/>
+		</RadioGroup>
+		
+		<CheckBox
+			android:id="@+id/recordButton"
+			android:checked="false"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:button="@drawable/button_l"
-			android:background="@drawable/button_l"
-			android:layout_marginLeft="100px"
-			android:layout_marginRight="0px"
-			android:layout_weight="1.0"
-			android:checked="true"
-			android:text="@string/rc"
-			android:gravity="center"
+			android:layout_marginTop="10dp"
+			android:layout_marginRight="10dp"
+			android:button="@drawable/button_record"
 			/>
-		<RadioButton
-			android:id="@+id/autonomousButton"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:button="@drawable/button_c"
-			android:background="@drawable/button_c"
-			android:layout_marginLeft="0px"
-			android:layout_marginRight="0px"
-			android:layout_weight="1.0"
-			android:text="@string/autonomous"
-			android:gravity="center"
-			/>
-		<RadioButton
-			android:id="@+id/stopButton"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:button="@drawable/button_r"
-			android:background="@drawable/button_r"
-			android:layout_marginLeft="0px"
-			android:layout_marginRight="0px"
-			android:layout_weight="1.0"
-			android:text="@string/stop"
-			android:gravity="center"
-			/>
-	</RadioGroup>
-	
-	<CheckBox
-		android:id="@+id/recordButton"
-		android:checked="false"
+	</LinearLayout>
+		
+	<LinearLayout
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:layout_marginBottom="10px"
-		android:layout_marginRight="10px"
-		android:layout_gravity="bottom|right"
-		android:button="@drawable/button_record"
-		/>
-		
-	<VideoView
-		android:id="@+id/videoView"
-		android:visibility="invisible"
-		android:layout_width="160dp"
-		android:layout_height="120dp"
-		android:layout_gravity="bottom|left"
-		/>
-	
-	<com.namniart.DialView
-		android:layout_width="120dp"
-		android:layout_height="120dp"
-	    android:id="@+id/computerBattery"
-	    custom:position="bottom_left"
-	    custom:direction="ccw"
 	    android:layout_gravity="bottom|left"
-	    />
+	    >
+		<VideoView
+			android:id="@+id/videoView"
+			android:visibility="invisible"
+			android:layout_width="160dp"
+			android:layout_height="120dp"
+			/>
+	
+		<com.namniart.DialView
+			android:layout_width="120dp"
+			android:layout_height="120dp"
+		    android:id="@+id/computerBattery"
+		    custom:position="bottom_left"
+		    custom:direction="ccw"
+		    android:layout_gravity="bottom|left"
+		    />
+	</LinearLayout>
+	
 	<com.namniart.DialView
 		android:layout_width="120dp"
 		android:layout_height="120dp"
 	    android:id="@+id/motorBattery"
 	    custom:position="bottom_right"
-	    custom:direction="ccw"
+	    custom:direction="cw"
 	    android:layout_gravity="bottom|right"
-	    />
-	<com.namniart.DialView
-		android:layout_width="120dp"
-		android:layout_height="120dp"
-	    custom:position="top_left"
-	    custom:direction="ccw"
-	    android:layout_gravity="top|left"
-	    />
-	<com.namniart.DialView
-		android:layout_width="120dp"
-		android:layout_height="120dp"
-	    custom:position="top_right"
-	    custom:direction="ccw"
-	    android:layout_gravity="top|right"
 	    />
 </FrameLayout>
